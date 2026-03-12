@@ -49,6 +49,7 @@ export function useSchoolData(): SchoolData {
       .from('user_roles')
       .select('school_id')
       .eq('user_id', user.id)
+      .eq('role', 'school_ceo')
       .single()
 
     if (!roleData?.school_id) { setLoading(false); return }
