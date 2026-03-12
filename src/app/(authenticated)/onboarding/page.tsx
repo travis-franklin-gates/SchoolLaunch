@@ -251,7 +251,7 @@ export default function OnboardingPage() {
     await supabase.from('scenarios').delete().eq('school_id', schoolId).eq('is_base_case', true)
 
     // Create base scenario
-    const { data: scenarioData } = await supabase.from('scenarios').insert({
+    await supabase.from('scenarios').insert({
       school_id: schoolId,
       name: 'Base Case',
       is_base_case: true,
@@ -268,29 +268,27 @@ export default function OnboardingPage() {
         enrollmentY3: finalData.enrollmentY3,
         enrollmentY4: finalData.enrollmentY4,
       },
-    }).select('id').single()
-
-    const scenarioId = scenarioData?.id
+    })
 
     // Build projection rows
     const projections = [
       // Revenue
-      { school_id: schoolId, scenario_id: scenarioId, year: 1, category: 'Revenue', line_item: 'State Apportionment', amount: apportionment, is_revenue: true },
-      { school_id: schoolId, scenario_id: scenarioId, year: 1, category: 'Revenue', line_item: 'Levy Equity', amount: levyEquity, is_revenue: true },
-      { school_id: schoolId, scenario_id: scenarioId, year: 1, category: 'Revenue', line_item: 'Title I', amount: grants.titleI, is_revenue: true },
-      { school_id: schoolId, scenario_id: scenarioId, year: 1, category: 'Revenue', line_item: 'IDEA', amount: grants.idea, is_revenue: true },
-      { school_id: schoolId, scenario_id: scenarioId, year: 1, category: 'Revenue', line_item: 'LAP', amount: grants.lap, is_revenue: true },
-      { school_id: schoolId, scenario_id: scenarioId, year: 1, category: 'Revenue', line_item: 'TBIP', amount: grants.tbip, is_revenue: true },
-      { school_id: schoolId, scenario_id: scenarioId, year: 1, category: 'Revenue', line_item: 'HiCap', amount: grants.hicap, is_revenue: true },
+      { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'State Apportionment', amount: apportionment, is_revenue: true },
+      { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'Levy Equity', amount: levyEquity, is_revenue: true },
+      { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'Title I', amount: grants.titleI, is_revenue: true },
+      { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'IDEA', amount: grants.idea, is_revenue: true },
+      { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'LAP', amount: grants.lap, is_revenue: true },
+      { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'TBIP', amount: grants.tbip, is_revenue: true },
+      { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'HiCap', amount: grants.hicap, is_revenue: true },
       // Expenses
-      { school_id: schoolId, scenario_id: scenarioId, year: 1, category: 'Personnel', line_item: 'Total Personnel', amount: totalPersonnel, is_revenue: false },
-      { school_id: schoolId, scenario_id: scenarioId, year: 1, category: 'Operations', line_item: 'Facilities', amount: facilityCost, is_revenue: false },
-      { school_id: schoolId, scenario_id: scenarioId, year: 1, category: 'Operations', line_item: 'Supplies & Materials', amount: supplies, is_revenue: false },
-      { school_id: schoolId, scenario_id: scenarioId, year: 1, category: 'Operations', line_item: 'Contracted Services', amount: contracted, is_revenue: false },
-      { school_id: schoolId, scenario_id: scenarioId, year: 1, category: 'Operations', line_item: 'Technology', amount: technology, is_revenue: false },
-      { school_id: schoolId, scenario_id: scenarioId, year: 1, category: 'Operations', line_item: 'Authorizer Fee', amount: authorizerFee, is_revenue: false },
-      { school_id: schoolId, scenario_id: scenarioId, year: 1, category: 'Operations', line_item: 'Insurance', amount: insurance, is_revenue: false },
-      { school_id: schoolId, scenario_id: scenarioId, year: 1, category: 'Operations', line_item: 'Misc/Contingency', amount: misc, is_revenue: false },
+      { school_id: schoolId, year: 1, category: 'Personnel', line_item: 'Total Personnel', amount: totalPersonnel, is_revenue: false },
+      { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Facilities', amount: facilityCost, is_revenue: false },
+      { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Supplies & Materials', amount: supplies, is_revenue: false },
+      { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Contracted Services', amount: contracted, is_revenue: false },
+      { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Technology', amount: technology, is_revenue: false },
+      { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Authorizer Fee', amount: authorizerFee, is_revenue: false },
+      { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Insurance', amount: insurance, is_revenue: false },
+      { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Misc/Contingency', amount: misc, is_revenue: false },
     ]
 
     await supabase.from('budget_projections').insert(projections)
