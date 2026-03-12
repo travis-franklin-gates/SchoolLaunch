@@ -57,31 +57,19 @@ export function useSchoolData(): SchoolData {
     const sid = roleData.school_id
     setSchoolId(sid)
 
-    // Fetch scenario first since projections need to be filtered by scenario_id
-    const [schoolRes, profileRes, posRes, scenRes] = await Promise.all([
+    const [schoolRes, profileRes, posRes, projRes, scenRes] = await Promise.all([
       supabase.from('schools').select('name').eq('id', sid).single(),
       supabase.from('school_profiles').select('*').eq('school_id', sid).single(),
       supabase.from('staffing_positions').select('*').eq('school_id', sid).eq('year', 1),
+      supabase.from('budget_projections').select('*').eq('school_id', sid).eq('year', 1),
       supabase.from('scenarios').select('id').eq('school_id', sid).eq('is_base_case', true).single(),
     ])
 
     if (schoolRes.data) setSchoolName(schoolRes.data.name)
     if (profileRes.data) setProfile(profileRes.data as SchoolProfile)
     if (posRes.data) setPositions(posRes.data as StaffingPosition[])
+    if (projRes.data) setProjections(projRes.data as BudgetProjection[])
     if (scenRes.data) setScenarioId(scenRes.data.id)
-
-    // Fetch projections filtered by the base case scenario
-    const baseScenarioId = scenRes.data?.id
-    if (baseScenarioId) {
-      const { data: projData } = await supabase
-        .from('budget_projections')
-        .select('*')
-        .eq('school_id', sid)
-        .eq('scenario_id', baseScenarioId)
-        .eq('year', 1)
-
-      if (projData) setProjections(projData as BudgetProjection[])
-    }
 
     setLoading(false)
   }
