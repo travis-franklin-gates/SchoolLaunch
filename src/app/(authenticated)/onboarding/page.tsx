@@ -247,11 +247,14 @@ export default function OnboardingPage() {
     const misc = Math.round(subtotalExpenses * (opsData.miscPct / 100))
 
     // Delete existing projections and scenario for year 1
-    await supabase.from('budget_projections').delete().eq('school_id', schoolId).eq('year', 1)
-    await supabase.from('scenarios').delete().eq('school_id', schoolId).eq('is_base_case', true)
+    const { error: delProjError } = await supabase.from('budget_projections').delete().eq('school_id', schoolId).eq('year', 1)
+    if (delProjError) console.error('[onboarding] delete budget_projections failed:', delProjError)
+
+    const { error: delScenarioError } = await supabase.from('scenarios').delete().eq('school_id', schoolId).eq('is_base_case', true)
+    if (delScenarioError) console.error('[onboarding] delete scenarios failed:', delScenarioError)
 
     // Create base scenario
-    await supabase.from('scenarios').insert({
+    const { error: scenarioError } = await supabase.from('scenarios').insert({
       school_id: schoolId,
       name: 'Base Case',
       is_base_case: true,
@@ -269,6 +272,7 @@ export default function OnboardingPage() {
         enrollmentY4: finalData.enrollmentY4,
       },
     })
+    if (scenarioError) console.error('[onboarding] insert scenario failed:', scenarioError)
 
     // Build projection rows
     const projections = [
@@ -291,13 +295,17 @@ export default function OnboardingPage() {
       { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Misc/Contingency', amount: misc, is_revenue: false },
     ]
 
-    await supabase.from('budget_projections').insert(projections)
+    console.log('[onboarding] inserting projections, count:', projections.length, 'school_id:', schoolId)
+    const { error: projError } = await supabase.from('budget_projections').insert(projections)
+    if (projError) console.error('[onboarding] insert budget_projections failed:', projError)
+    else console.log('[onboarding] budget_projections insert succeeded')
 
     // Mark onboarding complete
-    await supabase.from('school_profiles').upsert({
+    const { error: profileError } = await supabase.from('school_profiles').upsert({
       school_id: schoolId,
       onboarding_complete: true,
     }, { onConflict: 'school_id' })
+    if (profileError) console.error('[onboarding] upsert school_profiles failed:', profileError)
 
     setSaving(false)
     router.push('/dashboard')
