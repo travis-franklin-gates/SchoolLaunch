@@ -1,13 +1,30 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { calcSections, calcEnrollmentGrowth } from '@/lib/calculations'
+import { calcSections, calcEnrollmentGrowth, calcTotalBaseRevenue, calcAllGrants } from '@/lib/calculations'
 import type { GrowthPreset } from '@/lib/types'
 
 const GROWTH_RATES: Record<Exclude<GrowthPreset, 'manual'>, number> = {
   conservative: 5,
   moderate: 10,
   aggressive: 15,
+}
+
+const GROWTH_CONTEXT: Record<Exclude<GrowthPreset, 'manual'>, string> = {
+  conservative: 'Safest for authorizer review. Recommended for first-time operators.',
+  moderate: 'Common assumption for established charter networks expanding to WA.',
+  aggressive: 'Requires strong waitlist evidence. Authorizers will scrutinize.',
+}
+
+const GRADE_ENROLLMENT_DEFAULTS: Record<string, { enrollment: number; classSize: number }> = {
+  'K-5': { enrollment: 120, classSize: 22 },
+  'K-8': { enrollment: 200, classSize: 24 },
+  '6-8': { enrollment: 150, classSize: 25 },
+  '9-12': { enrollment: 200, classSize: 28 },
+}
+
+function fmt(n: number) {
+  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 }
 
 interface Props {
@@ -19,6 +36,11 @@ interface Props {
     enrollmentY4: number
     growthPreset: GrowthPreset
   }
+  gradeConfig: string
+  pctFrl: number
+  pctIep: number
+  pctEll: number
+  pctHicap: number
   onNext: (data: {
     enrollmentY1: number
     maxClassSize: number
@@ -30,9 +52,10 @@ interface Props {
   onBack: () => void
 }
 
-export default function StepEnrollment({ initialData, onNext, onBack }: Props) {
-  const [enrollmentY1, setEnrollmentY1] = useState(initialData.enrollmentY1 || 120)
-  const [maxClassSize, setMaxClassSize] = useState(initialData.maxClassSize || 22)
+export default function StepEnrollment({ initialData, gradeConfig, pctFrl, pctIep, pctEll, pctHicap, onNext, onBack }: Props) {
+  const defaults = GRADE_ENROLLMENT_DEFAULTS[gradeConfig] || GRADE_ENROLLMENT_DEFAULTS['K-5']
+  const [enrollmentY1, setEnrollmentY1] = useState(initialData.enrollmentY1 || defaults.enrollment)
+  const [maxClassSize, setMaxClassSize] = useState(initialData.maxClassSize || defaults.classSize)
   const [growthPreset, setGrowthPreset] = useState<GrowthPreset>(initialData.growthPreset || 'moderate')
   const [manualY2, setManualY2] = useState(initialData.enrollmentY2 || 0)
   const [manualY3, setManualY3] = useState(initialData.enrollmentY3 || 0)
@@ -55,6 +78,19 @@ export default function StepEnrollment({ initialData, onNext, onBack }: Props) {
   }, [enrollmentY1, growthPreset, manualY2, manualY3, manualY4])
 
   const sectionsY1 = calcSections(enrollmentY1, maxClassSize)
+
+  const revenuePreview = useMemo(() => {
+    const baseRevenue = calcTotalBaseRevenue(enrollmentY1)
+    const grants = calcAllGrants(enrollmentY1, pctFrl, pctIep, pctEll, pctHicap)
+    const totalGrants = grants.titleI + grants.idea + grants.lap + grants.tbip + grants.hicap
+    return { baseRevenue, totalGrants, total: baseRevenue + totalGrants }
+  }, [enrollmentY1, pctFrl, pctIep, pctEll, pctHicap])
+
+  const enrollmentWarning = enrollmentY1 < 80
+    ? 'Below 80 students may not generate sufficient revenue to cover fixed costs.'
+    : enrollmentY1 > 500
+    ? 'Large initial enrollment is unusual for a new charter. Authorizers may question this.'
+    : null
 
   function handleNext(e: React.FormEvent) {
     e.preventDefault()
@@ -79,50 +115,84 @@ export default function StepEnrollment({ initialData, onNext, onBack }: Props) {
   }
 
   return (
-    <form onSubmit={handleNext} className="space-y-6 max-w-lg">
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Target Enrollment Year 1</label>
-        <input
-          type="number"
-          value={enrollmentY1}
-          onChange={(e) => setEnrollmentY1(Number(e.target.value))}
-          min={1}
-          required
-          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-        />
+    <form onSubmit={handleNext} className="space-y-6 max-w-2xl">
+      <p className="text-sm text-slate-500">
+        Enrollment drives nearly every financial metric. Be realistic — authorizers prefer conservative projections backed by waitlist data.
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Target Enrollment Year 1</label>
+          <input
+            type="number"
+            value={enrollmentY1}
+            onChange={(e) => setEnrollmentY1(Number(e.target.value))}
+            min={1}
+            required
+            className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+          />
+          <p className="text-xs text-slate-400 mt-1">
+            Default for {gradeConfig}: {defaults.enrollment} students
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Max Class Size</label>
+          <input
+            type="number"
+            value={maxClassSize}
+            onChange={(e) => setMaxClassSize(Number(e.target.value))}
+            min={10}
+            max={35}
+            required
+            className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+          />
+          <p className="text-xs text-slate-400 mt-1">
+            Default for {gradeConfig}: {defaults.classSize} students/class
+          </p>
+        </div>
+      </div>
+
+      {enrollmentWarning && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex items-start gap-2">
+          <svg className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <p className="text-sm text-amber-700">{enrollmentWarning}</p>
+        </div>
+      )}
+
+      <div className="bg-slate-50 rounded-xl p-4 flex flex-wrap gap-6">
+        <div>
+          <p className="text-xs text-slate-500">Sections Needed</p>
+          <p className="text-lg font-semibold text-slate-800">{sectionsY1}</p>
+        </div>
+        <div>
+          <p className="text-xs text-slate-500">Est. Base Revenue</p>
+          <p className="text-lg font-semibold text-slate-800">{fmt(revenuePreview.baseRevenue)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-slate-500">Est. Grants</p>
+          <p className="text-lg font-semibold text-slate-800">{fmt(revenuePreview.totalGrants)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-slate-500">Total Revenue</p>
+          <p className="text-lg font-semibold text-blue-600">{fmt(revenuePreview.total)}</p>
+        </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Max Class Size</label>
-        <input
-          type="number"
-          value={maxClassSize}
-          onChange={(e) => setMaxClassSize(Number(e.target.value))}
-          min={10}
-          max={35}
-          required
-          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-        />
-      </div>
-
-      <div className="bg-blue-50 rounded-lg px-4 py-3">
-        <p className="text-sm text-blue-800">
-          Estimated sections needed: <span className="font-semibold">{sectionsY1}</span>
-        </p>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-3">Year 2-4 Growth</label>
-        <div className="flex gap-2 mb-4">
+        <label className="block text-sm font-medium text-slate-700 mb-3">Year 2–4 Growth</label>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
           {(['conservative', 'moderate', 'aggressive', 'manual'] as GrowthPreset[]).map((preset) => (
             <button
               key={preset}
               type="button"
               onClick={() => selectPreset(preset)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all border-2 ${
                 growthPreset === preset
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'border-blue-600 bg-blue-50 text-blue-700'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
               }`}
             >
               {preset === 'manual' ? 'Manual' : `${preset.charAt(0).toUpperCase() + preset.slice(1)} +${GROWTH_RATES[preset]}%`}
@@ -130,55 +200,33 @@ export default function StepEnrollment({ initialData, onNext, onBack }: Props) {
           ))}
         </div>
 
+        {growthPreset !== 'manual' && (
+          <p className="text-xs text-slate-500 mb-4 italic">{GROWTH_CONTEXT[growthPreset]}</p>
+        )}
+
         <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">Year 2</label>
-            {growthPreset === 'manual' ? (
-              <input
-                type="number"
-                value={manualY2}
-                onChange={(e) => setManualY2(Number(e.target.value))}
-                min={1}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-              />
-            ) : (
-              <div className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-700">
-                {enrollments.y2}
-              </div>
-            )}
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">Year 3</label>
-            {growthPreset === 'manual' ? (
-              <input
-                type="number"
-                value={manualY3}
-                onChange={(e) => setManualY3(Number(e.target.value))}
-                min={1}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-              />
-            ) : (
-              <div className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-700">
-                {enrollments.y3}
-              </div>
-            )}
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">Year 4</label>
-            {growthPreset === 'manual' ? (
-              <input
-                type="number"
-                value={manualY4}
-                onChange={(e) => setManualY4(Number(e.target.value))}
-                min={1}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-              />
-            ) : (
-              <div className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-700">
-                {enrollments.y4}
-              </div>
-            )}
-          </div>
+          {[
+            { label: 'Year 2', value: enrollments.y2, manual: manualY2, setManual: setManualY2 },
+            { label: 'Year 3', value: enrollments.y3, manual: manualY3, setManual: setManualY3 },
+            { label: 'Year 4', value: enrollments.y4, manual: manualY4, setManual: setManualY4 },
+          ].map(({ label, value, manual, setManual }) => (
+            <div key={label}>
+              <label className="block text-xs text-slate-500 mb-1">{label}</label>
+              {growthPreset === 'manual' ? (
+                <input
+                  type="number"
+                  value={manual}
+                  onChange={(e) => setManual(Number(e.target.value))}
+                  min={1}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                />
+              ) : (
+                <div className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 font-medium">
+                  {value}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -192,9 +240,9 @@ export default function StepEnrollment({ initialData, onNext, onBack }: Props) {
         </button>
         <button
           type="submit"
-          className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          className="bg-blue-600 text-white px-8 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
         >
-          Next
+          Continue
         </button>
       </div>
     </form>

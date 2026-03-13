@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { calcAuthorizerFee, calcRevenue } from '@/lib/calculations'
+import { calcAuthorizerFee, calcRevenue, calcTotalBaseRevenue, calcAllGrants } from '@/lib/calculations'
+import type { StartupFundingSource } from '@/lib/types'
 
 interface OperationsData {
   facilityMode: 'sqft' | 'flat'
@@ -19,8 +20,13 @@ interface OperationsData {
 interface Props {
   enrollment: number
   totalPersonnelCost: number
+  pctFrl: number
+  pctIep: number
+  pctEll: number
+  pctHicap: number
   initialData: OperationsData
-  onComplete: (data: OperationsData) => void
+  startupFunding: StartupFundingSource[]
+  onComplete: (data: OperationsData, funding: StartupFundingSource[]) => void
   onBack: () => void
   saving: boolean
 }
@@ -42,11 +48,47 @@ export const defaultOperationsData: OperationsData = {
   miscPct: 2,
 }
 
-export default function StepOperations({ enrollment, totalPersonnelCost, initialData, onComplete, onBack, saving }: Props) {
+const DEFAULT_STARTUP_SOURCES: StartupFundingSource[] = [
+  { source: 'WA Charter School Commission Grant', amount: 150000, type: 'grant', status: 'projected' },
+  { source: 'Federal CSP Grant', amount: 0, type: 'grant', status: 'projected' },
+]
+
+let fundingKeyCounter = 0
+function nextFundingKey() {
+  return `fund-${++fundingKeyCounter}`
+}
+
+interface FundingRow extends StartupFundingSource {
+  key: string
+}
+
+export default function StepOperations({
+  enrollment,
+  totalPersonnelCost,
+  pctFrl,
+  pctIep,
+  pctEll,
+  pctHicap,
+  initialData,
+  startupFunding,
+  onComplete,
+  onBack,
+  saving,
+}: Props) {
   const [data, setData] = useState<OperationsData>(initialData)
+  const [funding, setFunding] = useState<FundingRow[]>(
+    (startupFunding.length > 0 ? startupFunding : DEFAULT_STARTUP_SOURCES).map((f) => ({
+      ...f,
+      key: nextFundingKey(),
+    }))
+  )
 
   const apportionment = calcRevenue(enrollment)
   const authorizerFee = calcAuthorizerFee(enrollment)
+
+  const baseRevenue = calcTotalBaseRevenue(enrollment)
+  const grants = calcAllGrants(enrollment, pctFrl, pctIep, pctEll, pctHicap)
+  const totalRevenue = baseRevenue + grants.titleI + grants.idea + grants.lap + grants.tbip + grants.hicap
 
   const costs = useMemo(() => {
     const facility = data.facilityMode === 'sqft'
@@ -61,18 +103,46 @@ export default function StepOperations({ enrollment, totalPersonnelCost, initial
   }, [data, enrollment, authorizerFee, totalPersonnelCost])
 
   const totalOps = costs.facility + costs.supplies + costs.contracted + costs.technology + costs.authorizerFee + costs.insurance + costs.misc
+  const totalExpenses = totalPersonnelCost + totalOps
+  const netPosition = totalRevenue - totalExpenses
+  const totalStartup = funding.reduce((s, f) => s + f.amount, 0)
+  const facilityPct = totalRevenue > 0 ? ((costs.facility / totalRevenue) * 100).toFixed(1) : '0'
 
   function update<K extends keyof OperationsData>(key: K, value: OperationsData[K]) {
     setData((prev) => ({ ...prev, [key]: value }))
   }
 
+  function updateFunding(key: string, field: keyof StartupFundingSource, value: string | number) {
+    setFunding((prev) =>
+      prev.map((f) => (f.key === key ? { ...f, [field]: value } : f))
+    )
+  }
+
+  function removeFunding(key: string) {
+    setFunding((prev) => prev.filter((f) => f.key !== key))
+  }
+
+  function addFunding() {
+    setFunding((prev) => [
+      ...prev,
+      { key: nextFundingKey(), source: '', amount: 0, type: 'grant', status: 'projected' },
+    ])
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    onComplete(data)
+    const cleanFunding: StartupFundingSource[] = funding
+      .filter((f) => f.source.trim() || f.amount > 0)
+      .map(({ source, amount, type, status }) => ({ source, amount, type, status }))
+    onComplete(data, cleanFunding)
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
+      <p className="text-sm text-slate-500">
+        Operations costs and startup funding complete your financial picture. We&apos;ll calculate everything else automatically.
+      </p>
+
       {/* Facilities */}
       <div className="bg-white border border-slate-200 rounded-xl p-5">
         <div className="flex items-center justify-between mb-3">
@@ -129,7 +199,13 @@ export default function StepOperations({ enrollment, totalPersonnelCost, initial
             />
           </div>
         )}
-        <p className="text-xs text-slate-400 mt-2">Annual: {fmt(costs.facility)}</p>
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-xs text-slate-400">Annual: {fmt(costs.facility)}</p>
+          <p className="text-xs text-slate-400">Facility = {facilityPct}% of revenue</p>
+        </div>
+        {Number(facilityPct) > 15 && (
+          <p className="text-xs text-amber-600 mt-1">Above 15% of revenue — consider negotiating terms or exploring co-location.</p>
+        )}
       </div>
 
       {/* Per-pupil items */}
@@ -184,39 +260,141 @@ export default function StepOperations({ enrollment, totalPersonnelCost, initial
         </div>
       </div>
 
-      {/* Insurance */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Insurance (Annual)</label>
-        <input
-          type="number"
-          value={data.insurance}
-          onChange={(e) => update('insurance', Number(e.target.value))}
-          step={1000}
-          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 max-w-xs"
-        />
-      </div>
-
-      {/* Misc */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Misc/Contingency (% of total expenses)</label>
-        <div className="flex items-center gap-3">
+      {/* Insurance & Misc */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Insurance (Annual)</label>
           <input
             type="number"
-            value={data.miscPct}
-            onChange={(e) => update('miscPct', Number(e.target.value))}
-            min={0}
-            max={10}
-            step={0.5}
-            className="w-24 px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            value={data.insurance}
+            onChange={(e) => update('insurance', Number(e.target.value))}
+            step={1000}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
-          <span className="text-sm text-slate-500">= {fmt(costs.misc)}</span>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Misc/Contingency (%)</label>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              value={data.miscPct}
+              onChange={(e) => update('miscPct', Number(e.target.value))}
+              min={0}
+              max={10}
+              step={0.5}
+              className="w-24 px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <span className="text-sm text-slate-500">= {fmt(costs.misc)}</span>
+          </div>
         </div>
       </div>
 
-      {/* Totals */}
-      <div className="bg-slate-50 rounded-xl p-4">
-        <p className="text-xs text-slate-500">Total Operations Cost</p>
-        <p className="text-lg font-semibold text-slate-800">{fmt(totalOps)}</p>
+      {/* Startup Funding */}
+      <div className="bg-white border border-slate-200 rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-slate-800 mb-1">Startup Funding (Year 0)</h3>
+        <p className="text-xs text-slate-400 mb-4">Pre-opening grants, donations, and loans that fund startup costs before revenue arrives.</p>
+
+        <div className="space-y-3">
+          {funding.map((f) => (
+            <div key={f.key} className="flex items-center gap-2">
+              <input
+                type="text"
+                value={f.source}
+                onChange={(e) => updateFunding(f.key, 'source', e.target.value)}
+                placeholder="Source name"
+                className="flex-1 px-2 py-1.5 border border-slate-200 rounded text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <div className="flex items-center gap-1">
+                <span className="text-slate-400 text-sm">$</span>
+                <input
+                  type="number"
+                  value={f.amount}
+                  onChange={(e) => updateFunding(f.key, 'amount', Number(e.target.value))}
+                  step={5000}
+                  className="w-28 px-2 py-1.5 border border-slate-200 rounded text-sm text-right text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <select
+                value={f.type}
+                onChange={(e) => updateFunding(f.key, 'type', e.target.value)}
+                className="px-2 py-1.5 border border-slate-200 rounded text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="grant">Grant</option>
+                <option value="donation">Donation</option>
+                <option value="debt">Debt</option>
+                <option value="other">Other</option>
+              </select>
+              <select
+                value={f.status}
+                onChange={(e) => updateFunding(f.key, 'status', e.target.value)}
+                className="px-2 py-1.5 border border-slate-200 rounded text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="received">Received</option>
+                <option value="pledged">Pledged</option>
+                <option value="applied">Applied</option>
+                <option value="projected">Projected</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => removeFunding(f.key)}
+                className="text-red-400 hover:text-red-600 text-lg leading-none"
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={addFunding}
+          className="text-xs text-blue-600 hover:text-blue-800 font-medium mt-3"
+        >
+          + Add Funding Source
+        </button>
+        {totalStartup > 0 && (
+          <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between">
+            <span className="text-sm font-medium text-slate-700">Total Startup Funding</span>
+            <span className="text-sm font-semibold text-slate-800">{fmt(totalStartup)}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Live Financial Summary */}
+      <div className="bg-slate-800 rounded-xl p-5 text-white">
+        <h3 className="text-sm font-semibold mb-4 uppercase tracking-wide text-slate-300">Year 1 Financial Summary</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div>
+            <p className="text-xs text-slate-400">Total Revenue</p>
+            <p className="text-lg font-semibold">{fmt(totalRevenue)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400">Personnel</p>
+            <p className="text-lg font-semibold">{fmt(totalPersonnelCost)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400">Operations</p>
+            <p className="text-lg font-semibold">{fmt(totalOps)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400">Total Expenses</p>
+            <p className="text-lg font-semibold">{fmt(totalExpenses)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400">Net Position</p>
+            <p className={`text-lg font-semibold ${netPosition >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {fmt(netPosition)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400">Startup Funding</p>
+            <p className="text-lg font-semibold text-blue-400">{fmt(totalStartup)}</p>
+          </div>
+        </div>
+        {netPosition < 0 && (
+          <p className="text-xs text-amber-300 mt-3">
+            Negative net position is common for Year 1. Startup funding of {fmt(Math.abs(netPosition))}+ is recommended to cover the gap.
+          </p>
+        )}
       </div>
 
       <div className="pt-4 flex gap-3">
@@ -230,9 +408,19 @@ export default function StepOperations({ enrollment, totalPersonnelCost, initial
         <button
           type="submit"
           disabled={saving}
-          className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+          className="bg-blue-600 text-white px-8 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
         >
-          {saving ? 'Saving...' : 'Complete Onboarding'}
+          {saving ? (
+            <>
+              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Building Your Budget...
+            </>
+          ) : (
+            'Complete Onboarding'
+          )}
         </button>
       </div>
     </form>
