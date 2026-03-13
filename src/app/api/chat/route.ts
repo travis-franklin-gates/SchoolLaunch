@@ -26,35 +26,68 @@ const WA_KNOWLEDGE = `REVENUE KNOWLEDGE:
 - WA charter schools receive per-pupil funding through OSPI's Charter School Revolving Fund
 - Base allocation varies by grade band. Charter schools also receive levy equity (~$1,500/student)
 - Categorical grants: Title I (poverty-based), IDEA (IEP students), LAP (below grade level), TBIP (ELL students), HiCap (highly capable)
-- Title I schoolwide program threshold: 40% free/reduced lunch
 - Revenue timing: OSPI apportionment follows a monthly schedule — September 9%, October 8%, November 5% (LOW), December 9%, January 8.5%, February 9%, March 9%, April 9%, May 5% (LOW), June 6%, July 12.5%, August 10%
 - November and May are critical low-payment months at 5% each
 - The October enrollment count drives annual apportionment; January true-up adjusts remaining payments
 - Federal grants (Title I, IDEA) are reimbursement-based — the school spends first, then waits 30-60 days for reimbursement
 
-PERSONNEL KNOWLEDGE:
-- Personnel costs typically represent 75-85% of a WA charter school's total budget
-- Full cost of hire = base salary × 1.30 (covers SEBB benefits + FICA at 7.65%)
-- Personnel sustainability threshold: flag when personnel costs exceed 80% of total revenue
-- Healthy WA charter schools operate in the 72-78% range
-- WA charter schools must track certificated vs classified staff separately for OSPI reporting
+CATEGORICAL FUND ELIGIBILITY — DEFINITIVE THRESHOLDS:
+
+Title I — Part A:
+- ELIGIBILITY: Any school with students from low-income families qualifies for Title I funding. Charter schools are their own LEA in Washington and receive allocations based on poverty counts.
+- SCHOOLWIDE vs TARGETED: If the school's FRL percentage is 40% or higher, it qualifies as a SCHOOLWIDE Title I program — meaning funds can support programs benefiting all students at the school. If FRL is below 40%, the school must run a TARGETED ASSISTANCE program serving only individually identified students. This is a hard federal threshold — there is no gray area.
+- When you see a school with FRL ≥ 40%, state definitively: "Your school qualifies for a Title I Schoolwide program because your FRL rate of X% exceeds the 40% federal threshold."
+- CARRYOVER LIMIT: Schools may carry over up to 15% of their Title I allocation into the next fiscal year without a waiver. Exceeding 15% carryover requires a formal waiver request.
+
+IDEA — Special Education:
+- ELIGIBILITY: Any school enrolling students with IEPs receives IDEA funding. This is not optional — if you have IEP students, you receive IDEA funds and must comply with IDEA requirements.
+- MAINTENANCE OF EFFORT (MOE): The school MUST spend at least as much on special education from state and local funds as it did the prior year. This is a hard federal requirement — failure triggers a finding.
+- For new schools with no prior year: MOE baseline is established in Year 1. State definitively that Year 1 spending becomes the floor for all subsequent years.
+
+LAP — Learning Assistance Program:
+- ELIGIBILITY: State categorical fund allocated based on poverty demographics (FRL-eligible students). All WA charter schools with FRL-eligible students receive LAP funding.
+- ALLOWABLE USES: Supplemental instruction ONLY — not core classroom instruction. Extended learning time, small group intervention, dedicated intervention staff.
+
+TBIP — Transitional Bilingual Instruction Program:
+- ELIGIBILITY: Schools with enrolled ELL students who are in the TBIP program as reported in CEDARS. If the school has ELL students (ELL% > 0%), state definitively that TBIP funding will be received.
+
+HiCap — Highly Capable:
+- ELIGIBILITY: Schools with formally identified highly capable students. If HiCap% > 0% in the school profile, state definitively that HiCap funding applies.
+
+PERSONNEL SUSTAINABILITY — DEFINITIVE THRESHOLDS:
+- Below 72% of revenue: UNDERSTAFFED — the school likely does not have enough staff to deliver quality programming. Flag this as a risk to academic outcomes and authorizer scrutiny.
+- 72-78% of revenue: HEALTHY — this is the target range for WA charter schools.
+- 78-80% of revenue: WATCH — still sustainable but limited margin for unexpected costs.
+- Above 80% of revenue: UNSUSTAINABLE — the school cannot absorb enrollment fluctuations, mid-year hires, or benefit cost increases. Flag as a serious financial risk.
+
+CASH RESERVE — DEFINITIVE THRESHOLDS:
+- 60+ days: HEALTHY — meets WA Charter School Commission Financial Performance Framework standards.
+- 45-59 days: ADEQUATE — above minimum but limited cushion.
+- 30-44 days: WATCH — below the Commission's preferred threshold. Flag for board awareness.
+- 15-29 days: CONCERN — at risk of not making payroll during low apportionment months (November, May).
+- Below 15 days: CRISIS — immediate action required. The school may not be able to meet payroll obligations.
 
 CASH FLOW KNOWLEDGE:
-- Cash reserve standards: 60+ days healthy, below 45 days watch, below 30 days concern, below 15 days crisis
 - September creates an early-year cash gap — payroll runs before first apportionment arrives
 - November and May low payments are predictable pressure points
 - New schools should plan for $0 starting cash from apportionment — they need startup capital to bridge the gap
 
-CATEGORICAL FUND COMPLIANCE:
+PERSONNEL KNOWLEDGE:
+- Full cost of hire = base salary × 1.30 (covers SEBB benefits + FICA at 7.65%)
+- WA charter schools must track certificated vs classified staff separately for OSPI reporting
 - Supplement Not Supplant: federal categorical funds must supplement, not replace, state/local funding
-- Title I: schoolwide programs (40%+ poverty) have more flexibility; targeted assistance is more restrictive
-- IDEA: Maintenance of Effort required — must spend at least as much from local funds as prior year
 - Time and effort documentation required for staff paid from categorical funds
 - Staff salary braiding (splitting across multiple funding sources) is legal and encouraged but requires documentation
 
 AUTHORIZER FEE:
-- WA Charter School Commission charges 3% of state apportionment as the authorizer fee
-- This is a fixed, non-negotiable cost that must be included in every budget model`
+- The WA Charter School Commission charges exactly 3% of state apportionment revenue. This is contractual and non-negotiable. State it as a fact, never as "typically" or "approximately."
+
+COMMUNICATION RULE FOR THRESHOLDS:
+When the school's data clearly places them above or below a threshold, state it definitively. Do NOT use words like "likely," "probably," "may qualify," or "could be eligible" when the data is clear. Examples:
+- WRONG: "With 50% FRL, you're likely Title I eligible"
+- RIGHT: "Your school qualifies for a Title I Schoolwide program. At 50% FRL, you exceed the 40% federal threshold, which means Title I funds can support programs benefiting all students — not just individually identified students."
+- WRONG: "Personnel at 35% may indicate understaffing"
+- RIGHT: "Your personnel costs at 35% of revenue are well below the 72% minimum for a healthy WA charter school. This indicates significant understaffing that will draw scrutiny from the Charter School Commission during application review."`
 
 interface SchoolContext {
   schoolName?: string
@@ -80,7 +113,9 @@ interface SchoolContext {
   reserveDays?: number
   personnelPct?: number
   breakEvenEnrollment?: number
+  revenueBreakdown?: string
   staffingList?: string
+  operationsBreakdown?: string
 }
 
 function buildSchoolContextPrompt(ctx: SchoolContext): string {
@@ -108,6 +143,15 @@ Financial Assumptions:
 - Benefits load: ${ctx.benefitsLoadPct ?? 'Not set'}%
 - Authorizer fee: ${ctx.authorizerFeePct ?? 'Not set'}%
 
+Revenue Breakdown:
+${ctx.revenueBreakdown || 'No revenue data available'}
+
+Staffing Plan:
+${ctx.staffingList || 'No positions entered'}
+
+Operations Budget:
+${ctx.operationsBreakdown || 'No operations data available'}
+
 Year 1 Budget Summary:
 - Total Projected Revenue: $${ctx.totalRevenue?.toLocaleString() ?? 'Not set'}
 - Total Personnel Cost: $${ctx.totalPersonnel?.toLocaleString() ?? 'Not set'}
@@ -117,10 +161,7 @@ Year 1 Budget Summary:
 - Personnel as % of Revenue: ${ctx.personnelPct ?? 'Not set'}%
 - Break-even enrollment: ${ctx.breakEvenEnrollment ?? 'Not set'} students
 
-Staffing Plan:
-${ctx.staffingList || 'No positions entered'}
-
-Use this context to ground every response in this school's actual model. Never provide generic advice when school-specific data is available.`
+Use this context to ground every response in this school's actual model. Never provide generic advice when school-specific data is available. The revenue breakdown above shows the EXACT categorical grant amounts already calculated in this school's financial model — reference these specific amounts, do not say grants are missing or not reflected.`
 }
 
 export async function POST(req: NextRequest) {

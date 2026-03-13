@@ -4,6 +4,15 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import type { FinancialAssumptions } from '@/lib/types'
 import { getAssumptions } from '@/lib/types'
+import {
+  calcRevenue,
+  calcLevyEquity,
+  calcTitleI,
+  calcIDEA,
+  calcLAP,
+  calcTBIP,
+  calcHiCap,
+} from '@/lib/calculations'
 
 interface Message {
   role: 'user' | 'assistant' | 'system'
@@ -39,46 +48,83 @@ function buildSchoolContext(
   projections: { subcategory: string; amount: number; is_revenue: boolean }[]
 ) {
   const assumptions = getAssumptions(profile.financial_assumptions)
+  const enroll = profile.target_enrollment_y1
+  const benefitsMultiplier = 1 + assumptions.benefits_load_pct / 100
 
-  const totalRevenue = projections
-    .filter((p) => p.is_revenue)
-    .reduce((s, p) => s + p.amount, 0)
+  // --- Revenue breakdown (calculated from formulas, matching Revenue tab) ---
+  const stateApportionment = calcRevenue(enroll, assumptions.per_pupil_rate)
+  const levyEquity = calcLevyEquity(enroll, assumptions.levy_equity_per_student)
+  const titleI = calcTitleI(enroll, profile.pct_frl)
+  const idea = calcIDEA(enroll, profile.pct_iep)
+  const lap = calcLAP(enroll, profile.pct_frl)
+  const tbip = calcTBIP(enroll, profile.pct_ell)
+  const hicap = calcHiCap(enroll, profile.pct_hicap)
+  const totalRevenue = stateApportionment + levyEquity + titleI + idea + lap + tbip + hicap
 
+  const titleIEligibility = profile.pct_frl >= 40 ? 'SCHOOLWIDE PROGRAM ELIGIBLE (FRL ≥ 40%)' : 'TARGETED ASSISTANCE ONLY (FRL < 40%)'
+
+  const revenueLines = [
+    `- State Apportionment: $${stateApportionment.toLocaleString()} (${enroll} students × $${assumptions.per_pupil_rate.toLocaleString()})`,
+    `- Levy Equity: $${levyEquity.toLocaleString()} (${enroll} students × $${assumptions.levy_equity_per_student.toLocaleString()})`,
+  ]
+  if (titleI > 0) revenueLines.push(`- Title I: $${titleI.toLocaleString()} (${enroll} × ${profile.pct_frl}% FRL × $880) — ${titleIEligibility}`)
+  if (idea > 0) revenueLines.push(`- IDEA: $${idea.toLocaleString()} (${enroll} × ${profile.pct_iep}% IEP × $2,200)`)
+  if (lap > 0) revenueLines.push(`- LAP: $${lap.toLocaleString()} (${enroll} × ${profile.pct_frl}% FRL × $400)`)
+  if (tbip > 0) revenueLines.push(`- TBIP: $${tbip.toLocaleString()} (${enroll} × ${profile.pct_ell}% ELL × $1,800)`)
+  if (hicap > 0) revenueLines.push(`- HiCap: $${hicap.toLocaleString()} (${enroll} × ${profile.pct_hicap}% HiCap × $500)`)
+  revenueLines.push(`- Total Revenue: $${totalRevenue.toLocaleString()}`)
+
+  const revenueBreakdown = revenueLines.join('\n')
+
+  // --- Staffing breakdown with benefits ---
+  const totalFte = positions.reduce((s, p) => s + p.fte, 0)
   const totalPersonnel = positions.reduce(
-    (s, p) => s + Math.round(p.annual_salary * p.fte * (1 + assumptions.benefits_load_pct / 100)),
+    (s, p) => s + Math.round(p.annual_salary * p.fte * benefitsMultiplier),
     0
   )
 
-  const totalOperations = projections
-    .filter((p) => !p.is_revenue && p.subcategory !== 'Total Personnel')
-    .reduce((s, p) => s + p.amount, 0)
+  const staffingList = positions.length > 0
+    ? positions
+        .map((p) => {
+          const totalCost = Math.round(p.annual_salary * p.fte * benefitsMultiplier)
+          return `- ${p.title}: ${p.fte} FTE at $${p.annual_salary.toLocaleString()} (${p.category}) — Total cost with benefits: $${totalCost.toLocaleString()}`
+        })
+        .join('\n') + `\nTotal Personnel: $${totalPersonnel.toLocaleString()} (${totalFte} FTE)`
+    : 'No positions entered'
 
+  // --- Operations breakdown ---
+  const opsProjections = projections.filter((p) => !p.is_revenue && p.subcategory !== 'Total Personnel')
+  const totalOperations = opsProjections.reduce((s, p) => s + p.amount, 0)
+
+  const operationsBreakdown = opsProjections.length > 0
+    ? opsProjections
+        .map((p) => {
+          const note = p.subcategory === 'Authorizer Fee'
+            ? ` (${assumptions.authorizer_fee_pct}% of state apportionment)`
+            : ''
+          return `- ${p.subcategory}: $${p.amount.toLocaleString()}${note}`
+        })
+        .join('\n') + `\nTotal Operations: $${totalOperations.toLocaleString()}`
+    : 'No operations expenses entered'
+
+  // --- Summary metrics ---
   const totalExpenses = totalPersonnel + totalOperations
   const netPosition = totalRevenue - totalExpenses
   const dailyCost = totalExpenses > 0 ? totalExpenses / 365 : 1
   const reserveDays = Math.round(netPosition / dailyCost)
   const personnelPct = totalRevenue > 0 ? Math.round((totalPersonnel / totalRevenue) * 100) : 0
 
-  // Break-even: revenue per student vs cost per student
-  const revenuePerStudent = profile.target_enrollment_y1 > 0
-    ? totalRevenue / profile.target_enrollment_y1
-    : 0
+  const revenuePerStudent = enroll > 0 ? totalRevenue / enroll : 0
   const breakEvenEnrollment = revenuePerStudent > 0
     ? Math.ceil(totalExpenses / revenuePerStudent)
     : 0
-
-  const staffingList = positions.length > 0
-    ? positions
-        .map((p) => `${p.title}: ${p.fte} FTE at $${p.annual_salary.toLocaleString()} (${p.category})`)
-        .join('\n')
-    : 'No positions entered'
 
   return {
     schoolName,
     gradeConfig: profile.grade_config,
     plannedOpenYear: profile.planned_open_year,
     region: profile.region,
-    targetEnrollmentY1: profile.target_enrollment_y1,
+    targetEnrollmentY1: enroll,
     targetEnrollmentY2: profile.target_enrollment_y2,
     targetEnrollmentY3: profile.target_enrollment_y3,
     targetEnrollmentY4: profile.target_enrollment_y4,
@@ -97,7 +143,9 @@ function buildSchoolContext(
     reserveDays,
     personnelPct,
     breakEvenEnrollment,
+    revenueBreakdown,
     staffingList,
+    operationsBreakdown,
   }
 }
 
