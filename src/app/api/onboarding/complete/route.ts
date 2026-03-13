@@ -197,6 +197,16 @@ export async function POST(request: Request) {
   }
   console.log('[onboarding/complete] insert budget_projections succeeded')
 
+  // Mark onboarding as complete
+  const { error: onboardingError } = await admin
+    .from('school_profiles')
+    .update({ onboarding_complete: true })
+    .eq('school_id', schoolId)
+
+  if (onboardingError) {
+    console.error('[onboarding/complete] update onboarding_complete failed:', JSON.stringify(onboardingError))
+  }
+
   console.log('[onboarding/complete] all steps succeeded, returning success')
   return NextResponse.json({ success: true })
 }

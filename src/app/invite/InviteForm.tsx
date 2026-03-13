@@ -12,7 +12,7 @@ interface Invitation {
   organization_id: string
 }
 
-export default function InviteForm({ invitation }: { invitation: Invitation }) {
+export default function InviteForm({ invitation, schoolName }: { invitation: Invitation; schoolName?: string }) {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
@@ -63,7 +63,7 @@ export default function InviteForm({ invitation }: { invitation: Invitation }) {
 
       await supabase
         .from('invitations')
-        .update({ status: 'accepted' })
+        .update({ accepted: true, accepted_at: new Date().toISOString() })
         .eq('id', invitation.id)
 
       if (invitation.role === 'school_ceo') {
@@ -87,8 +87,13 @@ export default function InviteForm({ invitation }: { invitation: Invitation }) {
           </div>
 
           <div className="bg-slate-50 rounded-lg p-4 mb-6">
+            {schoolName && (
+              <p className="text-sm text-slate-700 font-medium mb-1">
+                You&apos;ve been invited to plan finances for {schoolName}
+              </p>
+            )}
             <p className="text-sm text-slate-600">
-              You&apos;ve been invited as <span className="font-medium">{invitation.role.replace('_', ' ')}</span>
+              Role: <span className="font-medium">{invitation.role.replace('_', ' ')}</span>
             </p>
             <p className="text-sm text-slate-500 mt-1">{invitation.email}</p>
           </div>

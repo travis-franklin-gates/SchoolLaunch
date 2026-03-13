@@ -29,7 +29,7 @@ export default async function InvitePage({
     .from('invitations')
     .select('id, email, role, school_id, organization_id')
     .eq('token', token)
-    .eq('status', 'pending')
+    .eq('accepted', false)
     .single()
 
   if (error || !invitation) {
@@ -39,7 +39,7 @@ export default async function InvitePage({
           <div className="bg-white rounded-xl shadow-lg p-8 text-center">
             <h1 className="text-2xl font-bold text-slate-800 mb-4">SchoolLaunch</h1>
             <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg">
-              Invalid or expired invitation.
+              This invitation is invalid or has expired.
             </div>
           </div>
         </div>
@@ -47,5 +47,16 @@ export default async function InvitePage({
     )
   }
 
-  return <InviteForm invitation={invitation} />
+  // Also load the school name for context
+  let schoolName = ''
+  if (invitation.school_id) {
+    const { data: school } = await supabase
+      .from('schools')
+      .select('name')
+      .eq('id', invitation.school_id)
+      .single()
+    schoolName = school?.name || ''
+  }
+
+  return <InviteForm invitation={invitation} schoolName={schoolName} />
 }
