@@ -197,18 +197,6 @@ export async function POST(request: Request) {
   }
   console.log('[onboarding/complete] insert budget_projections succeeded')
 
-  // --- Mark onboarding complete only after all inserts succeeded (fixes G3) ---
-  console.log('[onboarding/complete] marking onboarding complete')
-  const { error: completeError } = await admin.from('school_profiles').upsert({
-    school_id: schoolId,
-    onboarding_complete: true,
-  }, { onConflict: 'school_id' })
-
-  if (completeError) {
-    console.error('[onboarding/complete] upsert onboarding_complete failed:', JSON.stringify(completeError))
-    return NextResponse.json({ error: 'Failed to mark onboarding complete', detail: completeError }, { status: 500 })
-  }
-
   console.log('[onboarding/complete] all steps succeeded, returning success')
   return NextResponse.json({ success: true })
 }
