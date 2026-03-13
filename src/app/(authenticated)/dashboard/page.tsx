@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
+import { computeMultiYearDetailed, computeCashFlow } from '@/lib/budgetEngine'
+import { calcRevenue } from '@/lib/calculations'
 
 function fmt(n: number) {
   if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
@@ -41,13 +43,15 @@ function HealthTile({ label, value, subtitle, colorClass }: {
 
 export default function DashboardPage() {
   const {
-    schoolData: { profile, projections, loading },
+    schoolData: { schoolName, profile, positions, projections, loading },
+    assumptions,
     baseSummary,
     scenario,
     scenarioInputs,
     scenarioSummary,
     isModified,
     currentSummary: current,
+    baseApportionment,
     conservativeMode,
     conservativeSummary,
     setConservativeMode,
@@ -56,6 +60,15 @@ export default function DashboardPage() {
   } = useScenario()
 
   const [exporting, setExporting] = useState(false)
+
+  const multiYear = useMemo(
+    () => computeMultiYearDetailed(profile, positions, projections, assumptions, 0),
+    [profile, positions, projections, assumptions]
+  )
+  const cashFlowData = useMemo(
+    () => computeCashFlow(baseSummary, baseApportionment, 0),
+    [baseSummary, baseApportionment]
+  )
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
@@ -89,119 +102,38 @@ export default function DashboardPage() {
   async function handleExport() {
     setExporting(true)
     try {
-      const { default: jsPDF } = await import('jspdf')
-      const { default: autoTable } = await import('jspdf-autotable')
+      const payload = {
+        schoolName,
+        profile,
+        assumptions,
+        positions,
+        projections,
+        baseSummary,
+        conservativeSummary,
+        cashFlow: cashFlowData,
+        multiYear,
+      }
 
-      const doc = new jsPDF()
-      const pageW = doc.internal.pageSize.getWidth()
-
-      // Cover
-      doc.setFontSize(28)
-      doc.setTextColor(30, 41, 59)
-      doc.text(profile.grade_config ? `${profile.grade_config}` : '', pageW / 2, 60, { align: 'center' })
-      doc.setFontSize(22)
-      doc.text('Financial Plan', pageW / 2, 75, { align: 'center' })
-      doc.setFontSize(14)
-      doc.text('Year 1 through Year 4', pageW / 2, 88, { align: 'center' })
-      doc.setFontSize(10)
-      doc.setTextColor(100, 116, 139)
-      doc.text(`Prepared by SchoolLaunch  |  ${new Date().toLocaleDateString()}`, pageW / 2, 105, { align: 'center' })
-
-      // Revenue page
-      doc.addPage()
-      doc.setFontSize(16)
-      doc.setTextColor(30, 41, 59)
-      doc.text('Revenue Assumptions', 14, 20)
-
-      const revenueRows = projections
-        .filter((p) => p.is_revenue)
-        .map((p) => [p.subcategory, fmt(p.amount)])
-      revenueRows.push(['Total Revenue', fmt(baseSummary.totalRevenue)])
-
-      autoTable(doc, {
-        startY: 28,
-        head: [['Revenue Source', 'Amount']],
-        body: revenueRows,
-        theme: 'grid',
-        headStyles: { fillColor: [59, 130, 246] },
+      const res = await fetch('/api/export/narrative', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
 
-      // Personnel page
-      doc.addPage()
-      doc.setFontSize(16)
-      doc.text('Personnel Plan', 14, 20)
-      doc.setFontSize(10)
-      doc.text(`Personnel as % of Revenue: ${baseSummary.personnelPctRevenue.toFixed(1)}%`, 14, 28)
+      if (!res.ok) {
+        console.error('Export failed:', res.status)
+        setExporting(false)
+        return
+      }
 
-      // Operations page
-      doc.addPage()
-      doc.setFontSize(16)
-      doc.text('Operations Budget', 14, 20)
-
-      const opsRows = projections
-        .filter((p) => !p.is_revenue && p.category === 'Operations')
-        .map((p) => [p.subcategory, fmt(p.amount)])
-      opsRows.push(['Total Operations', fmt(baseSummary.totalOperations)])
-
-      autoTable(doc, {
-        startY: 28,
-        head: [['Expense', 'Amount']],
-        body: opsRows,
-        theme: 'grid',
-        headStyles: { fillColor: [59, 130, 246] },
-      })
-
-      doc.setFontSize(10)
-      const opsEndY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable?.finalY || 80
-      doc.text(`Facility cost: ${current.facilityPct.toFixed(1)}% of revenue (target: ≤15%)`, 14, opsEndY + 10)
-
-      // Summary page
-      doc.addPage()
-      doc.setFontSize(16)
-      doc.text('Financial Summary', 14, 20)
-
-      autoTable(doc, {
-        startY: 28,
-        head: [['Metric', 'Value']],
-        body: [
-          ['Total Revenue', fmt(baseSummary.totalRevenue)],
-          ['Total Personnel', fmt(baseSummary.totalPersonnel)],
-          ['Total Operations', fmt(baseSummary.totalOperations)],
-          ['Net Position', fmt(baseSummary.netPosition)],
-          ['Reserve Days', `${baseSummary.reserveDays} days`],
-          ['Personnel % of Revenue', `${baseSummary.personnelPctRevenue.toFixed(1)}%`],
-          ['Break-Even Enrollment', `${baseSummary.breakEvenEnrollment} students`],
-          ['Facility % of Revenue', `${baseSummary.facilityPct.toFixed(1)}%`],
-        ],
-        theme: 'grid',
-        headStyles: { fillColor: [59, 130, 246] },
-      })
-
-      // Conservative sensitivity
-      doc.addPage()
-      doc.setFontSize(16)
-      doc.text('Sensitivity Analysis: 90% Enrollment', 14, 20)
-      doc.setFontSize(10)
-      doc.setTextColor(100, 116, 139)
-      doc.text('Industry best practice: budget for revenue at 90% of projected enrollment.', 14, 28)
-      doc.text(`Revenue enrollment: ${conservativeEnrollment} students / Expense enrollment: ${profile.target_enrollment_y1} students`, 14, 35)
-
-      doc.setTextColor(30, 41, 59)
-      autoTable(doc, {
-        startY: 42,
-        head: [['Metric', 'Base Case', 'Conservative (90%)']],
-        body: [
-          ['Total Revenue', fmt(baseSummary.totalRevenue), fmt(conservativeSummary.totalRevenue)],
-          ['Net Position', fmt(baseSummary.netPosition), fmt(conservativeSummary.netPosition)],
-          ['Reserve Days', `${baseSummary.reserveDays}`, `${conservativeSummary.reserveDays}`],
-        ],
-        theme: 'grid',
-        headStyles: { fillColor: [59, 130, 246] },
-      })
-
-      doc.save('SchoolLaunch-Budget-Narrative.pdf')
+      const html = await res.text()
+      const newTab = window.open('', '_blank')
+      if (newTab) {
+        newTab.document.write(html)
+        newTab.document.close()
+      }
     } catch (err) {
-      console.error('PDF export failed:', err)
+      console.error('Export failed:', err)
     }
     setExporting(false)
   }
@@ -437,7 +369,7 @@ export default function DashboardPage() {
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
         </svg>
-        {exporting ? 'Generating...' : 'Export Budget Narrative (PDF)'}
+        {exporting ? 'Generating your financial plan...' : 'Export Budget Narrative'}
       </button>
     </div>
   )
