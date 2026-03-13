@@ -1,18 +1,22 @@
-const PER_PUPIL_RATE = 15000
-const LEVY_EQUITY_RATE = 1500
-const BENEFITS_RATE = 0.30
-const AUTHORIZER_FEE_RATE = 0.03
+import type { FinancialAssumptions } from './types'
+import { DEFAULT_ASSUMPTIONS } from './types'
 
-export function calcRevenue(enrollment: number) {
-  return enrollment * PER_PUPIL_RATE
+// Re-export defaults for backward compatibility
+const PER_PUPIL_RATE = DEFAULT_ASSUMPTIONS.per_pupil_rate
+const LEVY_EQUITY_RATE = DEFAULT_ASSUMPTIONS.levy_equity_per_student
+const BENEFITS_RATE = DEFAULT_ASSUMPTIONS.benefits_load_pct / 100
+const AUTHORIZER_FEE_RATE = DEFAULT_ASSUMPTIONS.authorizer_fee_pct / 100
+
+export function calcRevenue(enrollment: number, perPupilRate: number = PER_PUPIL_RATE) {
+  return enrollment * perPupilRate
 }
 
-export function calcLevyEquity(enrollment: number) {
-  return enrollment * LEVY_EQUITY_RATE
+export function calcLevyEquity(enrollment: number, levyRate: number = LEVY_EQUITY_RATE) {
+  return enrollment * levyRate
 }
 
-export function calcTotalBaseRevenue(enrollment: number) {
-  return calcRevenue(enrollment) + calcLevyEquity(enrollment)
+export function calcTotalBaseRevenue(enrollment: number, perPupilRate: number = PER_PUPIL_RATE, levyRate: number = LEVY_EQUITY_RATE) {
+  return calcRevenue(enrollment, perPupilRate) + calcLevyEquity(enrollment, levyRate)
 }
 
 export function calcTitleI(enrollment: number, pctFrl: number) {
@@ -45,12 +49,12 @@ export function calcAllGrants(enrollment: number, pctFrl: number, pctIep: number
   }
 }
 
-export function calcBenefits(salary: number) {
-  return Math.round(salary * BENEFITS_RATE)
+export function calcBenefits(salary: number, benefitsRate: number = BENEFITS_RATE) {
+  return Math.round(salary * benefitsRate)
 }
 
-export function calcAuthorizerFee(enrollment: number) {
-  return Math.round(calcRevenue(enrollment) * AUTHORIZER_FEE_RATE)
+export function calcAuthorizerFee(enrollment: number, feeRate: number = AUTHORIZER_FEE_RATE, perPupilRate: number = PER_PUPIL_RATE) {
+  return Math.round(calcRevenue(enrollment, perPupilRate) * feeRate)
 }
 
 export function calcSections(enrollment: number, classSize: number) {
@@ -59,6 +63,20 @@ export function calcSections(enrollment: number, classSize: number) {
 
 export function calcEnrollmentGrowth(base: number, rate: number, year: number) {
   return Math.round(base * Math.pow(1 + rate / 100, year - 1))
+}
+
+export function calcTotalRevenue(
+  enrollment: number,
+  pctFrl: number,
+  pctIep: number,
+  pctEll: number,
+  pctHicap: number,
+  assumptions: FinancialAssumptions
+) {
+  const apportionment = calcRevenue(enrollment, assumptions.per_pupil_rate)
+  const levyEquity = calcLevyEquity(enrollment, assumptions.levy_equity_per_student)
+  const grants = calcAllGrants(enrollment, pctFrl, pctIep, pctEll, pctHicap)
+  return apportionment + levyEquity + grants.titleI + grants.idea + grants.lap + grants.tbip + grants.hicap
 }
 
 export { PER_PUPIL_RATE, LEVY_EQUITY_RATE, BENEFITS_RATE, AUTHORIZER_FEE_RATE }

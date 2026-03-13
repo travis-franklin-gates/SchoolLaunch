@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSchoolData } from '@/lib/useSchoolData'
+import { useScenario } from '@/lib/ScenarioContext'
 import { calcAuthorizerFee } from '@/lib/calculations'
 import { createClient } from '@/lib/supabase/client'
 
@@ -16,7 +16,11 @@ interface OpsRow {
 }
 
 export default function OperationsPage() {
-  const { schoolId, profile, projections, loading } = useSchoolData()
+  const {
+    schoolData: { schoolId, profile, projections, loading },
+    assumptions,
+    isModified,
+  } = useScenario()
   const [rows, setRows] = useState<OpsRow[]>([])
   const [saving, setSaving] = useState(false)
   const supabase = createClient()
@@ -39,12 +43,12 @@ export default function OperationsPage() {
   function getPerPupilBenchmark(lineItem: string, enr: number): string {
     const benchmarks: Record<string, string> = {
       'Facilities': 'Varies by market',
-      'Supplies & Materials': `$200/student = ${fmt(200 * enr)}`,
-      'Contracted Services': `$150/student = ${fmt(150 * enr)}`,
-      'Technology': `$180/student = ${fmt(180 * enr)}`,
-      'Authorizer Fee': '3% of state apportionment',
-      'Insurance': '$18,000/yr typical',
-      'Misc/Contingency': '2% of total expenses typical',
+      'Supplies & Materials': `$${assumptions.supplies_per_student}/student = ${fmt(assumptions.supplies_per_student * enr)}`,
+      'Contracted Services': `$${assumptions.contracted_services_per_student}/student = ${fmt(assumptions.contracted_services_per_student * enr)}`,
+      'Technology': `$${assumptions.technology_per_student}/student = ${fmt(assumptions.technology_per_student * enr)}`,
+      'Authorizer Fee': `${assumptions.authorizer_fee_pct}% of state apportionment`,
+      'Insurance': `$${assumptions.insurance_annual.toLocaleString()}/yr typical`,
+      'Misc/Contingency': `${assumptions.contingency_pct}% of total expenses typical`,
     }
     return benchmarks[lineItem] || ''
   }
@@ -81,6 +85,12 @@ export default function OperationsPage() {
           <p className="text-sm text-slate-500 mt-1">Non-personnel expenses for Year 1. Per-pupil benchmarks shown for reference.</p>
         </div>
       </div>
+
+      {isModified && (
+        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
+          Scenario active — showing base case operations. Adjust amounts here to update the base case budget.
+        </div>
+      )}
 
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-4">
         <table className="w-full text-sm">

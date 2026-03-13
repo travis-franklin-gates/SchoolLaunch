@@ -110,7 +110,7 @@ export default function DashboardPage() {
               type="range"
               min={Math.round(profile.target_enrollment_y1 * 0.5)}
               max={Math.round(profile.target_enrollment_y1 * 1.5)}
-              step={5}
+              step={1}
               value={scenarioInputs.enrollment}
               onChange={(e) => updateScenario({ enrollment: Number(e.target.value) })}
               className="w-full accent-blue-600"

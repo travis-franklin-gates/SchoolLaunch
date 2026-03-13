@@ -9,9 +9,12 @@ import {
   type BudgetSummary,
 } from '@/lib/budgetEngine'
 import { calcRevenue } from '@/lib/calculations'
+import type { FinancialAssumptions } from '@/lib/types'
+import { getAssumptions } from '@/lib/types'
 
 export interface ScenarioContextType {
   schoolData: SchoolData
+  assumptions: FinancialAssumptions
   baseSummary: BudgetSummary
   scenario: ScenarioInputs | null
   scenarioInputs: ScenarioInputs
@@ -36,9 +39,11 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
   const schoolData = useSchoolData()
   const { profile, positions, projections } = schoolData
 
+  const assumptions = useMemo(() => getAssumptions(profile.financial_assumptions), [profile.financial_assumptions])
+
   const baseSummary = useMemo(
-    () => computeSummaryFromProjections(projections, positions),
-    [projections, positions]
+    () => computeSummaryFromProjections(projections, positions, assumptions),
+    [projections, positions, assumptions]
   )
 
   const baseFacilities = projections.find((p) => p.subcategory === 'Facilities' && !p.is_revenue)?.amount || 0
@@ -58,14 +63,14 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
   const scenarioInputs = scenario || baseInputs
 
   const scenarioSummary = useMemo(
-    () => computeScenario(scenarioInputs, profile, positions, projections),
-    [scenarioInputs, profile, positions, projections]
+    () => computeScenario(scenarioInputs, profile, positions, projections, assumptions),
+    [scenarioInputs, profile, positions, projections, assumptions]
   )
 
   const isModified = scenario !== null
 
-  const baseApportionment = calcRevenue(profile.target_enrollment_y1)
-  const scenarioApportionment = calcRevenue(scenarioInputs.enrollment)
+  const baseApportionment = calcRevenue(profile.target_enrollment_y1, assumptions.per_pupil_rate)
+  const scenarioApportionment = calcRevenue(scenarioInputs.enrollment, assumptions.per_pupil_rate)
 
   function updateScenario(partial: Partial<ScenarioInputs>) {
     setScenario((prev) => ({
@@ -82,6 +87,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
 
   const value: ScenarioContextType = {
     schoolData,
+    assumptions,
     baseSummary,
     scenario,
     scenarioInputs,

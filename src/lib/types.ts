@@ -1,3 +1,36 @@
+export interface FinancialAssumptions {
+  per_pupil_rate: number
+  levy_equity_per_student: number
+  benefits_load_pct: number
+  authorizer_fee_pct: number
+  salary_escalator_pct: number
+  ops_escalator_pct: number
+  supplies_per_student: number
+  contracted_services_per_student: number
+  technology_per_student: number
+  insurance_annual: number
+  contingency_pct: number
+}
+
+export const DEFAULT_ASSUMPTIONS: FinancialAssumptions = {
+  per_pupil_rate: 15000,
+  levy_equity_per_student: 1500,
+  benefits_load_pct: 30,
+  authorizer_fee_pct: 3,
+  salary_escalator_pct: 2.5,
+  ops_escalator_pct: 2,
+  supplies_per_student: 200,
+  contracted_services_per_student: 150,
+  technology_per_student: 180,
+  insurance_annual: 18000,
+  contingency_pct: 2,
+}
+
+export function getAssumptions(raw: Partial<FinancialAssumptions> | null | undefined): FinancialAssumptions {
+  if (!raw) return { ...DEFAULT_ASSUMPTIONS }
+  return { ...DEFAULT_ASSUMPTIONS, ...raw }
+}
+
 export interface SchoolProfile {
   school_id: string
   region: string
@@ -13,6 +46,7 @@ export interface SchoolProfile {
   pct_ell: number
   pct_hicap: number
   onboarding_complete: boolean
+  financial_assumptions?: Partial<FinancialAssumptions> | null
 }
 
 export interface StaffingPosition {

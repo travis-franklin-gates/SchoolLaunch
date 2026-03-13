@@ -10,8 +10,6 @@ import {
   calcLAP,
   calcTBIP,
   calcHiCap,
-  PER_PUPIL_RATE,
-  LEVY_EQUITY_RATE,
 } from '@/lib/calculations'
 
 function fmt(n: number) {
@@ -29,6 +27,7 @@ interface RevenueRow {
 export default function RevenuePage() {
   const {
     schoolData: { profile, loading },
+    assumptions,
     isModified,
     scenarioInputs,
   } = useScenario()
@@ -36,20 +35,22 @@ export default function RevenuePage() {
 
   const baseEnrollment = profile.target_enrollment_y1
   const scenarioEnrollment = scenarioInputs.enrollment
+  const ppr = assumptions.per_pupil_rate
+  const ler = assumptions.levy_equity_per_student
 
   const rows: RevenueRow[] = useMemo(() => [
     {
       label: 'State Apportionment',
-      formula: `${baseEnrollment} students x $${PER_PUPIL_RATE.toLocaleString()}/student`,
-      calculated: calcRevenue(baseEnrollment),
-      scenarioCalc: calcRevenue(scenarioEnrollment),
+      formula: `${baseEnrollment} students x $${ppr.toLocaleString()}/student`,
+      calculated: calcRevenue(baseEnrollment, ppr),
+      scenarioCalc: calcRevenue(scenarioEnrollment, ppr),
       override: overrides['State Apportionment'] ?? null,
     },
     {
       label: 'Levy Equity',
-      formula: `${baseEnrollment} students x $${LEVY_EQUITY_RATE.toLocaleString()}/student`,
-      calculated: calcLevyEquity(baseEnrollment),
-      scenarioCalc: calcLevyEquity(scenarioEnrollment),
+      formula: `${baseEnrollment} students x $${ler.toLocaleString()}/student`,
+      calculated: calcLevyEquity(baseEnrollment, ler),
+      scenarioCalc: calcLevyEquity(scenarioEnrollment, ler),
       override: overrides['Levy Equity'] ?? null,
     },
     {
@@ -89,7 +90,7 @@ export default function RevenuePage() {
       scenarioCalc: calcHiCap(scenarioEnrollment, profile.pct_hicap),
       override: overrides['HiCap'] ?? null,
     },
-  ], [baseEnrollment, scenarioEnrollment, profile, overrides])
+  ], [baseEnrollment, scenarioEnrollment, profile, overrides, ppr, ler])
 
   const totalBase = rows.reduce((sum, r) => sum + (r.override ?? r.calculated), 0)
   const totalScenario = rows.reduce((sum, r) => sum + (r.override ?? r.scenarioCalc), 0)
