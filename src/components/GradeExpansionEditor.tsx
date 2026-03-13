@@ -109,14 +109,20 @@ export default function GradeExpansionEditor({
     [plan, retentionRate]
   )
 
-  // Grades available to assign (in buildout, not in opening, not yet assigned to any year)
-  const unassignedGrades = useMemo(() => {
-    const openSet = new Set(openingGrades)
-    const assigned = new Set<string>()
-    for (const grades of yearNewGrades.values()) {
-      for (const g of grades) assigned.add(g)
+  // For each year, compute which buildout grades are NOT yet served (from opening + prior additions)
+  const availableByYear = useMemo(() => {
+    const map = new Map<number, string[]>()
+    const served = new Set(openingGrades)
+    for (let year = 2; year <= 5; year++) {
+      // Add grades assigned to prior years into served set
+      const priorNew = yearNewGrades.get(year - 1) || []
+      for (const g of priorNew) served.add(g)
+      // Available = buildout grades not yet served and not assigned to this year
+      const thisYearAssigned = new Set(yearNewGrades.get(year) || [])
+      const available = sortGrades(buildoutGrades.filter((g) => !served.has(g) && !thisYearAssigned.has(g)))
+      map.set(year, available)
     }
-    return sortGrades(buildoutGrades.filter((g) => !openSet.has(g) && !assigned.has(g)))
+    return map
   }, [openingGrades, buildoutGrades, yearNewGrades])
 
   // Notify parent on changes
@@ -151,15 +157,8 @@ export default function GradeExpansionEditor({
       const next = new Map(prev)
       const current = next.get(year) || []
       if (current.includes(grade)) {
-        // Remove from this year
         next.set(year, current.filter((g) => g !== grade))
       } else {
-        // Remove from any other year first
-        for (const [y, grades] of next) {
-          if (y !== year && grades.includes(grade)) {
-            next.set(y, grades.filter((g) => g !== grade))
-          }
-        }
         next.set(year, sortGrades([...current, grade]))
       }
       return next
@@ -326,8 +325,8 @@ export default function GradeExpansionEditor({
                               +{g}
                             </button>
                           ))}
-                          {/* Unassigned grades — gray outline, clickable to add */}
-                          {unassignedGrades.map((g) => (
+                          {/* Available grades — gray outline, clickable to add */}
+                          {(availableByYear.get(e.year) || []).map((g) => (
                             <button
                               key={g}
                               type="button"
@@ -338,7 +337,7 @@ export default function GradeExpansionEditor({
                               {g}
                             </button>
                           ))}
-                          {yearAssigned.length === 0 && unassignedGrades.length === 0 && (
+                          {yearAssigned.length === 0 && (availableByYear.get(e.year) || []).length === 0 && (
                             <span className="text-slate-400 text-xs">—</span>
                           )}
                         </div>
