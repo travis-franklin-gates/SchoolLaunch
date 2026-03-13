@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { buildSchoolContextString } from '@/lib/buildSchoolContext'
+import { computeMultiYearDetailed, computeFPFScorecard } from '@/lib/budgetEngine'
 import Link from 'next/link'
 
 interface AgentResult {
@@ -68,7 +69,20 @@ function SkeletonCard() {
 export default function AdvisoryPage() {
   const {
     schoolData: { schoolName, profile, positions, projections, gradeExpansionPlan, loading },
+    assumptions,
+    conservativeMode,
   } = useScenario()
+
+  const multiYear = useMemo(
+    () => computeMultiYearDetailed(profile, positions, projections, assumptions, 0, gradeExpansionPlan),
+    [profile, positions, projections, assumptions, gradeExpansionPlan]
+  )
+  const startupFunding = profile.startup_funding?.reduce((s: number, f: { amount: number }) => s + f.amount, 0) || 0
+  const preOpenCash = Math.round(startupFunding * 0.6)
+  const scorecard = useMemo(
+    () => computeFPFScorecard(multiYear, preOpenCash, conservativeMode),
+    [multiYear, preOpenCash, conservativeMode]
+  )
 
   const [data, setData] = useState<AdvisoryData | null>(null)
   const [fetching, setFetching] = useState(false)
@@ -79,7 +93,7 @@ export default function AdvisoryPage() {
     setFetching(true)
     setError(null)
     try {
-      const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan)
+      const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
       const res = await fetch('/api/advisory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -93,7 +107,7 @@ export default function AdvisoryPage() {
       setError('Failed to generate advisory analysis. Please try again.')
     }
     setFetching(false)
-  }, [schoolName, profile, positions, projections, gradeExpansionPlan, loading])
+  }, [schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard, loading])
 
   useEffect(() => {
     if (!data && !fetching && schoolName && !loading) {

@@ -2,6 +2,7 @@ import type { FinancialAssumptions, SchoolProfile, StaffingPosition, BudgetProje
 import { getAssumptions } from './types'
 import { calcCommissionRevenue, calcAAFTE } from './calculations'
 import { computeExpansionEnrollments, expansionToEnrollmentArray } from './gradeExpansion'
+import type { MultiYearDetailedRow, FPFScorecard } from './budgetEngine'
 
 export function buildSchoolContextString(
   schoolName: string,
@@ -9,6 +10,8 @@ export function buildSchoolContextString(
   positions: StaffingPosition[],
   projections: BudgetProjection[],
   gradeExpansionPlan?: GradeExpansionEntry[],
+  multiYear?: MultiYearDetailedRow[],
+  scorecard?: FPFScorecard,
 ): string {
   const assumptions = getAssumptions(profile.financial_assumptions)
   const enroll = profile.target_enrollment_y1
@@ -73,6 +76,7 @@ ${expansionLines}
 - Year 2: ${profile.target_enrollment_y2} students
 - Year 3: ${profile.target_enrollment_y3} students
 - Year 4: ${profile.target_enrollment_y4} students
+- Year 5: ${profile.target_enrollment_y5 || profile.target_enrollment_y4} students
 - Growth Y1→Y2: ${enroll > 0 ? (((profile.target_enrollment_y2 - enroll) / enroll) * 100).toFixed(0) : 0}%
 - Growth Y2→Y3: ${profile.target_enrollment_y2 > 0 ? (((profile.target_enrollment_y3 - profile.target_enrollment_y2) / profile.target_enrollment_y2) * 100).toFixed(0) : 0}%`
   }
@@ -117,5 +121,12 @@ KEY METRICS:
 - Reserve Days: ${reserveDays}
 - Personnel % of Revenue: ${personnelPct}%
 - Break-Even Enrollment: ${breakEvenEnrollment} students (target: ${enroll})
-- Facility % of Revenue: ${facilityPct}%`
+- Facility % of Revenue: ${facilityPct}%${multiYear && multiYear.length > 0 ? `
+
+MULTI-YEAR SUMMARY (Years 1-${multiYear.length}):
+${multiYear.map((r) => `- Year ${r.year}: Revenue $${r.revenue.total.toLocaleString()}, Expenses $${r.totalExpenses.toLocaleString()}, Net $${r.net.toLocaleString()}, Cumulative $${r.cumulativeNet.toLocaleString()}, ${r.reserveDays} days cash`).join('\n')}` : ''}${scorecard ? `
+
+FPF SCORECARD (Commission Financial Performance Framework):
+${scorecard.measures.map((m) => `- ${m.name}: ${m.values.map((v, i) => `Y${i + 1}=${v === null ? 'N/A' : v}`).join(', ')} | Stage 1: ${m.stage1Target}, Stage 2: ${m.stage2Target} | Status: ${m.statuses.join(', ')}`).join('\n')}
+Overall: ${scorecard.overallStatus} — ${scorecard.overallMessage}` : ''}`
 }

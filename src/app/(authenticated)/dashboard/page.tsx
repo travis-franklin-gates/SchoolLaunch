@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
-import { computeMultiYearDetailed, computeCashFlow } from '@/lib/budgetEngine'
+import { computeMultiYearDetailed, computeCashFlow, computeFPFScorecard, type FPFScorecard } from '@/lib/budgetEngine'
 import { buildSchoolContextString } from '@/lib/buildSchoolContext'
 import Link from 'next/link'
 
@@ -92,6 +92,7 @@ export default function DashboardPage() {
   const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
 
   const [exporting, setExporting] = useState(false)
+  const [commissionExporting, setCommissionExporting] = useState(false)
   const [advisory, setAdvisory] = useState<AdvisoryData | null>(null)
   const [advisoryLoading, setAdvisoryLoading] = useState(false)
 
@@ -104,11 +105,18 @@ export default function DashboardPage() {
     [baseSummary, baseApportionment]
   )
 
+  const startupFunding = profile.startup_funding?.reduce((s: number, f: { amount: number }) => s + f.amount, 0) || 0
+  const preOpenCash = Math.round(startupFunding * 0.6)
+  const scorecard = useMemo(
+    () => computeFPFScorecard(multiYear, preOpenCash, conservativeMode),
+    [multiYear, preOpenCash, conservativeMode]
+  )
+
   const fetchAdvisory = useCallback(async () => {
     if (!schoolName || loading) return
     setAdvisoryLoading(true)
     try {
-      const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan)
+      const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
       const res = await fetch('/api/advisory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -122,7 +130,7 @@ export default function DashboardPage() {
       console.error('Advisory fetch failed:', err)
     }
     setAdvisoryLoading(false)
-  }, [schoolName, profile, positions, projections, gradeExpansionPlan, loading])
+  }, [schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard, loading])
 
   useEffect(() => {
     if (!advisory && !advisoryLoading && schoolName && !loading) {
@@ -165,7 +173,7 @@ export default function DashboardPage() {
       // Ensure advisory data is available for PDF
       let advisoryForPdf = advisory
       if (!advisoryForPdf) {
-        const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan)
+        const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
         const advRes = await fetch('/api/advisory', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -212,6 +220,40 @@ export default function DashboardPage() {
       console.error('Export failed:', err)
     }
     setExporting(false)
+  }
+
+  async function handleCommissionExport() {
+    setCommissionExporting(true)
+    try {
+      const payload = {
+        schoolName,
+        profile,
+        assumptions,
+        positions,
+        projections,
+        multiYear,
+        gradeExpansionPlan,
+        scorecard,
+        startingCash: preOpenCash,
+      }
+      const res = await fetch('/api/export/commission', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (res.ok) {
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${schoolName.replace(/\s+/g, '_')}_Commission_Template.xlsx`
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+    } catch (err) {
+      console.error('Commission export failed:', err)
+    }
+    setCommissionExporting(false)
   }
 
   return (
@@ -282,6 +324,65 @@ export default function DashboardPage() {
           )}
         </div>
       ) : null}
+
+      {/* Commission FPF Scorecard (compact) */}
+      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Commission Financial Performance Scorecard</h2>
+          <div className="flex gap-4 text-[10px] text-slate-400">
+            <span>Years 1-2: <strong className="text-slate-600">Stage 1</strong></span>
+            <span>Years 3-5: <strong className="text-slate-600">Stage 2</strong></span>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-slate-200">
+                <th className="text-left py-2 pr-3 font-semibold text-slate-600 min-w-[160px]">Measure</th>
+                {[1, 3, 5].map((y) => (
+                  <th key={y} className="text-center px-3 py-2 font-semibold text-slate-600 min-w-[70px]">Year {y}</th>
+                ))}
+                <th className="text-center px-3 py-2 font-semibold text-slate-500">Target</th>
+              </tr>
+            </thead>
+            <tbody>
+              {scorecard.measures.filter(m => m.name !== 'DSCR').map((m) => (
+                <tr key={m.name} className="border-b border-slate-100">
+                  <td className="py-2 pr-3 text-slate-600 font-medium">{m.name}</td>
+                  {[0, 2, 4].map((idx) => {
+                    const v = m.values[idx]
+                    const s = m.statuses[idx]
+                    const color = s === 'meets' ? 'bg-emerald-50 text-emerald-700'
+                      : s === 'approaches' ? 'bg-amber-50 text-amber-700'
+                      : s === 'does_not_meet' ? 'bg-red-50 text-red-700'
+                      : 'bg-slate-50 text-slate-400'
+                    const display = v === null ? 'N/A'
+                      : m.name.includes('Margin') || m.name === 'Enrollment Variance' ? `${v}%`
+                      : m.name === 'Cash Flow' || m.name === '3-Year Cash Flow' ? `$${Math.round(v as number / 1000)}K`
+                      : m.name === 'Days of Cash' ? `${v}`
+                      : typeof v === 'number' ? v.toFixed(2) : String(v)
+                    return (
+                      <td key={idx} className="px-3 py-2 text-center">
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${color}`}>{display}</span>
+                      </td>
+                    )
+                  })}
+                  <td className="px-3 py-2 text-center text-slate-400">
+                    {m.stage1Target === m.stage2Target ? m.stage1Target : `${m.stage1Target} / ${m.stage2Target}`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className={`mt-3 px-4 py-2 rounded-lg text-xs font-medium ${
+          scorecard.overallStatus === 'green' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+            : scorecard.overallStatus === 'yellow' ? 'bg-amber-50 text-amber-700 border border-amber-200'
+            : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          {scorecard.overallMessage}
+        </div>
+      </div>
 
       {/* Conservative mode banner */}
       {conservativeMode && (
@@ -501,17 +602,29 @@ export default function DashboardPage() {
         </table>
       </div>
 
-      {/* Export button */}
-      <button
-        onClick={handleExport}
-        disabled={exporting}
-        className="px-5 py-2.5 bg-slate-800 text-white rounded-xl text-sm font-medium hover:bg-slate-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-      >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-        </svg>
-        {exporting ? 'Generating your financial plan...' : 'Export Budget Narrative'}
-      </button>
+      {/* Export buttons */}
+      <div className="flex gap-3">
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          className="px-5 py-2.5 bg-slate-800 text-white rounded-xl text-sm font-medium hover:bg-slate-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          </svg>
+          {exporting ? 'Generating...' : 'Export Budget Narrative'}
+        </button>
+        <button
+          onClick={handleCommissionExport}
+          disabled={commissionExporting}
+          className="px-5 py-2.5 bg-blue-700 text-white rounded-xl text-sm font-medium hover:bg-blue-800 transition-colors disabled:opacity-50 flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          </svg>
+          {commissionExporting ? 'Generating...' : 'Export for Commission'}
+        </button>
+      </div>
     </div>
   )
 }

@@ -86,6 +86,7 @@ export interface SchoolProfile {
   target_enrollment_y2: number
   target_enrollment_y3: number
   target_enrollment_y4: number
+  target_enrollment_y5: number
   max_class_size: number
   pct_frl: number
   pct_iep: number

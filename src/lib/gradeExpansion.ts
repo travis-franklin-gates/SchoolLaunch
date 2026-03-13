@@ -177,22 +177,22 @@ export function teachersPerNewGrade(grade: string, sections: number): number {
 }
 
 /**
- * Convert expansion enrollments to the Y1-Y4 array used by the budget engine.
- * Returns [y1, y2, y3, y4].
+ * Convert expansion enrollments to the Y1-Y5 array used by the budget engine.
+ * Returns [y1, y2, y3, y4, y5].
  */
 export function expansionToEnrollmentArray(
   plan: GradeExpansionEntry[],
   retentionRate: number = 90,
-): [number, number, number, number] {
+): number[] {
   const enrollments = computeExpansionEnrollments(plan, retentionRate)
-  const result: [number, number, number, number] = [0, 0, 0, 0]
+  const result: number[] = [0, 0, 0, 0, 0]
   for (const e of enrollments) {
-    if (e.year >= 1 && e.year <= 4) {
+    if (e.year >= 1 && e.year <= 5) {
       result[e.year - 1] = e.total
     }
   }
-  // Fill forward if plan doesn't cover all 4 years
-  for (let i = 1; i < 4; i++) {
+  // Fill forward if plan doesn't cover all 5 years
+  for (let i = 1; i < 5; i++) {
     if (result[i] === 0 && result[i - 1] > 0) {
       result[i] = result[i - 1]
     }

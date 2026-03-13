@@ -80,13 +80,13 @@ export default function MultiYearPage() {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
   }
 
-  const yrs = [1, 2, 3, 4]
+  const yrs = [1, 2, 3, 4, 5]
 
   return (
     <div>
       <h1 className="text-2xl font-bold text-slate-800 mb-2">Multi-Year Projection</h1>
       <p className="text-sm text-slate-500 mb-6">
-        Years 2-4 add teaching positions as enrollment grows, {assumptions.salary_escalator_pct}% annual salary escalator, and {assumptions.ops_escalator_pct}% operations escalator.
+        Five-year projection with {assumptions.salary_escalator_pct}% annual salary escalator, {assumptions.ops_escalator_pct}% operations escalator, and {assumptions.revenue_cola_pct}% revenue COLA.
       </p>
 
       {/* Startup Funding Sources */}
@@ -222,7 +222,7 @@ export default function MultiYearPage() {
             {/* Enrollment Breakdown (grade expansion) */}
             {hasExpansion && (
               <>
-                <SectionHeader label="Enrollment (Grade Expansion)" cols={4} />
+                <SectionHeader label="Enrollment (Grade Expansion)" cols={5} />
                 <tr className="border-b border-slate-100 bg-blue-50/30">
                   <td className="px-5 py-2.5 text-slate-600">Grades Served</td>
                   {yearsWithStartup.map((y) => (
@@ -260,7 +260,7 @@ export default function MultiYearPage() {
             )}
 
             {/* Revenue Section */}
-            <SectionHeader label="Revenue" cols={4} />
+            <SectionHeader label="Revenue" cols={5} />
             <Row label="Regular Ed Apportionment" values={yearsWithStartup.map((y) => y.revenue.regularEd)} />
             <Row label="SPED Apportionment" values={yearsWithStartup.map((y) => y.revenue.sped)} />
             <Row label="Facilities Revenue" values={yearsWithStartup.map((y) => y.revenue.facilitiesRev)} />
@@ -270,10 +270,11 @@ export default function MultiYearPage() {
             <Row label="LAP" values={yearsWithStartup.map((y) => y.revenue.lap)} />
             <Row label="TBIP" values={yearsWithStartup.map((y) => y.revenue.tbip)} />
             <Row label="HiCap" values={yearsWithStartup.map((y) => y.revenue.hicap)} />
+            <Row label="Interest & Other Income" values={yearsWithStartup.map((y) => y.revenue.interestIncome)} />
             <TotalRow label="Total Revenue" values={yearsWithStartup.map((y) => y.revenue.total)} />
 
             {/* Personnel Section */}
-            <SectionHeader label="Personnel" cols={4} />
+            <SectionHeader label="Personnel" cols={5} />
             <Row label="Certificated Staff" values={yearsWithStartup.map((y) => y.personnel.certificated)} />
             <Row label="Classified Staff" values={yearsWithStartup.map((y) => y.personnel.classified)} />
             <Row label="Admin Staff" values={yearsWithStartup.map((y) => y.personnel.admin)} />
@@ -291,7 +292,7 @@ export default function MultiYearPage() {
             </tr>
 
             {/* Operations Section */}
-            <SectionHeader label="Operations" cols={4} />
+            <SectionHeader label="Operations" cols={5} />
             <Row label="Facilities" values={yearsWithStartup.map((y) => y.operations.facilities)} />
             <Row label="Supplies & Materials" values={yearsWithStartup.map((y) => y.operations.supplies)} />
             <Row label="Contracted Services" values={yearsWithStartup.map((y) => y.operations.contracted)} />
@@ -302,7 +303,7 @@ export default function MultiYearPage() {
             <TotalRow label="Total Operations" values={yearsWithStartup.map((y) => y.operations.total)} />
 
             {/* Summary Section */}
-            <SectionHeader label="Summary" cols={4} />
+            <SectionHeader label="Summary" cols={5} />
             <TotalRow label="Total Revenue" values={yearsWithStartup.map((y) => y.revenue.total)} />
             <TotalRow label="Total Expenses" values={yearsWithStartup.map((y) => y.totalExpenses)} />
             <tr className="border-b border-slate-200">

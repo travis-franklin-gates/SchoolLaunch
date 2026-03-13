@@ -30,6 +30,7 @@ export default function SettingsPage() {
   const [enrollY2, setEnrollY2] = useState(profile.target_enrollment_y2)
   const [enrollY3, setEnrollY3] = useState(profile.target_enrollment_y3)
   const [enrollY4, setEnrollY4] = useState(profile.target_enrollment_y4)
+  const [enrollY5, setEnrollY5] = useState(profile.target_enrollment_y5)
   const [pctFrl, setPctFrl] = useState(profile.pct_frl)
   const [pctIep, setPctIep] = useState(profile.pct_iep)
   const [pctEll, setPctEll] = useState(profile.pct_ell)
@@ -68,6 +69,7 @@ export default function SettingsPage() {
     setEnrollY2(profile.target_enrollment_y2)
     setEnrollY3(profile.target_enrollment_y3)
     setEnrollY4(profile.target_enrollment_y4)
+    setEnrollY5(profile.target_enrollment_y5)
     setPctFrl(profile.pct_frl)
     setPctIep(profile.pct_iep)
     setPctEll(profile.pct_ell)
@@ -103,6 +105,7 @@ export default function SettingsPage() {
       target_enrollment_y2: enrollY2,
       target_enrollment_y3: enrollY3,
       target_enrollment_y4: enrollY4,
+      target_enrollment_y5: enrollY5,
       pct_frl: pctFrl,
       pct_iep: pctIep,
       pct_ell: pctEll,
@@ -213,7 +216,7 @@ export default function SettingsPage() {
       <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
         <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Enrollment & Demographics</h2>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Year 1 Enrollment</label>
             <input type="number" value={enrollY1} onChange={(e) => setEnrollY1(Number(e.target.value))}
@@ -232,6 +235,11 @@ export default function SettingsPage() {
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Year 4 Enrollment</label>
             <input type="number" value={enrollY4} onChange={(e) => setEnrollY4(Number(e.target.value))}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Year 5 Enrollment</label>
+            <input type="number" value={enrollY5} onChange={(e) => setEnrollY5(Number(e.target.value))}
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
           </div>
         </div>

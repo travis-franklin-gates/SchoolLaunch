@@ -201,7 +201,7 @@ Break-Even Enrollment: ${baseSummary.breakEvenEnrollment} students
 Facility Cost: ${baseSummary.facilityPct.toFixed(1)}% of revenue
 Staff: ${totalFte} FTE total, ${teacherCount} teachers, ${studentTeacherRatio}:1 student-teacher ratio
 Conservative (90% enrollment): Revenue ${fmtDollars(conservativeSummary.totalRevenue)}, Net ${fmtDollars(conservativeSummary.netPosition)}, Reserve Days ${conservativeSummary.reserveDays}
-Multi-year: Y1 net ${fmtDollars(multiYear[0]?.net || 0)}, Y2 net ${fmtDollars(multiYear[1]?.net || 0)}, Y3 net ${fmtDollars(multiYear[2]?.net || 0)}, Y4 net ${fmtDollars(multiYear[3]?.net || 0)}
+Multi-year: Y1 net ${fmtDollars(multiYear[0]?.net || 0)}, Y2 net ${fmtDollars(multiYear[1]?.net || 0)}, Y3 net ${fmtDollars(multiYear[2]?.net || 0)}, Y4 net ${fmtDollars(multiYear[3]?.net || 0)}, Y5 net ${fmtDollars(multiYear[4]?.net || 0)}
 Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)} secured`
 
   // Generate AI content in parallel
@@ -455,7 +455,7 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
 <!-- PAGE 1: Cover -->
 <div class="cover">
   <h1>${schoolName}</h1>
-  <div class="subtitle">Financial Plan &mdash; Year 1 through Year 4</div>
+  <div class="subtitle">Financial Plan &mdash; Year 1 through Year 5</div>
   <div class="subtitle" style="font-size:16px;color:#64748B;">${profile.grade_config} &bull; ${profile.region || 'Washington State'}</div>
   <div class="prepared">
     Prepared for the<br/>

@@ -257,6 +257,7 @@ export interface MultiYearDetailedRow {
     lap: number
     tbip: number
     hicap: number
+    interestIncome: number
     total: number
     // Legacy aliases
     apportionment: number
@@ -315,6 +316,7 @@ export function computeMultiYearDetailed(
     profile.target_enrollment_y2,
     profile.target_enrollment_y3,
     profile.target_enrollment_y4,
+    profile.target_enrollment_y5 || profile.target_enrollment_y4,
   ]
   const salaryEscalator = 1 + assumptions.salary_escalator_pct / 100
   const opsEscalator = 1 + assumptions.ops_escalator_pct / 100
@@ -331,12 +333,19 @@ export function computeMultiYearDetailed(
   let cumulativeNet = preOpeningNet
   const rows: MultiYearDetailedRow[] = []
 
-  for (let y = 1; y <= 4; y++) {
-    const enr = enrollments[y - 1] || enrollments[0]
+  const interestRate = assumptions.interest_rate_on_cash / 100
+
+  for (let y = 1; y <= 5; y++) {
+    const enr = enrollments[y - 1] || enrollments[enrollments.length - 1] || enrollments[0]
 
     // Revenue — Commission-aligned with COLA
     const rev = calcCommissionRevenue(enr, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions, y)
-    const totalRevenue = rev.total
+    // Interest income on prior year ending cash balance
+    const priorCash = cumulativeNet
+    const interestIncome = y === 1
+      ? Math.round(Math.max(0, priorCash) * interestRate / 2) // half-year approximation
+      : Math.round(Math.max(0, priorCash) * interestRate)
+    const totalRevenue = rev.total + interestIncome
     // State apportionment = regularEd + sped + facilitiesRev (for authorizer fee)
     const stateApport = rev.regularEd + rev.sped + rev.facilitiesRev
 
@@ -448,6 +457,7 @@ export function computeMultiYearDetailed(
         lap: rev.lap,
         tbip: rev.tbip,
         hicap: rev.hicap,
+        interestIncome,
         total: totalRevenue,
         apportionment: rev.regularEd + rev.sped + rev.facilitiesRev,
       },
@@ -556,4 +566,235 @@ export function computeCashFlow(summary: BudgetSummary, apportionmentTotal: numb
       cumulativeBalance: cumulative,
     }
   })
+}
+
+// --- Commission Financial Performance Framework (FPF) Scorecard ---
+
+export interface FPFMeasure {
+  name: string
+  formula: string
+  values: (number | null)[] // one per year (5)
+  stage1Target: string
+  stage2Target: string
+  statuses: ('meets' | 'approaches' | 'does_not_meet' | 'na')[]
+}
+
+export interface FPFScorecard {
+  measures: FPFMeasure[]
+  overallStatus: 'green' | 'yellow' | 'red'
+  overallMessage: string
+}
+
+function fpfStatus(
+  value: number | null,
+  year: number,
+  check: (v: number, stage: 1 | 2) => 'meets' | 'approaches' | 'does_not_meet',
+): 'meets' | 'approaches' | 'does_not_meet' | 'na' {
+  if (value === null) return 'na'
+  const stage = year <= 2 ? 1 : 2
+  return check(value, stage)
+}
+
+export function computeFPFScorecard(
+  multiYear: MultiYearDetailedRow[],
+  startingCash: number,
+  conservativeMode: boolean,
+): FPFScorecard {
+  // Build year-end cash balances
+  const yearEndCash: number[] = []
+  let cash = startingCash
+  for (const row of multiYear) {
+    cash += row.net
+    yearEndCash.push(cash)
+  }
+
+  const measures: FPFMeasure[] = []
+
+  // 1. Current Ratio: (Starting Cash + Revenue) / Expenses for Y1; cumulative net proxy for Y2+
+  const currentRatioValues = multiYear.map((row, i) => {
+    if (i === 0) {
+      const assets = startingCash + row.revenue.total
+      return row.totalExpenses > 0 ? assets / row.totalExpenses : 99
+    }
+    const assets = yearEndCash[i]
+    // Approximate current liabilities as ~1/12 of annual expenses
+    const liabilities = row.totalExpenses / 12
+    return liabilities > 0 ? Math.max(0, assets) / liabilities : 99
+  })
+  measures.push({
+    name: 'Current Ratio',
+    formula: 'Current Assets ÷ Current Liabilities',
+    values: currentRatioValues.map(v => Math.round(v * 100) / 100),
+    stage1Target: '≥1.0',
+    stage2Target: '≥1.1',
+    statuses: currentRatioValues.map((v, i) =>
+      fpfStatus(v, i + 1, (val, stage) =>
+        val >= (stage === 1 ? 1.0 : 1.1) ? 'meets'
+          : val >= (stage === 1 ? 0.8 : 0.88) ? 'approaches'
+          : 'does_not_meet'
+      )
+    ),
+  })
+
+  // 2. Days of Cash
+  const daysOfCash = multiYear.map((row, i) => {
+    const dailyExpense = row.totalExpenses / 365
+    return dailyExpense > 0 ? Math.round(yearEndCash[i] / dailyExpense) : 0
+  })
+  measures.push({
+    name: 'Days of Cash',
+    formula: 'Unrestricted Cash ÷ (Total Expenses / 365)',
+    values: daysOfCash,
+    stage1Target: '≥30',
+    stage2Target: '≥60',
+    statuses: daysOfCash.map((v, i) =>
+      fpfStatus(v, i + 1, (val, stage) =>
+        val >= (stage === 1 ? 30 : 60) ? 'meets'
+          : val >= (stage === 1 ? 24 : 48) ? 'approaches'
+          : 'does_not_meet'
+      )
+    ),
+  })
+
+  // 3. Total Margin
+  const totalMargin = multiYear.map(row =>
+    row.revenue.total > 0 ? Math.round((row.net / row.revenue.total) * 1000) / 10 : 0
+  )
+  measures.push({
+    name: 'Total Margin',
+    formula: 'Net Income ÷ Total Revenue',
+    values: totalMargin,
+    stage1Target: '≥0%',
+    stage2Target: '≥0%',
+    statuses: totalMargin.map((v, i) =>
+      fpfStatus(v, i + 1, (val) =>
+        val >= 0 ? 'meets' : val >= -2 ? 'approaches' : 'does_not_meet'
+      )
+    ),
+  })
+
+  // 4. 3-Year Total Margin
+  const threeYearMargin: (number | null)[] = multiYear.map((_, i) => {
+    if (i < 2) return null
+    const netSum = multiYear.slice(i - 2, i + 1).reduce((s, r) => s + r.net, 0)
+    const revSum = multiYear.slice(i - 2, i + 1).reduce((s, r) => s + r.revenue.total, 0)
+    return revSum > 0 ? Math.round((netSum / revSum) * 1000) / 10 : 0
+  })
+  measures.push({
+    name: '3-Year Total Margin',
+    formula: '3-Year Net Income ÷ 3-Year Revenue',
+    values: threeYearMargin,
+    stage1Target: 'N/A',
+    stage2Target: '>0%',
+    statuses: threeYearMargin.map((v, i) =>
+      v === null ? 'na' : fpfStatus(v, i + 1, (val) =>
+        val > 0 ? 'meets' : val >= -1 ? 'approaches' : 'does_not_meet'
+      )
+    ),
+  })
+
+  // 5. Debt-to-Asset (no debt modeling yet, show 0)
+  measures.push({
+    name: 'Debt-to-Asset',
+    formula: 'Total Liabilities ÷ Total Assets',
+    values: multiYear.map(() => 0),
+    stage1Target: '<0.90',
+    stage2Target: '<0.90',
+    statuses: multiYear.map(() => 'meets'),
+  })
+
+  // 6. Cash Flow (year-over-year change)
+  const cashFlowValues = multiYear.map((_, i) => {
+    if (i === 0) return yearEndCash[0] - startingCash
+    return yearEndCash[i] - yearEndCash[i - 1]
+  })
+  measures.push({
+    name: 'Cash Flow',
+    formula: 'Year-End Cash − Prior Year-End Cash',
+    values: cashFlowValues,
+    stage1Target: '>0',
+    stage2Target: '>0',
+    statuses: cashFlowValues.map((v, i) =>
+      fpfStatus(v, i + 1, (val) =>
+        val > 0 ? 'meets' : val >= -5000 ? 'approaches' : 'does_not_meet'
+      )
+    ),
+  })
+
+  // 7. 3-Year Cash Flow
+  const threeYearCashFlow: (number | null)[] = multiYear.map((_, i) => {
+    if (i < 2) return null
+    return yearEndCash[i] - (i >= 3 ? yearEndCash[i - 3] : startingCash)
+  })
+  measures.push({
+    name: '3-Year Cash Flow',
+    formula: 'Year-End Cash − (Year-3) End Cash',
+    values: threeYearCashFlow,
+    stage1Target: 'N/A',
+    stage2Target: '>0',
+    statuses: threeYearCashFlow.map((v, i) =>
+      v === null ? 'na' : fpfStatus(v, i + 1, (val) =>
+        val > 0 ? 'meets' : val >= -5000 ? 'approaches' : 'does_not_meet'
+      )
+    ),
+  })
+
+  // 8. Enrollment Variance
+  const enrollmentVariance = multiYear.map(() =>
+    conservativeMode ? 90 : 100
+  )
+  measures.push({
+    name: 'Enrollment Variance',
+    formula: 'Actual ÷ Projected',
+    values: enrollmentVariance,
+    stage1Target: '≥95%',
+    stage2Target: '≥95%',
+    statuses: enrollmentVariance.map((v, i) =>
+      fpfStatus(v, i + 1, (val) =>
+        val >= 95 ? 'meets' : val >= 85 ? 'approaches' : 'does_not_meet'
+      )
+    ),
+  })
+
+  // 9. DSCR (no debt = N/A)
+  measures.push({
+    name: 'DSCR',
+    formula: '(Net Income + Depreciation + Interest) ÷ Debt Service',
+    values: multiYear.map(() => null),
+    stage1Target: 'N/A (no debt)',
+    stage2Target: '≥1.1',
+    statuses: multiYear.map(() => 'na'),
+  })
+
+  // Overall assessment
+  const stage1Issues: string[] = []
+  const stage2Issues: string[] = []
+  for (const m of measures) {
+    for (let i = 0; i < Math.min(2, m.statuses.length); i++) {
+      if (m.statuses[i] === 'does_not_meet') {
+        if (!stage1Issues.includes(m.name)) stage1Issues.push(m.name)
+      }
+    }
+    for (let i = 2; i < m.statuses.length; i++) {
+      if (m.statuses[i] === 'does_not_meet') {
+        if (!stage2Issues.includes(m.name)) stage2Issues.push(m.name)
+      }
+    }
+  }
+
+  let overallStatus: 'green' | 'yellow' | 'red'
+  let overallMessage: string
+
+  if (stage1Issues.length === 0 && stage2Issues.length === 0) {
+    overallStatus = 'green'
+    overallMessage = 'Your model meets all Stage 1 standards for Years 1-2 and all Stage 2 standards for Years 3-5.'
+  } else if (stage1Issues.length === 0) {
+    overallStatus = 'yellow'
+    overallMessage = `Your model meets Stage 1 standards but does not yet meet Stage 2 for: ${stage2Issues.join(', ')}.`
+  } else {
+    overallStatus = 'red'
+    overallMessage = `Your model does not meet Stage 1 standards for: ${stage1Issues.join(', ')} — address before submitting.`
+  }
+
+  return { measures, overallStatus, overallMessage }
 }
