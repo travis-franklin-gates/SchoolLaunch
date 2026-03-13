@@ -37,19 +37,37 @@ export function isHighSchoolGrade(grade: string): boolean {
 }
 
 /**
+ * Compute the default mapping of which new grades are added each year (1 per year).
+ */
+export function defaultYearNewGrades(
+  openingGrades: string[],
+  buildoutGrades: string[],
+): Map<number, string[]> {
+  const openSet = new Set(openingGrades)
+  const gradesToAdd = sortGrades(buildoutGrades.filter((g) => !openSet.has(g)))
+  const map = new Map<number, string[]>()
+
+  // 1 grade per year in years 2–5
+  for (let i = 0; i < gradesToAdd.length && (i + 2) <= 5; i++) {
+    map.set(i + 2, [gradesToAdd[i]])
+  }
+
+  return map
+}
+
+/**
  * Auto-generate an expansion timeline given opening and buildout grades.
- * Adds 1-2 new grades per year until full buildout (max 5 years).
+ * Uses yearNewGrades mapping to decide which grades are added each year.
+ * Defaults to 1 new grade per year if no mapping provided.
  */
 export function generateExpansionPlan(
   openingGrades: string[],
   buildoutGrades: string[],
   sectionsPerGrade: number = 2,
   studentsPerSection: number = 24,
+  yearNewGrades?: Map<number, string[]>,
 ): GradeExpansionEntry[] {
-  const sorted = sortGrades(buildoutGrades)
-  const openSet = new Set(openingGrades)
-  const gradesToAdd = sorted.filter((g) => !openSet.has(g))
-
+  const mapping = yearNewGrades || defaultYearNewGrades(openingGrades, buildoutGrades)
   const entries: GradeExpansionEntry[] = []
 
   // Year 1: opening grades
@@ -63,11 +81,8 @@ export function generateExpansionPlan(
     })
   }
 
-  // Years 2+: add grades progressively (1-2 per year)
-  let year = 2
-  let idx = 0
-  while (idx < gradesToAdd.length && year <= 5) {
-    // Carry forward all existing grades
+  // Years 2–5: carry forward prior grades + add new grades from mapping
+  for (let year = 2; year <= 5; year++) {
     const priorGrades = entries
       .filter((e) => e.year === year - 1)
       .map((e) => e.grade_level)
@@ -83,36 +98,16 @@ export function generateExpansionPlan(
       })
     }
 
-    // Add 1-2 new grades this year
-    const gradesThisYear = Math.min(2, gradesToAdd.length - idx)
-    for (let i = 0; i < gradesThisYear; i++) {
+    const newGrades = mapping.get(year) || []
+    for (const g of sortGrades(newGrades)) {
       entries.push({
         year,
-        grade_level: gradesToAdd[idx],
+        grade_level: g,
         sections: sectionsPerGrade,
         students_per_section: studentsPerSection,
         is_new_grade: true,
       })
-      idx++
     }
-
-    year++
-  }
-
-  // Fill remaining years up to 5 if buildout complete before year 5
-  // (carry forward the last year's grades)
-  while (year <= 5) {
-    const priorGrades = entries.filter((e) => e.year === year - 1)
-    for (const e of priorGrades) {
-      entries.push({
-        year,
-        grade_level: e.grade_level,
-        sections: e.sections,
-        students_per_section: e.students_per_section,
-        is_new_grade: false,
-      })
-    }
-    year++
   }
 
   return entries
