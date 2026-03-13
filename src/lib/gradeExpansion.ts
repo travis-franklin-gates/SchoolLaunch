@@ -120,11 +120,8 @@ export function computeExpansionEnrollments(
   plan: GradeExpansionEntry[],
   retentionRate: number = 90,
 ): { year: number; total: number; returning: number; newGrade: number; grades: string[]; newGrades: string[] }[] {
-  const retention = retentionRate / 100
   const years = Array.from(new Set(plan.map((e) => e.year))).sort((a, b) => a - b)
   const results: { year: number; total: number; returning: number; newGrade: number; grades: string[]; newGrades: string[] }[] = []
-
-  let priorTotal = 0
 
   for (const year of years) {
     const yearEntries = plan.filter((e) => e.year === year)
@@ -133,23 +130,14 @@ export function computeExpansionEnrollments(
       (s, e) => s + e.sections * e.students_per_section, 0
     )
 
-    let total: number
-    let returning: number
-
-    if (year === 1 || years.indexOf(year) === 0) {
-      // Year 1: all students are new (opening)
-      total = yearEntries.reduce((s, e) => s + e.sections * e.students_per_section, 0)
-      returning = 0
-    } else {
-      returning = Math.round(priorTotal * retention)
-      total = returning + newGradeStudents
-    }
+    // Total = full planned capacity (all grades × sections × students)
+    const total = yearEntries.reduce((s, e) => s + e.sections * e.students_per_section, 0)
+    const returning = total - newGradeStudents
 
     const grades = sortGrades(yearEntries.map((e) => e.grade_level))
     const newGrades = sortGrades(newGradeEntries.map((e) => e.grade_level))
 
     results.push({ year, total, returning, newGrade: newGradeStudents, grades, newGrades })
-    priorTotal = total
   }
 
   return results

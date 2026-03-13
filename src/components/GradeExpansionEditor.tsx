@@ -285,8 +285,7 @@ export default function GradeExpansionEditor({
                 <th className="text-left px-3 py-2 font-semibold text-slate-600">Year</th>
                 <th className="text-left px-3 py-2 font-semibold text-slate-600">Grades Served</th>
                 <th className="text-left px-3 py-2 font-semibold text-slate-600">New Grades</th>
-                <th className="text-right px-3 py-2 font-semibold text-slate-600">Returning</th>
-                <th className="text-right px-3 py-2 font-semibold text-slate-600">New Grade</th>
+                <th className="text-right px-3 py-2 font-semibold text-slate-600">New Students</th>
                 <th className="text-right px-3 py-2 font-semibold text-slate-600 font-bold">Total Students</th>
               </tr>
             </thead>
@@ -345,11 +344,8 @@ export default function GradeExpansionEditor({
                         </div>
                       )}
                     </td>
-                    <td className="px-3 py-2.5 text-right text-slate-600">
-                      {e.year === 1 ? '—' : e.returning}
-                    </td>
                     <td className="px-3 py-2.5 text-right text-teal-600 font-medium">
-                      {e.year === 1 ? e.total : (e.newGrade > 0 ? `+${e.newGrade}` : '—')}
+                      {e.newGrade > 0 ? `+${e.newGrade}` : '—'}
                     </td>
                     <td className="px-3 py-2.5 text-right font-bold text-slate-800">
                       {e.total}
