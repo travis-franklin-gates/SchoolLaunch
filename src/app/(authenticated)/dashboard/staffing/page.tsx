@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSchoolData } from '@/lib/useSchoolData'
+import { useScenario } from '@/lib/ScenarioContext'
 import { calcBenefits } from '@/lib/calculations'
 import { createClient } from '@/lib/supabase/client'
 
@@ -21,7 +21,10 @@ let nextId = 0
 function tempId() { return `new-${++nextId}` }
 
 export default function StaffingPage() {
-  const { schoolId, positions: dbPositions, projections, loading } = useSchoolData()
+  const {
+    schoolData: { schoolId, positions: dbPositions, projections, loading },
+    isModified,
+  } = useScenario()
   const [positions, setPositions] = useState<Position[]>([])
   const [saving, setSaving] = useState(false)
   const supabase = createClient()
@@ -94,6 +97,12 @@ export default function StaffingPage() {
 
   return (
     <div>
+      {isModified && (
+        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
+          Scenario active — showing base case staffing. Adjust positions here to update the base case budget.
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Staffing</h1>

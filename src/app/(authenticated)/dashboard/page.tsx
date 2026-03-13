@@ -1,13 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { useSchoolData } from '@/lib/useSchoolData'
-import {
-  computeSummaryFromProjections,
-  computeScenario,
-  type ScenarioInputs,
-  type BudgetSummary,
-} from '@/lib/budgetEngine'
+import { useScenario } from '@/lib/ScenarioContext'
 
 function fmt(n: number) {
   if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
@@ -40,42 +33,17 @@ function HealthTile({ label, value, subtitle, colorClass }: {
 }
 
 export default function DashboardPage() {
-  const { profile, positions, projections, loading } = useSchoolData()
-
-  const baseSummary = useMemo(
-    () => computeSummaryFromProjections(projections, positions),
-    [projections, positions]
-  )
-
-  // Base scenario inputs from profile
-  const baseFacilities = projections.find((p) => p.subcategory === 'Facilities' && !p.is_revenue)?.amount || 0
-  const baseMonthlyLease = Math.round(baseFacilities / 12)
-  const baseCertSalary = positions.find((p) => p.category === 'certificated')?.annual_salary || 58000
-
-  const [scenario, setScenario] = useState<ScenarioInputs | null>(null)
-
-  // Initialize scenario inputs once data loads
-  const scenarioInputs: ScenarioInputs = scenario || {
-    enrollment: profile.target_enrollment_y1,
-    classSize: profile.max_class_size,
-    leadTeacherSalary: baseCertSalary,
-    monthlyLease: baseMonthlyLease,
-    extraTeacher: false,
-  }
-
-  const scenarioSummary = useMemo(
-    () => computeScenario(scenarioInputs, profile, positions, projections),
-    [scenarioInputs, profile, positions, projections]
-  )
-
-  const current = scenario ? scenarioSummary : baseSummary
-
-  function updateScenario(partial: Partial<ScenarioInputs>) {
-    setScenario((prev) => ({
-      ...(prev || scenarioInputs),
-      ...partial,
-    }))
-  }
+  const {
+    schoolData: { profile, loading },
+    baseSummary,
+    scenario,
+    scenarioInputs,
+    scenarioSummary,
+    isModified,
+    currentSummary: current,
+    updateScenario,
+    resetScenario,
+  } = useScenario()
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
@@ -92,7 +60,7 @@ export default function DashboardPage() {
     : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' }
 
   const delta = (base: number, curr: number, unit: string, invert = false) => {
-    if (!scenario) return null
+    if (!isModified) return null
     const diff = curr - base
     if (diff === 0) return null
     const arrow = (invert ? -diff : diff) > 0 ? '\u2191' : '\u2193'
@@ -202,9 +170,9 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {scenario && (
+        {isModified && (
           <button
-            onClick={() => setScenario(null)}
+            onClick={resetScenario}
             className="mt-4 text-xs text-blue-600 hover:text-blue-800 font-medium"
           >
             Reset to Base Case
@@ -219,7 +187,8 @@ export default function DashboardPage() {
             <tr className="bg-slate-50 border-b border-slate-200">
               <th className="text-left px-6 py-3 font-semibold text-slate-600"></th>
               <th className="text-right px-6 py-3 font-semibold text-slate-600">Base Case</th>
-              {scenario && <th className="text-right px-6 py-3 font-semibold text-blue-600">Current Scenario</th>}
+              {isModified && <th className="text-right px-6 py-3 font-semibold text-blue-600">Scenario</th>}
+              {isModified && <th className="text-right px-6 py-3 font-semibold text-slate-500">Delta</th>}
             </tr>
           </thead>
           <tbody>
@@ -229,27 +198,35 @@ export default function DashboardPage() {
               { label: 'Total Operations', base: baseSummary.totalOperations, curr: scenarioSummary.totalOperations },
               { label: 'Net Position', base: baseSummary.netPosition, curr: scenarioSummary.netPosition, bold: true },
               { label: 'Reserve Days', base: baseSummary.reserveDays, curr: scenarioSummary.reserveDays, bold: true, isDays: true },
-            ].map((row) => (
-              <tr key={row.label} className="border-b border-slate-100 last:border-0">
-                <td className={`px-6 py-3 ${row.bold ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>
-                  {row.label}
-                </td>
-                <td className={`px-6 py-3 text-right ${row.bold ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>
-                  {row.isDays ? `${row.base} days` : fmt(row.base)}
-                </td>
-                {scenario && (
-                  <td className={`px-6 py-3 text-right ${row.bold ? 'font-semibold' : ''} ${
-                    row.isDays
-                      ? (row.curr >= 60 ? 'text-emerald-600' : row.curr >= 30 ? 'text-amber-600' : 'text-red-600')
-                      : row.label === 'Net Position'
-                      ? (row.curr >= 0 ? 'text-emerald-600' : 'text-red-600')
-                      : 'text-blue-600'
-                  }`}>
-                    {row.isDays ? `${row.curr} days` : fmt(row.curr)}
+            ].map((row) => {
+              const diff = row.curr - row.base
+              return (
+                <tr key={row.label} className="border-b border-slate-100 last:border-0">
+                  <td className={`px-6 py-3 ${row.bold ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>
+                    {row.label}
                   </td>
-                )}
-              </tr>
-            ))}
+                  <td className={`px-6 py-3 text-right ${row.bold ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>
+                    {row.isDays ? `${row.base} days` : fmt(row.base)}
+                  </td>
+                  {isModified && (
+                    <td className={`px-6 py-3 text-right ${row.bold ? 'font-semibold' : ''} ${
+                      row.isDays
+                        ? (row.curr >= 60 ? 'text-emerald-600' : row.curr >= 30 ? 'text-amber-600' : 'text-red-600')
+                        : row.label === 'Net Position'
+                        ? (row.curr >= 0 ? 'text-emerald-600' : 'text-red-600')
+                        : 'text-blue-600'
+                    }`}>
+                      {row.isDays ? `${row.curr} days` : fmt(row.curr)}
+                    </td>
+                  )}
+                  {isModified && (
+                    <td className={`px-6 py-3 text-right text-sm ${diff >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {diff === 0 ? '—' : row.isDays ? `${diff > 0 ? '+' : ''}${diff}` : `${diff > 0 ? '+' : ''}${fmt(diff)}`}
+                    </td>
+                  )}
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

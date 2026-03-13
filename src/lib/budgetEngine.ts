@@ -139,6 +139,87 @@ export function computeScenario(
   }
 }
 
+// --- Multi-Year Personnel Scaling ---
+
+export interface MultiYearStaffing {
+  teachers: number
+  paras: number
+  officeStaff: number
+  otherStaff: number
+  totalPositions: number
+  totalPersonnelCost: number
+}
+
+export function computeMultiYearPersonnel(
+  enrollment: number,
+  year: number,
+  basePositions: StaffingPosition[],
+  y1Enrollment: number,
+  salaryEscalator: number,
+): MultiYearStaffing {
+  const escalator = Math.pow(salaryEscalator, year - 1)
+
+  // Identify position groups from Year 1
+  const teacherPositions = basePositions.filter(
+    (p) => p.category === 'certificated' && /teacher/i.test(p.title)
+  )
+  const paraPositions = basePositions.filter((p) => /para/i.test(p.title))
+  const officePositions = basePositions.filter((p) => /office/i.test(p.title))
+
+  const y1TeacherFte = teacherPositions.reduce((s, p) => s + p.fte, 0)
+  const y1ParaFte = paraPositions.reduce((s, p) => s + p.fte, 0)
+  const y1OfficeFte = officePositions.reduce((s, p) => s + p.fte, 0)
+
+  const studentsPerTeacher = y1TeacherFte > 0 ? y1Enrollment / y1TeacherFte : 24
+  const requiredTeachers = Math.ceil(enrollment / studentsPerTeacher)
+  const additionalTeachers = Math.max(0, requiredTeachers - y1TeacherFte)
+
+  // Threshold-based additions
+  const additionalParas = (enrollment >= 150 && y1ParaFte < 3) ? Math.min(1, 3 - y1ParaFte) : 0
+  const additionalOffice = (enrollment >= 200 && y1OfficeFte < 2) ? Math.min(1, 2 - y1OfficeFte) : 0
+
+  // Cost: escalate all base positions
+  let totalCost = 0
+  for (const pos of basePositions) {
+    const salary = Math.round(pos.annual_salary * escalator)
+    const cost = pos.fte * salary
+    totalCost += cost + calcBenefits(cost)
+  }
+
+  // Cost: additional teachers at lead teacher salary
+  const leadTeacherSalary = teacherPositions[0]?.annual_salary || 58000
+  if (additionalTeachers > 0) {
+    const newSalary = Math.round(leadTeacherSalary * escalator)
+    const cost = additionalTeachers * newSalary
+    totalCost += cost + calcBenefits(cost)
+  }
+
+  // Cost: additional paras
+  if (additionalParas > 0) {
+    const paraSalary = paraPositions[0]?.annual_salary || 35000
+    const cost = additionalParas * Math.round(paraSalary * escalator)
+    totalCost += cost + calcBenefits(cost)
+  }
+
+  // Cost: additional office staff
+  if (additionalOffice > 0) {
+    const officeSalary = officePositions[0]?.annual_salary || 42000
+    const cost = additionalOffice * Math.round(officeSalary * escalator)
+    totalCost += cost + calcBenefits(cost)
+  }
+
+  const otherCount = basePositions.length - teacherPositions.length - paraPositions.length - officePositions.length
+
+  return {
+    teachers: y1TeacherFte + additionalTeachers,
+    paras: y1ParaFte + additionalParas,
+    officeStaff: y1OfficeFte + additionalOffice,
+    otherStaff: otherCount,
+    totalPositions: basePositions.length + additionalTeachers + additionalParas + additionalOffice,
+    totalPersonnelCost: totalCost,
+  }
+}
+
 // OSPI monthly payment schedule
 export const OSPI_SCHEDULE: Record<string, number> = {
   Sep: 0.09,

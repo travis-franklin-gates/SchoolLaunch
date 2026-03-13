@@ -1,29 +1,34 @@
 'use client'
 
 import { useMemo } from 'react'
-import { useSchoolData } from '@/lib/useSchoolData'
-import { computeSummaryFromProjections, computeCashFlow, type CashFlowMonth } from '@/lib/budgetEngine'
+import { useScenario } from '@/lib/ScenarioContext'
+import { computeCashFlow } from '@/lib/budgetEngine'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 }
 
 export default function CashFlowPage() {
-  const { positions, projections, loading } = useSchoolData()
+  const {
+    schoolData: { loading },
+    baseSummary,
+    currentSummary,
+    baseApportionment,
+    scenarioApportionment,
+    isModified,
+  } = useScenario()
 
-  const summary = useMemo(
-    () => computeSummaryFromProjections(projections, positions),
-    [projections, positions]
+  const baseCashFlow = useMemo(
+    () => computeCashFlow(baseSummary, baseApportionment),
+    [baseSummary, baseApportionment]
   )
 
-  const apportionmentTotal = projections.find(
-    (p) => p.is_revenue && p.subcategory === 'State Apportionment'
-  )?.amount || 0
-
-  const cashFlow = useMemo(
-    () => computeCashFlow(summary, apportionmentTotal),
-    [summary, apportionmentTotal]
+  const scenarioCashFlow = useMemo(
+    () => computeCashFlow(currentSummary, isModified ? scenarioApportionment : baseApportionment),
+    [currentSummary, isModified, scenarioApportionment, baseApportionment]
   )
+
+  const cashFlow = isModified ? scenarioCashFlow : baseCashFlow
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
@@ -36,6 +41,12 @@ export default function CashFlowPage() {
         Month-by-month Year 1 projection (September through August) using the OSPI apportionment payment schedule.
         Starting cash balance: $0.
       </p>
+
+      {isModified && (
+        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
+          Scenario active — cash flow reflects adjusted enrollment, salary, and lease inputs.
+        </div>
+      )}
 
       <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto">
         <table className="w-full text-sm whitespace-nowrap">

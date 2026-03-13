@@ -1,16 +1,16 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { useSchoolData } from '@/lib/useSchoolData'
+import { useScenario } from '@/lib/ScenarioContext'
 import {
   computeSummaryFromProjections,
+  computeMultiYearPersonnel,
+  type MultiYearStaffing,
 } from '@/lib/budgetEngine'
 import {
   calcRevenue,
   calcLevyEquity,
   calcAllGrants,
-  PER_PUPIL_RATE,
-  LEVY_EQUITY_RATE,
 } from '@/lib/calculations'
 
 function fmt(n: number) {
@@ -20,6 +20,7 @@ function fmt(n: number) {
 interface YearRow {
   year: string
   enrollment: number | null
+  staffing: MultiYearStaffing | null
   revenue: number
   personnel: number
   operations: number
@@ -28,9 +29,10 @@ interface YearRow {
 }
 
 export default function MultiYearPage() {
-  const { profile, positions, projections, loading } = useSchoolData()
+  const {
+    schoolData: { profile, positions, projections, loading },
+  } = useScenario()
 
-  // Year 0 pre-opening costs
   const [preOpening, setPreOpening] = useState({
     leaseDeposit: 15000,
     furniture: 25000,
@@ -50,6 +52,27 @@ export default function MultiYearPage() {
     profile.target_enrollment_y4,
   ]
 
+  const SALARY_ESCALATOR = 1.025
+  const OPS_ESCALATOR = 1.02
+
+  const y1Staffing: MultiYearStaffing = useMemo(() => {
+    const teacherPositions = positions.filter(
+      (p) => p.category === 'certificated' && /teacher/i.test(p.title)
+    )
+    const paraPositions = positions.filter((p) => /para/i.test(p.title))
+    const officePositions = positions.filter((p) => /office/i.test(p.title))
+    const otherCount = positions.length - teacherPositions.length - paraPositions.length - officePositions.length
+
+    return {
+      teachers: teacherPositions.reduce((s, p) => s + p.fte, 0),
+      paras: paraPositions.reduce((s, p) => s + p.fte, 0),
+      officeStaff: officePositions.reduce((s, p) => s + p.fte, 0),
+      otherStaff: otherCount,
+      totalPositions: positions.length,
+      totalPersonnelCost: year1Summary.totalPersonnel,
+    }
+  }, [positions, year1Summary])
+
   const yearRows: YearRow[] = useMemo(() => {
     const rows: YearRow[] = []
 
@@ -58,6 +81,7 @@ export default function MultiYearPage() {
     rows.push({
       year: 'Year 0 (Pre-Opening)',
       enrollment: null,
+      staffing: null,
       revenue: 0,
       personnel: preOpening.preOpenStaff,
       operations: preOpening.leaseDeposit + preOpening.furniture + preOpening.techSetup,
@@ -69,6 +93,7 @@ export default function MultiYearPage() {
     rows.push({
       year: 'Year 1',
       enrollment: enrollments[0],
+      staffing: y1Staffing,
       revenue: year1Summary.totalRevenue,
       personnel: year1Summary.totalPersonnel,
       operations: year1Summary.totalOperations,
@@ -76,10 +101,7 @@ export default function MultiYearPage() {
       reserveDays: year1Summary.reserveDays,
     })
 
-    // Years 2-4: simplified projection
-    const SALARY_ESCALATOR = 1.025
-    const OPS_ESCALATOR = 1.02
-
+    // Years 2-4: scaled projection with new hires
     for (let y = 2; y <= 4; y++) {
       const enr = enrollments[y - 1] || enrollments[0]
       const apportionment = calcRevenue(enr)
@@ -87,7 +109,10 @@ export default function MultiYearPage() {
       const grants = calcAllGrants(enr, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap)
       const revenue = apportionment + levyEquity + grants.titleI + grants.idea + grants.lap + grants.tbip + grants.hicap
 
-      const personnel = Math.round(year1Summary.totalPersonnel * Math.pow(SALARY_ESCALATOR, y - 1))
+      const staffing = computeMultiYearPersonnel(
+        enr, y, positions, enrollments[0], SALARY_ESCALATOR
+      )
+      const personnel = staffing.totalPersonnelCost
       const operations = Math.round(year1Summary.totalOperations * Math.pow(OPS_ESCALATOR, y - 1))
       const totalExpenses = personnel + operations
       const net = revenue - totalExpenses
@@ -97,6 +122,7 @@ export default function MultiYearPage() {
       rows.push({
         year: `Year ${y}`,
         enrollment: enr,
+        staffing,
         revenue,
         personnel,
         operations,
@@ -106,7 +132,7 @@ export default function MultiYearPage() {
     }
 
     return rows
-  }, [year1Summary, enrollments, profile, preOpening])
+  }, [year1Summary, y1Staffing, enrollments, profile, positions, preOpening])
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
@@ -116,7 +142,8 @@ export default function MultiYearPage() {
     <div>
       <h1 className="text-2xl font-bold text-slate-800 mb-2">Multi-Year Projection</h1>
       <p className="text-sm text-slate-500 mb-6">
-        Years 2-4 use enrollment growth assumptions from onboarding, 2.5% annual salary escalator, and 2% operations escalator.
+        Years 2-4 add teaching positions as enrollment grows (using Year 1 student-teacher ratio),
+        2.5% annual salary escalator, and 2% operations escalator.
       </p>
 
       {/* Pre-opening cost inputs */}
@@ -150,6 +177,7 @@ export default function MultiYearPage() {
             <tr className="bg-slate-50 border-b border-slate-200">
               <th className="text-left px-5 py-3 font-semibold text-slate-600">Year</th>
               <th className="text-right px-5 py-3 font-semibold text-slate-600">Enrollment</th>
+              <th className="text-left px-5 py-3 font-semibold text-slate-600">Staff</th>
               <th className="text-right px-5 py-3 font-semibold text-slate-600">Revenue</th>
               <th className="text-right px-5 py-3 font-semibold text-slate-600">Personnel</th>
               <th className="text-right px-5 py-3 font-semibold text-slate-600">Operations</th>
@@ -163,6 +191,13 @@ export default function MultiYearPage() {
                 <td className="px-5 py-3 font-medium text-slate-800">{row.year}</td>
                 <td className="px-5 py-3 text-right text-slate-600">
                   {row.enrollment !== null ? row.enrollment : '—'}
+                </td>
+                <td className="px-5 py-3 text-slate-500 text-xs">
+                  {row.staffing ? (
+                    <span title={`${row.staffing.teachers} teachers, ${row.staffing.paras} paras, ${row.staffing.officeStaff} office, ${row.staffing.otherStaff} other`}>
+                      {row.staffing.totalPositions} total ({row.staffing.teachers}T, {row.staffing.paras}P, {row.staffing.officeStaff}O)
+                    </span>
+                  ) : '—'}
                 </td>
                 <td className="px-5 py-3 text-right text-slate-600">{row.revenue > 0 ? fmt(row.revenue) : '—'}</td>
                 <td className="px-5 py-3 text-right text-slate-600">{fmt(row.personnel)}</td>
