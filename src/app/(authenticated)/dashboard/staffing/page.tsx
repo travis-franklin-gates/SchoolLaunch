@@ -173,9 +173,9 @@ export default function StaffingPage() {
   }
 
   return (
-    <div>
+    <div className="animate-fade-in">
       {toast && (
-        <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium ${
+        <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium animate-slide-in-right ${
           toast.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
         }`}>
           {toast.message}
@@ -183,14 +183,14 @@ export default function StaffingPage() {
       )}
 
       {isModified && (
-        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
+        <div className="mb-4 bg-teal-50 border border-teal-200 rounded-lg px-4 py-3 text-sm text-teal-700">
           Scenario active — showing base case staffing. Adjust positions here to update the base case budget.
         </div>
       )}
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Staffing</h1>
+          <h1 className="text-[28px] font-semibold text-slate-900">Staffing</h1>
           <p className="text-sm text-slate-500 mt-1">Commission-aligned position types with OSPI/BLS salary benchmarks.</p>
         </div>
         <div className="flex items-center gap-3">
@@ -205,16 +205,16 @@ export default function StaffingPage() {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-4">
-        <table className="w-full text-sm">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-4">
+        <table className="sl-table w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-4 py-3 font-semibold text-slate-600">Position Type</th>
-              <th className="text-left px-4 py-3 font-semibold text-slate-600">Classification</th>
-              <th className="text-right px-4 py-3 font-semibold text-slate-600">FTE</th>
-              <th className="text-right px-4 py-3 font-semibold text-slate-600">Salary</th>
-              <th className="text-right px-4 py-3 font-semibold text-slate-600">Benefits ({assumptions.benefits_load_pct}%)</th>
-              <th className="text-right px-4 py-3 font-semibold text-slate-600">Total Cost</th>
+            <tr>
+              <th className="text-left px-4 py-3">Position Type</th>
+              <th className="text-left px-4 py-3">Classification</th>
+              <th className="text-right px-4 py-3">FTE</th>
+              <th className="text-right px-4 py-3">Salary</th>
+              <th className="text-right px-4 py-3">Benefits ({assumptions.benefits_load_pct}%)</th>
+              <th className="text-right px-4 py-3">Total Cost</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
@@ -286,8 +286,8 @@ export default function StaffingPage() {
                       <div className="text-[10px] text-slate-400 text-right mt-0.5">Benchmark: {fmt(pos.benchmarkSalary)}</div>
                     )}
                   </td>
-                  <td className="px-4 py-2 text-right text-slate-500">{fmt(benefits)}</td>
-                  <td className="px-4 py-2 text-right font-medium text-slate-800">{fmt(cost + benefits)}</td>
+                  <td className="num px-4 py-2 text-slate-500">{fmt(benefits)}</td>
+                  <td className="num px-4 py-2 font-medium text-slate-800">{fmt(cost + benefits)}</td>
                   <td className="px-4 py-2">
                     <button
                       onClick={() => removePosition(pos.id)}
@@ -301,19 +301,19 @@ export default function StaffingPage() {
             })}
           </tbody>
           <tfoot>
-            <tr className="border-t border-slate-200 bg-slate-50">
+            <tr>
               <td className="px-4 py-2 text-slate-600 font-medium" colSpan={3}>Total Salaries</td>
-              <td className="px-4 py-2 text-right font-medium text-slate-800" colSpan={1}>{fmt(totalSalaries)}</td>
+              <td className="num px-4 py-2 font-medium text-slate-800" colSpan={1}>{fmt(totalSalaries)}</td>
               <td colSpan={3}></td>
             </tr>
-            <tr className="bg-slate-50">
+            <tr>
               <td className="px-4 py-2 text-slate-600 font-medium" colSpan={3}>Taxes & Benefits ({assumptions.benefits_load_pct}%)</td>
-              <td className="px-4 py-2 text-right font-medium text-slate-800" colSpan={1}>{fmt(totalBenefits)}</td>
+              <td className="num px-4 py-2 font-medium text-slate-800" colSpan={1}>{fmt(totalBenefits)}</td>
               <td colSpan={3}></td>
             </tr>
-            <tr className="bg-slate-50 border-t border-slate-300">
+            <tr className="border-t border-slate-300">
               <td className="px-4 py-3 font-bold text-slate-800" colSpan={5}>Total Compensation</td>
-              <td className="px-4 py-3 text-right font-bold text-slate-800">{fmt(totalPersonnel)}</td>
+              <td className="num px-4 py-3 font-bold text-slate-800">{fmt(totalPersonnel)}</td>
               <td></td>
             </tr>
           </tfoot>
@@ -323,14 +323,14 @@ export default function StaffingPage() {
       <div className="flex gap-3">
         <button
           onClick={addPosition}
-          className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+          className="px-4 py-2 text-sm font-medium text-teal-600 bg-teal-50 hover:bg-teal-100 rounded-lg transition-colors"
         >
           + Add Position
         </button>
         <button
           onClick={save}
           disabled={saving}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+          className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
         >
           {saving ? 'Saving...' : 'Save Changes'}
         </button>

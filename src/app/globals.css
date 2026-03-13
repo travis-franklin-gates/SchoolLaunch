@@ -1,6 +1,244 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400&display=swap');
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: 'IBM Plex Sans', sans-serif;
+  --font-heading: 'DM Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+:root {
+  /* Primary brand */
+  --navy: #1B2A4A;
+  --navy-light: #243556;
+  --navy-dark: #111D35;
+
+  /* Accent — teal */
+  --teal-50: #ECFDF5;
+  --teal-100: #D1FAE5;
+  --teal-500: #10B981;
+  --teal-600: #059669;
+  --teal-700: #047857;
+
+  /* Warning — amber */
+  --amber-50: #FFFBEB;
+  --amber-500: #F59E0B;
+  --amber-600: #D97706;
+
+  /* Danger — rose */
+  --rose-50: #FFF1F2;
+  --rose-500: #F43F5E;
+  --rose-600: #E11D48;
+
+  /* Backgrounds */
+  --bg-page: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --bg-table-alt: #F8FAFC;
+  --bg-table-header: #F1F5F9;
+
+  /* Borders */
+  --border-subtle: #E2E8F0;
+  --border-medium: #CBD5E1;
+
+  /* Text */
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-tertiary: #94A3B8;
+  --text-on-dark: #F1F5F9;
+
+  /* Font families */
+  --font-heading-var: 'DM Sans', sans-serif;
+  --font-body-var: 'IBM Plex Sans', sans-serif;
+  --font-mono-var: 'IBM Plex Mono', monospace;
+}
+
+body {
+  font-family: var(--font-body-var);
+  background: var(--bg-page);
+  color: var(--text-primary);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-heading-var);
+}
+
+/* ===== TABLE DESIGN SYSTEM ===== */
+.sl-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+}
+
+.sl-table thead th {
+  background: var(--bg-table-header);
+  padding: 12px 16px;
+  font-family: var(--font-heading-var);
+  font-weight: 500;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  text-align: left;
+  border-bottom: 1px solid var(--border-medium);
+}
+
+.sl-table thead th.num,
+.sl-table tbody td.num {
+  text-align: right;
+  font-family: var(--font-mono-var);
+}
+
+.sl-table tbody tr {
+  transition: background 150ms;
+}
+
+.sl-table tbody tr:nth-child(even) {
+  background: var(--bg-table-alt);
+}
+
+.sl-table tbody tr:hover {
+  background: #EFF6FF;
+}
+
+.sl-table tbody td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.sl-table tbody tr.total {
+  font-weight: 500;
+  background: var(--bg-table-header);
+  border-top: 2px solid var(--border-medium);
+}
+
+.sl-table tbody tr.section-header {
+  background: var(--bg-table-header);
+  font-family: var(--font-heading-var);
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.sl-table tfoot td {
+  padding: 12px 16px;
+  background: var(--bg-table-header);
+  border-top: 2px solid var(--border-medium);
+  font-weight: 600;
+}
+
+/* Status badges */
+.badge-meets {
+  background: var(--teal-50);
+  color: var(--teal-700);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-watch {
+  background: var(--amber-50);
+  color: var(--amber-600);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-risk {
+  background: var(--rose-50);
+  color: var(--rose-600);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ===== FORM ELEMENTS ===== */
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+select,
+textarea {
+  font-family: var(--font-body-var);
+}
+
+input[type="range"] {
+  accent-color: var(--teal-600);
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 300ms ease-out both;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 400ms ease-out both;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 300ms ease-out both;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Staggered card entrance */
+.stagger-1 { animation-delay: 50ms; }
+.stagger-2 { animation-delay: 100ms; }
+.stagger-3 { animation-delay: 150ms; }
+.stagger-4 { animation-delay: 200ms; }
+.stagger-5 { animation-delay: 250ms; }
+.stagger-6 { animation-delay: 300ms; }
+.stagger-7 { animation-delay: 350ms; }
+
+/* Number transition */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono-var);
+}
+
+/* Scrollbar styling */
+.sl-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.sl-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sl-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: 3px;
+}
+
+.sl-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
 }

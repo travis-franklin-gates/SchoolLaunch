@@ -13,20 +13,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between">
+    <div className="min-h-screen" style={{ background: 'var(--bg-page)' }}>
+      <header className="bg-white border-b border-slate-200 px-8 h-16 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-2.5">
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-extrabold text-white"
-            style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' }}
+            style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}
           >
             S
           </div>
           <div>
-            <div className="text-slate-800 text-lg font-bold tracking-tight">
-              School<span className="text-blue-600">Launch</span>
+            <div className="text-slate-800 text-lg font-semibold tracking-tight" style={{ fontFamily: 'var(--font-heading-var)' }}>
+              School<span className="text-emerald-600">Launch</span>
             </div>
-            <div className="text-[0.6rem] text-slate-400 uppercase tracking-widest font-medium">
+            <div className="text-[10px] text-slate-400 uppercase tracking-[0.15em] font-medium">
               Portfolio
             </div>
           </div>
@@ -34,11 +34,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <button
           onClick={handleLogout}
           className="text-sm text-slate-500 hover:text-slate-800 transition-colors"
+          style={{ fontFamily: 'var(--font-heading-var)' }}
         >
           Sign Out
         </button>
       </header>
-      <main className="p-8">{children}</main>
+      <main className="p-4 md:p-8">{children}</main>
     </div>
   )
 }

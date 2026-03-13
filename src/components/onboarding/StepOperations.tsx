@@ -150,14 +150,14 @@ export default function StepOperations({
             <button
               type="button"
               onClick={() => update('facilityMode', 'sqft')}
-              className={`text-xs px-3 py-1 rounded-lg ${data.facilityMode === 'sqft' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+              className={`text-xs px-3 py-1 rounded-lg ${data.facilityMode === 'sqft' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600'}`}
             >
               Sq Footage
             </button>
             <button
               type="button"
               onClick={() => update('facilityMode', 'flat')}
-              className={`text-xs px-3 py-1 rounded-lg ${data.facilityMode === 'flat' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+              className={`text-xs px-3 py-1 rounded-lg ${data.facilityMode === 'flat' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600'}`}
             >
               Flat Monthly
             </button>
@@ -172,7 +172,7 @@ export default function StepOperations({
                 type="number"
                 value={data.facilitySqft}
                 onChange={(e) => update('facilitySqft', Number(e.target.value))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
               />
             </div>
             <div>
@@ -182,7 +182,7 @@ export default function StepOperations({
                 value={data.facilityCostPerSqft}
                 onChange={(e) => update('facilityCostPerSqft', Number(e.target.value))}
                 step={0.5}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
               />
             </div>
           </div>
@@ -194,7 +194,7 @@ export default function StepOperations({
               value={data.facilityMonthly}
               onChange={(e) => update('facilityMonthly', Number(e.target.value))}
               step={500}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
             />
           </div>
         )}
@@ -240,7 +240,7 @@ export default function StepOperations({
           id="foodProgram"
           checked={data.foodProgram}
           onChange={(e) => update('foodProgram', e.target.checked)}
-          className="w-4 h-4 accent-blue-600"
+          className="w-4 h-4 accent-teal-600"
         />
         <div>
           <label htmlFor="foodProgram" className="text-sm font-medium text-slate-700">Food Program</label>
@@ -268,7 +268,7 @@ export default function StepOperations({
             value={data.insurance}
             onChange={(e) => update('insurance', Number(e.target.value))}
             step={1000}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
           />
         </div>
         <div>
@@ -281,7 +281,7 @@ export default function StepOperations({
               min={0}
               max={10}
               step={0.5}
-              className="w-24 px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-24 px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
             />
             <span className="text-sm text-slate-500">= {fmt(costs.misc)}</span>
           </div>
@@ -301,7 +301,7 @@ export default function StepOperations({
                 value={f.source}
                 onChange={(e) => updateFunding(f.key, 'source', e.target.value)}
                 placeholder="Source name"
-                className="flex-1 px-2 py-1.5 border border-slate-200 rounded text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="flex-1 px-2 py-1.5 border border-slate-200 rounded text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
               />
               <div className="flex items-center gap-1">
                 <span className="text-slate-400 text-sm">$</span>
@@ -310,13 +310,13 @@ export default function StepOperations({
                   value={f.amount}
                   onChange={(e) => updateFunding(f.key, 'amount', Number(e.target.value))}
                   step={5000}
-                  className="w-28 px-2 py-1.5 border border-slate-200 rounded text-sm text-right text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-28 px-2 py-1.5 border border-slate-200 rounded text-sm text-right text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
                 />
               </div>
               <select
                 value={f.type}
                 onChange={(e) => updateFunding(f.key, 'type', e.target.value)}
-                className="px-2 py-1.5 border border-slate-200 rounded text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="px-2 py-1.5 border border-slate-200 rounded text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
               >
                 <option value="grant">Grant</option>
                 <option value="donation">Donation</option>
@@ -326,7 +326,7 @@ export default function StepOperations({
               <select
                 value={f.status}
                 onChange={(e) => updateFunding(f.key, 'status', e.target.value)}
-                className="px-2 py-1.5 border border-slate-200 rounded text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="px-2 py-1.5 border border-slate-200 rounded text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
               >
                 <option value="received">Received</option>
                 <option value="pledged">Pledged</option>
@@ -346,7 +346,7 @@ export default function StepOperations({
         <button
           type="button"
           onClick={addFunding}
-          className="text-xs text-blue-600 hover:text-blue-800 font-medium mt-3"
+          className="text-xs text-teal-600 hover:text-teal-800 font-medium mt-3"
         >
           + Add Funding Source
         </button>
@@ -407,7 +407,7 @@ export default function StepOperations({
         <button
           type="submit"
           disabled={saving}
-          className="bg-blue-600 text-white px-8 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+          className="bg-teal-600 text-white px-8 py-2.5 rounded-lg font-medium hover:bg-teal-700 transition-colors disabled:opacity-50 flex items-center gap-2"
         >
           {saving ? (
             <>
@@ -451,7 +451,7 @@ function PerPupilField({
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
           step={10}
-          className="w-full px-2 py-1.5 border border-slate-300 rounded text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full px-2 py-1.5 border border-slate-300 rounded text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
         />
         <span className="text-slate-400 text-sm whitespace-nowrap">/pupil</span>
       </div>

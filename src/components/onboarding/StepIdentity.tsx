@@ -79,7 +79,7 @@ export default function StepIdentity({ initialData, onNext }: Props) {
           type="text"
           value={schoolName}
           onChange={(e) => { setSchoolName(e.target.value); setTouched(true) }}
-          className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 ${
+          className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 ${
             nameError ? 'border-red-300 bg-red-50' : 'border-slate-300'
           }`}
           placeholder="e.g., Cascade Academy"
@@ -92,7 +92,7 @@ export default function StepIdentity({ initialData, onNext }: Props) {
         <select
           value={region}
           onChange={(e) => setRegion(e.target.value)}
-          className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 bg-white"
+          className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 bg-white"
         >
           {REGIONS.map((r) => (
             <option key={r} value={r}>{r}</option>
@@ -106,7 +106,7 @@ export default function StepIdentity({ initialData, onNext }: Props) {
         <select
           value={plannedOpenYear}
           onChange={(e) => setPlannedOpenYear(Number(e.target.value))}
-          className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 bg-white"
+          className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 bg-white"
         >
           {YEARS.map((y) => (
             <option key={y} value={y}>{y}–{y + 1} School Year</option>
@@ -124,7 +124,7 @@ export default function StepIdentity({ initialData, onNext }: Props) {
               onClick={() => setGradeConfig(g)}
               className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all ${
                 gradeConfig === g
-                  ? 'border-blue-600 bg-blue-50 text-blue-700'
+                  ? 'border-teal-600 bg-teal-50 text-teal-700'
                   : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
               }`}
             >
@@ -135,17 +135,17 @@ export default function StepIdentity({ initialData, onNext }: Props) {
       </div>
 
       {tip && (
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-          <p className="text-sm font-medium text-blue-800 mb-1">{tip.desc}</p>
-          <p className="text-xs text-blue-600">{tip.typical}</p>
-          <p className="text-xs text-blue-600 mt-1">{tip.note}</p>
+        <div className="bg-teal-50 border border-teal-100 rounded-xl p-4">
+          <p className="text-sm font-medium text-teal-800 mb-1">{tip.desc}</p>
+          <p className="text-xs text-teal-600">{tip.typical}</p>
+          <p className="text-xs text-teal-600 mt-1">{tip.note}</p>
         </div>
       )}
 
       <div className="pt-4">
         <button
           type="submit"
-          className="bg-blue-600 text-white px-8 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          className="bg-teal-600 text-white px-8 py-2.5 rounded-lg font-medium hover:bg-teal-700 transition-colors"
         >
           Continue
         </button>

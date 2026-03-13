@@ -351,7 +351,7 @@ export default function OnboardingPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-10 h-10 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-slate-500">Loading your school data...</p>
         </div>
       </div>
@@ -395,23 +395,23 @@ export default function OnboardingPage() {
           </div>
         </div>
 
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-8">
-          <h3 className="text-sm font-semibold text-blue-800 mb-2">What happens next?</h3>
-          <ul className="text-sm text-blue-700 space-y-2 text-left">
+        <div className="bg-teal-50 border border-teal-100 rounded-xl p-6 mb-8">
+          <h3 className="text-sm font-semibold text-teal-800 mb-2">What happens next?</h3>
+          <ul className="text-sm text-teal-700 space-y-2 text-left">
             <li className="flex items-start gap-2">
-              <span className="text-blue-500 mt-0.5">1.</span>
+              <span className="text-teal-500 mt-0.5">1.</span>
               <span>Explore your <strong>Dashboard</strong> to see revenue, staffing, operations, and cash flow projections</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-blue-500 mt-0.5">2.</span>
+              <span className="text-teal-500 mt-0.5">2.</span>
               <span>Run the <strong>Advisory Panel</strong> for expert analysis from 7 specialized financial agents</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-blue-500 mt-0.5">3.</span>
+              <span className="text-teal-500 mt-0.5">3.</span>
               <span>Export a professional <strong>Budget Narrative PDF</strong> for your authorizer application</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-blue-500 mt-0.5">4.</span>
+              <span className="text-teal-500 mt-0.5">4.</span>
               <span>Use <strong>Ask SchoolLaunch</strong> to get instant answers about WA charter finances</span>
             </li>
           </ul>
@@ -419,7 +419,7 @@ export default function OnboardingPage() {
 
         <button
           onClick={() => router.push('/dashboard')}
-          className="bg-blue-600 text-white px-10 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-lg"
+          className="bg-teal-600 text-white px-10 py-3 rounded-lg font-semibold hover:bg-teal-700 transition-colors text-lg"
         >
           Go to Dashboard
         </button>
@@ -431,17 +431,17 @@ export default function OnboardingPage() {
     <div>
       {/* Progress bar */}
       <div className="mb-8">
-        <div className="flex items-center gap-1 mb-4">
+        <div className="flex items-center gap-1 mb-6">
           {STEPS.map(({ label, icon }, i) => (
             <div key={label} className="flex items-center flex-1">
               <div className="flex flex-col items-center flex-1">
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                     i < step
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-teal-600 text-white'
                       : i === step
-                      ? 'bg-blue-600 text-white ring-4 ring-blue-100'
-                      : 'bg-slate-100 text-slate-400'
+                      ? 'bg-white ring-[3px] ring-teal-600 animate-pulse'
+                      : 'bg-slate-200 text-slate-400'
                   }`}
                 >
                   {i < step ? (
@@ -449,24 +449,24 @@ export default function OnboardingPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   ) : (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <svg className={`w-5 h-5 ${i === step ? 'text-teal-600' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
                     </svg>
                   )}
                 </div>
                 <span className={`text-xs mt-1.5 font-medium ${
-                  i <= step ? 'text-blue-600' : 'text-slate-400'
-                }`}>{label}</span>
+                  i <= step ? 'text-teal-600' : 'text-slate-400'
+                }`} style={{ fontFamily: 'var(--font-heading-var)' }}>{label}</span>
               </div>
               {i < STEPS.length - 1 && (
-                <div className={`h-0.5 w-full -mt-5 mx-1 ${i < step ? 'bg-blue-600' : 'bg-slate-200'}`} />
+                <div className={`h-0.5 w-full -mt-5 mx-1 ${i < step ? 'bg-teal-600' : 'bg-slate-200'}`} />
               )}
             </div>
           ))}
         </div>
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-slate-800">{STEPS[step].label}</h2>
-          <span className="text-xs text-slate-400">Step {step + 1} of {STEPS.length}</span>
+        <div className="text-center">
+          <h2 className="text-[24px] font-semibold text-slate-900" style={{ fontFamily: 'var(--font-heading-var)' }}>{STEPS[step].label}</h2>
+          <p className="text-[15px] text-slate-400 mt-1">Step {step + 1} of {STEPS.length}</p>
         </div>
       </div>
 

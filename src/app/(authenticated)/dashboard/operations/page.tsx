@@ -212,16 +212,16 @@ export default function OperationsPage() {
   })).filter((g) => g.rows.length > 0)
 
   return (
-    <div>
+    <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Operations</h1>
+          <h1 className="text-[28px] font-semibold text-slate-900">Operations</h1>
           <p className="text-sm text-slate-500 mt-1">Non-personnel expenses for Year 1, organized by category. Per-pupil benchmarks shown for reference.</p>
         </div>
       </div>
 
       {toast && (
-        <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium ${
+        <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium animate-slide-in-right ${
           toast.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
         }`}>
           {toast.message}
@@ -229,7 +229,7 @@ export default function OperationsPage() {
       )}
 
       {isModified && (
-        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
+        <div className="mb-4 bg-teal-50 border border-teal-200 rounded-lg px-4 py-3 text-sm text-teal-700">
           Scenario active — showing base case operations. Adjust amounts here to update the base case budget.
         </div>
       )}
@@ -250,7 +250,7 @@ export default function OperationsPage() {
 
       {/* Food Service note */}
       {assumptions.food_service_offered && (
-        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
+        <div className="mb-4 bg-teal-50 border border-teal-200 rounded-lg px-4 py-3 text-sm text-teal-700">
           <strong>Food Service:</strong> If 100% of students qualify for free meals, your school may be eligible for the Community Eligibility Provision (CEP),
           which provides USDA NSLP reimbursement that can offset food service costs. Update demographics in Settings.
         </div>
@@ -258,19 +258,19 @@ export default function OperationsPage() {
 
       {/* Transportation note */}
       {assumptions.transportation_offered && (
-        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
+        <div className="mb-4 bg-teal-50 border border-teal-200 rounded-lg px-4 py-3 text-sm text-teal-700">
           <strong>Transportation:</strong> WA charter schools must provide transportation services under RCW 28A.710.040.
           Document your transportation plan in your charter application. Consider contracted vs. in-house options.
         </div>
       )}
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-4">
-        <table className="w-full text-sm">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-4">
+        <table className="w-full text-sm sl-table">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-6 py-3 font-semibold text-slate-600">Expense</th>
-              <th className="text-left px-6 py-3 font-semibold text-slate-600">Benchmark</th>
-              <th className="text-right px-6 py-3 font-semibold text-slate-600">Amount</th>
+              <th className="text-left px-6 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Expense</th>
+              <th className="text-left px-6 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Benchmark</th>
+              <th className="text-right px-6 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -288,7 +288,7 @@ export default function OperationsPage() {
           <tfoot>
             <tr className="bg-slate-50 border-t border-slate-200">
               <td className="px-6 py-3 font-bold text-slate-800" colSpan={2}>Total Operations</td>
-              <td className="px-6 py-3 text-right font-bold text-slate-800">{fmt(totalOps)}</td>
+              <td className="px-6 py-3 text-right font-bold text-slate-800 num">{fmt(totalOps)}</td>
             </tr>
           </tfoot>
         </table>
@@ -297,7 +297,7 @@ export default function OperationsPage() {
       <button
         onClick={save}
         disabled={saving}
-        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+        className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
       >
         {saving ? 'Saving...' : 'Save Changes'}
       </button>
@@ -320,8 +320,8 @@ function GroupSection({
 }) {
   return (
     <>
-      <tr className="bg-slate-100 border-b border-slate-200">
-        <td className="px-6 py-2 font-semibold text-xs text-slate-600 uppercase tracking-wide" colSpan={3}>
+      <tr className="bg-slate-100 border-b border-slate-200 section-header">
+        <td className="px-6 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide" colSpan={3}>
           {group}
         </td>
       </tr>
@@ -334,14 +334,14 @@ function GroupSection({
             <td className="px-6 py-3 text-xs text-slate-500">{row.perPupilBenchmark}</td>
             <td className="px-6 py-3 text-right">
               {isReadOnly ? (
-                <span className="text-slate-500">{fmt(row.amount)}</span>
+                <span className="text-slate-500 num">{fmt(row.amount)}</span>
               ) : (
                 <input
                   type="number"
                   step={1000}
                   value={row.amount}
                   onChange={(e) => updateAmount(globalIdx, Number(e.target.value))}
-                  className="w-32 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-32 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
               )}
             </td>
@@ -350,7 +350,7 @@ function GroupSection({
       })}
       <tr className="border-b border-slate-200 bg-slate-50/50">
         <td className="px-6 py-2 font-semibold text-slate-700 text-xs" colSpan={2}>Subtotal: {group}</td>
-        <td className="px-6 py-2 text-right font-semibold text-slate-700 text-xs">{fmt(subtotal)}</td>
+        <td className="px-6 py-2 text-right font-semibold text-slate-700 text-xs num">{fmt(subtotal)}</td>
       </tr>
     </>
   )

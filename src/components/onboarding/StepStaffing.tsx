@@ -198,7 +198,7 @@ export default function StepStaffing({ enrollment, maxClassSize, gradeConfig, pc
         <button
           type="button"
           onClick={resetDefaults}
-          className="text-xs text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap ml-4"
+          className="text-xs text-teal-600 hover:text-teal-800 font-medium whitespace-nowrap ml-4"
         >
           Reset to Defaults
         </button>
@@ -268,14 +268,14 @@ export default function StepStaffing({ enrollment, maxClassSize, gradeConfig, pc
                       type="text"
                       value={p.title}
                       onChange={(e) => updatePosition(p.key, 'title', e.target.value)}
-                      className="w-full px-2 py-1.5 border border-slate-200 rounded text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full px-2 py-1.5 border border-slate-200 rounded text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
                     />
                   </td>
                   <td className="py-2 pr-3">
                     <select
                       value={p.category}
                       onChange={(e) => updatePosition(p.key, 'category', e.target.value)}
-                      className="w-full px-2 py-1.5 border border-slate-200 rounded text-slate-900 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full px-2 py-1.5 border border-slate-200 rounded text-slate-900 bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
                     >
                       <option value="certificated">Certificated</option>
                       <option value="classified">Classified</option>
@@ -290,7 +290,7 @@ export default function StepStaffing({ enrollment, maxClassSize, gradeConfig, pc
                       min={0.1}
                       max={2}
                       step={0.1}
-                      className="w-20 px-2 py-1.5 border border-slate-200 rounded text-right text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-20 px-2 py-1.5 border border-slate-200 rounded text-right text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
                     />
                   </td>
                   <td className="py-2 pr-3">
@@ -300,7 +300,7 @@ export default function StepStaffing({ enrollment, maxClassSize, gradeConfig, pc
                       onChange={(e) => updatePosition(p.key, 'salary', Number(e.target.value))}
                       min={0}
                       step={1000}
-                      className="w-28 px-2 py-1.5 border border-slate-200 rounded text-right text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-28 px-2 py-1.5 border border-slate-200 rounded text-right text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
                     />
                   </td>
                   <td className="py-2 pr-3 text-right text-slate-500">{fmt(benefits)}</td>
@@ -325,7 +325,7 @@ export default function StepStaffing({ enrollment, maxClassSize, gradeConfig, pc
       <button
         type="button"
         onClick={addPosition}
-        className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+        className="text-sm text-teal-600 hover:text-teal-800 font-medium"
       >
         + Add Position
       </button>
@@ -340,7 +340,7 @@ export default function StepStaffing({ enrollment, maxClassSize, gradeConfig, pc
         </button>
         <button
           type="submit"
-          className="bg-blue-600 text-white px-8 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          className="bg-teal-600 text-white px-8 py-2.5 rounded-lg font-medium hover:bg-teal-700 transition-colors"
         >
           Continue
         </button>

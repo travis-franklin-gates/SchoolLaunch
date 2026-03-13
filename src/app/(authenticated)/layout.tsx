@@ -6,9 +6,9 @@ export default function AuthenticatedLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen" style={{ background: 'var(--bg-page)' }}>
       <Sidebar />
-      <main className="ml-60 p-8">
+      <main className="md:ml-60 p-4 md:p-8 pt-16 md:pt-8">
         {children}
       </main>
     </div>

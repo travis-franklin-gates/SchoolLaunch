@@ -48,19 +48,19 @@ function AgentIcon({ icon, className }: { icon: string; className?: string }) {
 
 function SkeletonCard() {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-5 animate-pulse">
+    <div className="bg-white border border-slate-200 rounded-xl p-5">
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-8 h-8 bg-slate-200 rounded-lg" />
+        <div className="w-8 h-8 animate-shimmer rounded-lg" />
         <div className="flex-1">
-          <div className="h-4 bg-slate-200 rounded w-32 mb-1" />
-          <div className="h-3 bg-slate-100 rounded w-48" />
+          <div className="h-4 animate-shimmer rounded w-32 mb-1" />
+          <div className="h-3 animate-shimmer rounded w-48" />
         </div>
-        <div className="h-5 bg-slate-200 rounded-full w-24" />
+        <div className="h-5 animate-shimmer rounded-full w-24" />
       </div>
       <div className="space-y-2">
-        <div className="h-3 bg-slate-100 rounded w-full" />
-        <div className="h-3 bg-slate-100 rounded w-5/6" />
-        <div className="h-3 bg-slate-100 rounded w-4/6" />
+        <div className="h-3 animate-shimmer rounded w-full" />
+        <div className="h-3 animate-shimmer rounded w-5/6" />
+        <div className="h-3 animate-shimmer rounded w-4/6" />
       </div>
     </div>
   )
@@ -124,10 +124,10 @@ export default function AdvisoryPage() {
   const strongCount = data?.agents.filter((a) => a.status === 'strong').length || 0
 
   return (
-    <div>
+    <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Advisory Panel</h1>
+          <h1 className="text-[28px] font-semibold text-slate-900">Advisory Panel</h1>
           <p className="text-sm text-slate-500 mt-1">Seven expert perspectives on your financial plan</p>
         </div>
         <button
@@ -148,19 +148,19 @@ export default function AdvisoryPage() {
 
       {/* Briefing */}
       {fetching && !data ? (
-        <div className="bg-white border-l-4 border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-8 animate-pulse">
-          <div className="h-4 bg-slate-200 rounded w-48 mb-4" />
+        <div className="bg-white border-l-4 border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-8">
+          <div className="h-4 animate-shimmer rounded w-48 mb-4" />
           <div className="space-y-3">
-            <div className="h-3 bg-slate-100 rounded w-full" />
-            <div className="h-3 bg-slate-100 rounded w-full" />
-            <div className="h-3 bg-slate-100 rounded w-5/6" />
-            <div className="h-3 bg-slate-100 rounded w-full mt-4" />
-            <div className="h-3 bg-slate-100 rounded w-full" />
-            <div className="h-3 bg-slate-100 rounded w-4/6" />
+            <div className="h-3 animate-shimmer rounded w-full" />
+            <div className="h-3 animate-shimmer rounded w-full" />
+            <div className="h-3 animate-shimmer rounded w-5/6" />
+            <div className="h-3 animate-shimmer rounded w-full mt-4" />
+            <div className="h-3 animate-shimmer rounded w-full" />
+            <div className="h-3 animate-shimmer rounded w-4/6" />
           </div>
         </div>
       ) : data ? (
-        <div className="bg-white border-l-4 border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-8">
+        <div className="bg-white border-l-4 border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-8 animate-fade-in-up">
           <div className="flex items-center gap-2 mb-4">
             <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -194,12 +194,12 @@ export default function AdvisoryPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
         {fetching && !data
           ? Array.from({ length: 7 }).map((_, i) => <SkeletonCard key={i} />)
-          : data?.agents.map((agent) => {
+          : data?.agents.map((agent, agentIdx) => {
               const cfg = STATUS_CONFIG[agent.status]
               return (
-                <div key={agent.id} className={`bg-white border-l-4 ${cfg.border} border border-slate-200 rounded-xl p-5`}>
+                <div key={agent.id} className={`bg-white border-l-4 ${cfg.border} border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200 animate-fade-in-up stagger-${agentIdx + 1}`}>
                   <div className="flex items-start gap-3 mb-3">
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${cfg.bg} ${cfg.text}`}>
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${cfg.bg} ${cfg.text}`}>
                       <AgentIcon icon={agent.icon} className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -238,7 +238,7 @@ export default function AdvisoryPage() {
           </div>
           <Link
             href="/dashboard/ask"
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+            className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors"
           >
             Ask SchoolLaunch
           </Link>

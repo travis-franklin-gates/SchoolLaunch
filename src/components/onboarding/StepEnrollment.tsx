@@ -186,7 +186,7 @@ export default function StepEnrollment({
           onClick={() => setMode('grade_expansion')}
           className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
             mode === 'grade_expansion'
-              ? 'bg-white text-blue-700 shadow-sm'
+              ? 'bg-white text-teal-700 shadow-sm'
               : 'text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -197,7 +197,7 @@ export default function StepEnrollment({
           onClick={() => setMode('simple')}
           className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
             mode === 'simple'
-              ? 'bg-white text-blue-700 shadow-sm'
+              ? 'bg-white text-teal-700 shadow-sm'
               : 'text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -219,7 +219,7 @@ export default function StepEnrollment({
               onChange={(e) => setMaxClassSize(Number(e.target.value))}
               min={10}
               max={35}
-              className="w-32 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+              className="w-32 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
             />
           </div>
 
@@ -244,7 +244,7 @@ export default function StepEnrollment({
                 onChange={(e) => setEnrollmentY1(Number(e.target.value))}
                 min={1}
                 required
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
               />
               <p className="text-xs text-slate-400 mt-1">Default for {gradeConfig}: {defaults.enrollment}</p>
             </div>
@@ -257,7 +257,7 @@ export default function StepEnrollment({
                 min={10}
                 max={35}
                 required
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
               />
             </div>
           </div>
@@ -272,7 +272,7 @@ export default function StepEnrollment({
                   onClick={() => selectPreset(preset)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-all border-2 ${
                     growthPreset === preset
-                      ? 'border-blue-600 bg-blue-50 text-blue-700'
+                      ? 'border-teal-600 bg-teal-50 text-teal-700'
                       : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                   }`}
                 >
@@ -297,7 +297,7 @@ export default function StepEnrollment({
                       value={manual}
                       onChange={(e) => setManual(Number(e.target.value))}
                       min={1}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
                     />
                   ) : (
                     <div className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 font-medium">{value}</div>
@@ -334,7 +334,7 @@ export default function StepEnrollment({
         </div>
         <div>
           <p className="text-xs text-slate-500">Total Revenue</p>
-          <p className="text-lg font-semibold text-blue-600">{fmt(revenuePreview.total)}</p>
+          <p className="text-lg font-semibold text-teal-600">{fmt(revenuePreview.total)}</p>
         </div>
       </div>
 
@@ -348,7 +348,7 @@ export default function StepEnrollment({
         </button>
         <button
           type="submit"
-          className="bg-blue-600 text-white px-8 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          className="bg-teal-600 text-white px-8 py-2.5 rounded-lg font-medium hover:bg-teal-700 transition-colors"
         >
           Continue
         </button>

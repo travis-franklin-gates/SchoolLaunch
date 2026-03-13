@@ -126,8 +126,8 @@ export default function RevenuePage() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-slate-800 mb-2">Revenue</h1>
+    <div className="animate-fade-in">
+      <h1 className="text-[28px] font-semibold text-slate-900 mb-2">Revenue</h1>
       <p className="text-sm text-slate-500 mb-2">Commission-aligned revenue breakdown for Year 1. Override any line by entering a custom amount.</p>
       <div className="text-xs text-slate-400 mb-6">
         Headcount: <strong className="text-slate-600">{baseEnrollment} students</strong> | AAFTE: <strong className="text-slate-600">{baseAAFTE} students ({aaftePct}%)</strong>
@@ -135,21 +135,21 @@ export default function RevenuePage() {
       </div>
 
       {isModified && (
-        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
+        <div className="mb-4 bg-teal-50 border border-teal-200 rounded-lg px-4 py-3 text-sm text-teal-700">
           Scenario active — enrollment adjusted to <strong>{scenarioEnrollment}</strong> students (AAFTE: {scenarioAAFTE}).
         </div>
       )}
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+        <table className="sl-table w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-6 py-3 font-semibold text-slate-600">Revenue Source</th>
-              <th className="text-left px-6 py-3 font-semibold text-slate-600">Formula</th>
-              <th className="text-right px-6 py-3 font-semibold text-slate-600">Base Case</th>
-              {isModified && <th className="text-right px-6 py-3 font-semibold text-blue-600">Scenario</th>}
-              <th className="text-right px-6 py-3 font-semibold text-slate-600">Override</th>
-              <th className="text-right px-6 py-3 font-semibold text-slate-600">Amount</th>
+            <tr>
+              <th className="text-left px-6 py-3">Revenue Source</th>
+              <th className="text-left px-6 py-3">Formula</th>
+              <th className="text-right px-6 py-3">Base Case</th>
+              {isModified && <th className="text-right px-6 py-3 text-teal-600">Scenario</th>}
+              <th className="text-right px-6 py-3">Override</th>
+              <th className="text-right px-6 py-3">Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -158,8 +158,8 @@ export default function RevenuePage() {
               const groupTotal = groupRows.reduce((s, r) => s + (r.override ?? r.calculated), 0)
               return (
                 <>{/* group header */}
-                  <tr key={`header-${group}`} className="bg-slate-50">
-                    <td colSpan={isModified ? 6 : 5} className="px-6 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  <tr key={`header-${group}`} className="section-header">
+                    <td colSpan={isModified ? 6 : 5} className="px-6 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide">
                       {group}
                     </td>
                   </tr>
@@ -169,9 +169,9 @@ export default function RevenuePage() {
                       <tr key={row.label} className="border-b border-slate-100">
                         <td className="px-6 py-3 font-medium text-slate-800">{row.label}</td>
                         <td className="px-6 py-3 text-slate-500 text-xs">{row.formula}</td>
-                        <td className="px-6 py-3 text-right text-slate-500">{fmt(row.calculated)}</td>
+                        <td className="num px-6 py-3 text-slate-500">{fmt(row.calculated)}</td>
                         {isModified && (
-                          <td className={`px-6 py-3 text-right ${row.scenarioCalc !== row.calculated ? 'text-blue-600 font-medium' : 'text-slate-500'}`}>
+                          <td className={`num px-6 py-3 ${row.scenarioCalc !== row.calculated ? 'text-teal-600 font-medium' : 'text-slate-500'}`}>
                             {fmt(row.scenarioCalc)}
                           </td>
                         )}
@@ -188,10 +188,10 @@ export default function RevenuePage() {
                                 return next
                               })
                             }}
-                            className="w-28 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-28 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                           />
                         </td>
-                        <td className={`px-6 py-3 text-right font-medium ${row.override !== null ? 'text-blue-600' : 'text-slate-800'}`}>
+                        <td className={`num px-6 py-3 font-medium ${row.override !== null ? 'text-teal-600' : 'text-slate-800'}`}>
                           {fmt(effective)}
                         </td>
                       </tr>
@@ -202,14 +202,14 @@ export default function RevenuePage() {
             })}
           </tbody>
           <tfoot>
-            <tr className="bg-slate-50 border-t border-slate-200">
+            <tr>
               <td className="px-6 py-3 font-bold text-slate-800" colSpan={2}>Total Revenue</td>
-              <td className="px-6 py-3 text-right font-bold text-slate-800">{fmt(totalBase)}</td>
+              <td className="num px-6 py-3 font-bold text-slate-800">{fmt(totalBase)}</td>
               {isModified && (
-                <td className="px-6 py-3 text-right font-bold text-blue-600">{fmt(totalScenario)}</td>
+                <td className="num px-6 py-3 font-bold text-teal-600">{fmt(totalScenario)}</td>
               )}
               <td></td>
-              <td className="px-6 py-3 text-right font-bold text-slate-800">
+              <td className="num px-6 py-3 font-bold text-slate-800">
                 {fmt(isModified ? totalScenario : totalBase)}
               </td>
             </tr>

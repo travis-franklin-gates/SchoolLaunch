@@ -92,7 +92,7 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
   if (loading || !profile) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
       </div>
     )
   }
@@ -120,7 +120,7 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
   return (
     <div>
       {/* Back link */}
-      <Link href="/portfolio" className="text-sm text-blue-600 hover:text-blue-800 font-medium mb-4 inline-block">
+      <Link href="/portfolio" className="text-sm text-teal-600 hover:text-teal-800 font-medium mb-4 inline-block">
         &larr; Back to Portfolio
       </Link>
 

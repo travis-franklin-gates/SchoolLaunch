@@ -83,35 +83,35 @@ export default function MultiYearPage() {
   const yrs = [1, 2, 3, 4, 5]
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-slate-800 mb-2">Multi-Year Projection</h1>
+    <div className="animate-fade-in">
+      <h1 className="text-[28px] font-semibold text-slate-900 mb-2">Multi-Year Projection</h1>
       <p className="text-sm text-slate-500 mb-6">
         Five-year projection with {assumptions.salary_escalator_pct}% annual salary escalator, {assumptions.ops_escalator_pct}% operations escalator, and {assumptions.revenue_cola_pct}% revenue COLA.
       </p>
 
       {/* Startup Funding Sources */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
+      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Startup Funding Sources</h2>
+          <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide">Startup Funding Sources</h2>
           <div className="flex gap-2">
             <button
               onClick={addSource}
-              className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium text-teal-600 border border-teal-200 rounded-lg hover:bg-teal-50 transition-colors"
             >
               + Add Source
             </button>
             <button
               onClick={saveFunding}
               disabled={savingFunding}
-              className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="px-3 py-1.5 text-xs font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
             >
               {savingFunding ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto sl-scroll">
+          <table className="w-full text-sm sl-table">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="text-left px-3 py-2 font-semibold text-slate-600">Source</th>
@@ -130,7 +130,7 @@ export default function MultiYearPage() {
                       value={src.source}
                       onChange={(e) => updateSource(idx, 'source', e.target.value)}
                       placeholder="Funding source name..."
-                      className="w-full border border-slate-200 rounded px-2 py-1 text-sm"
+                      className="w-full border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     />
                   </td>
                   <td className="px-3 py-2">
@@ -139,14 +139,14 @@ export default function MultiYearPage() {
                       step={1000}
                       value={src.amount}
                       onChange={(e) => updateSource(idx, 'amount', Number(e.target.value))}
-                      className="w-full text-right border border-slate-200 rounded px-2 py-1 text-sm"
+                      className="w-full text-right border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     />
                   </td>
                   <td className="px-3 py-2">
                     <select
                       value={src.type}
                       onChange={(e) => updateSource(idx, 'type', e.target.value)}
-                      className="w-full border border-slate-200 rounded px-2 py-1 text-sm"
+                      className="w-full border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     >
                       {FUNDING_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                     </select>
@@ -155,7 +155,7 @@ export default function MultiYearPage() {
                     <select
                       value={src.status}
                       onChange={(e) => updateSource(idx, 'status', e.target.value)}
-                      className="w-full border border-slate-200 rounded px-2 py-1 text-sm"
+                      className="w-full border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     >
                       {FUNDING_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
@@ -203,13 +203,13 @@ export default function MultiYearPage() {
       </div>
 
       {/* Main multi-year table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto">
-        <table className="w-full text-sm whitespace-nowrap">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm overflow-x-auto sl-scroll">
+        <table className="w-full text-sm whitespace-nowrap sl-table">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
               <th className="text-left px-5 py-3 font-semibold text-slate-600 min-w-[200px]"></th>
               {yrs.map((y) => (
-                <th key={y} className="text-right px-5 py-3 font-semibold text-slate-600 min-w-[130px]">
+                <th key={y} className="text-right px-5 py-3 font-semibold text-slate-600 min-w-[130px] num">
                   Year {y}
                   <div className="text-[10px] font-normal text-slate-400">
                     {yearsWithStartup[y - 1]?.enrollment || 0} students
@@ -223,7 +223,7 @@ export default function MultiYearPage() {
             {hasExpansion && (
               <>
                 <SectionHeader label="Enrollment (Grade Expansion)" cols={5} />
-                <tr className="border-b border-slate-100 bg-blue-50/30">
+                <tr className="border-b border-slate-100 bg-teal-50/30">
                   <td className="px-5 py-2.5 text-slate-600">Grades Served</td>
                   {yearsWithStartup.map((y) => (
                     <td key={y.year} className="px-5 py-2.5 text-right text-xs text-slate-600">
@@ -234,7 +234,7 @@ export default function MultiYearPage() {
                 <tr className="border-b border-slate-100">
                   <td className="px-5 py-2.5 text-slate-600">New Grades Added</td>
                   {yearsWithStartup.map((y) => (
-                    <td key={y.year} className="px-5 py-2.5 text-right text-blue-600 font-medium text-xs">
+                    <td key={y.year} className="px-5 py-2.5 text-right text-teal-600 font-medium text-xs">
                       {y.expansionDetail?.newGrades.length ? `+${y.expansionDetail.newGrades.join(', ')}` : '—'}
                     </td>
                   ))}
@@ -250,7 +250,7 @@ export default function MultiYearPage() {
                 <tr className="border-b border-slate-100">
                   <td className="px-5 py-2.5 text-slate-600">New Grade Students</td>
                   {yearsWithStartup.map((y) => (
-                    <td key={y.year} className="px-5 py-2.5 text-right text-blue-600">
+                    <td key={y.year} className="px-5 py-2.5 text-right text-teal-600">
                       {y.expansionDetail ? (y.year === 1 ? y.enrollment : (y.expansionDetail.newGrade > 0 ? `+${y.expansionDetail.newGrade}` : '—')) : '—'}
                     </td>
                   ))}
@@ -343,8 +343,8 @@ export default function MultiYearPage() {
 
 function SectionHeader({ label, cols }: { label: string; cols: number }) {
   return (
-    <tr className="bg-slate-100 border-b border-slate-200">
-      <td className="px-5 py-2 font-semibold text-xs text-slate-600 uppercase tracking-wide" colSpan={cols + 1}>
+    <tr className="bg-slate-100 border-b border-slate-200 section-header">
+      <td className="px-5 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide" colSpan={cols + 1}>
         {label}
       </td>
     </tr>
@@ -356,7 +356,7 @@ function Row({ label, values }: { label: string; values: number[] }) {
     <tr className="border-b border-slate-100 even:bg-slate-50/30">
       <td className="px-5 py-2.5 text-slate-600">{label}</td>
       {values.map((v, i) => (
-        <td key={i} className="px-5 py-2.5 text-right text-slate-600">{fmt(v)}</td>
+        <td key={i} className="px-5 py-2.5 text-right text-slate-600 tabular-nums num">{fmt(v)}</td>
       ))}
     </tr>
   )
@@ -364,10 +364,10 @@ function Row({ label, values }: { label: string; values: number[] }) {
 
 function TotalRow({ label, values }: { label: string; values: number[] }) {
   return (
-    <tr className="border-b border-slate-200 bg-slate-50">
+    <tr className="border-b border-slate-200 bg-slate-50 total">
       <td className="px-5 py-3 font-bold text-slate-800">{label}</td>
       {values.map((v, i) => (
-        <td key={i} className="px-5 py-3 text-right font-bold text-slate-800">{fmt(v)}</td>
+        <td key={i} className="px-5 py-3 text-right font-bold text-slate-800 tabular-nums num">{fmt(v)}</td>
       ))}
     </tr>
   )

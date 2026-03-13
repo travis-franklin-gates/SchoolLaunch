@@ -95,8 +95,8 @@ export default function CashFlowPage() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-slate-800 mb-2">Cash Flow</h1>
+    <div className="animate-fade-in">
+      <h1 className="text-[28px] font-semibold text-slate-900 mb-2">Cash Flow</h1>
       <p className="text-sm text-slate-500 mb-4">
         Month-by-month projections using the OSPI apportionment payment schedule.
       </p>
@@ -105,7 +105,7 @@ export default function CashFlowPage() {
       <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit mb-6">
         <button
           onClick={() => setView('year0')}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
             view === 'year0' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -113,7 +113,7 @@ export default function CashFlowPage() {
         </button>
         <button
           onClick={() => setView('year1')}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
             view === 'year1' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -122,7 +122,7 @@ export default function CashFlowPage() {
       </div>
 
       {isModified && view === 'year1' && (
-        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
+        <div className="mb-4 bg-teal-50 border border-teal-200 rounded-lg px-4 py-3 text-sm text-teal-700">
           Scenario active — cash flow reflects adjusted enrollment, salary, and lease inputs.
         </div>
       )}
@@ -130,22 +130,22 @@ export default function CashFlowPage() {
       {view === 'year0' ? (
         <>
           {/* Startup Funding Sources summary */}
-          <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
-            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Startup Funding Inflows</h2>
-            <table className="w-full text-sm mb-4">
+          <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
+            <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Startup Funding Inflows</h2>
+            <table className="w-full text-sm sl-table mb-4">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-left px-3 py-2 font-semibold text-slate-600">Source</th>
-                  <th className="text-right px-3 py-2 font-semibold text-slate-600 w-28">Amount</th>
-                  <th className="text-left px-3 py-2 font-semibold text-slate-600 w-24">Type</th>
-                  <th className="text-left px-3 py-2 font-semibold text-slate-600 w-24">Status</th>
+                  <th className="text-left px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide">Source</th>
+                  <th className="text-right px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-28">Amount</th>
+                  <th className="text-left px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-24">Type</th>
+                  <th className="text-left px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-24">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {fundingSources.map((src, idx) => (
                   <tr key={idx} className="border-b border-slate-100">
                     <td className="px-3 py-2 text-slate-700">{src.source || 'Unnamed'}</td>
-                    <td className="px-3 py-2 text-right font-medium text-slate-800">{fmt(src.amount)}</td>
+                    <td className="px-3 py-2 text-right font-medium text-slate-800 num">{fmt(src.amount)}</td>
                     <td className="px-3 py-2">
                       <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
                         src.type === 'grant' ? 'bg-blue-100 text-blue-700' :
@@ -172,7 +172,7 @@ export default function CashFlowPage() {
               <tfoot>
                 <tr className="bg-slate-50 border-t border-slate-200">
                   <td className="px-3 py-2 font-bold text-slate-800">Total Available</td>
-                  <td className="px-3 py-2 text-right font-bold text-slate-800">{fmt(totalFunding)}</td>
+                  <td className="px-3 py-2 text-right font-bold text-slate-800 num">{fmt(totalFunding)}</td>
                   <td colSpan={2}></td>
                 </tr>
               </tfoot>
@@ -195,8 +195,8 @@ export default function CashFlowPage() {
           </div>
 
           {/* Pre-opening cost inputs */}
-          <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
-            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Pre-Opening Spending</h2>
+          <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
+            <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Pre-Opening Spending</h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
                 { key: 'leaseDeposit' as const, label: 'Lease Deposits' },
@@ -209,7 +209,7 @@ export default function CashFlowPage() {
                   <input
                     type="number" step={1000} value={preOpening[key]}
                     onChange={(e) => setPreOpening((prev) => ({ ...prev, [key]: Number(e.target.value) }))}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   />
                 </div>
               ))}
@@ -217,23 +217,23 @@ export default function CashFlowPage() {
           </div>
 
           {/* Year 0 cash flow table */}
-          <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto">
-            <table className="w-full text-sm whitespace-nowrap">
+          <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto sl-scroll shadow-sm">
+            <table className="w-full text-sm whitespace-nowrap sl-table">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Month</th>
-                  <th className="text-right px-4 py-3 font-semibold text-slate-600">Startup Spending</th>
-                  <th className="text-right px-4 py-3 font-semibold text-slate-600">Cumulative Spent</th>
-                  <th className="text-right px-4 py-3 font-semibold text-slate-600">Remaining Balance</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Month</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Startup Spending</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Cumulative Spent</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Remaining Balance</th>
                 </tr>
               </thead>
               <tbody>
                 {year0Flow.map((m) => (
                   <tr key={m.month} className={`border-b border-slate-100 ${m.balance < 0 ? 'bg-red-50' : ''}`}>
                     <td className="px-4 py-3 font-medium text-slate-800">{m.month}</td>
-                    <td className="px-4 py-3 text-right text-slate-600">{fmt(m.spending)}</td>
-                    <td className="px-4 py-3 text-right text-slate-600">{fmt(m.cumulativeSpent)}</td>
-                    <td className={`px-4 py-3 text-right font-bold ${m.balance >= 0 ? 'text-slate-800' : 'text-red-600'}`}>
+                    <td className="px-4 py-3 text-right text-slate-600 num">{fmt(m.spending)}</td>
+                    <td className="px-4 py-3 text-right text-slate-600 num">{fmt(m.cumulativeSpent)}</td>
+                    <td className={`px-4 py-3 text-right font-bold num ${m.balance >= 0 ? 'text-slate-800' : 'text-red-600'}`}>
                       {fmt(m.balance)}
                     </td>
                   </tr>
@@ -265,35 +265,35 @@ export default function CashFlowPage() {
             Starting cash balance: <strong>{fmt(year0EndingBalance)}</strong> (carried from Year 0 pre-opening)
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto">
-            <table className="w-full text-sm whitespace-nowrap">
+          <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto sl-scroll shadow-sm">
+            <table className="w-full text-sm whitespace-nowrap sl-table">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Month</th>
-                  <th className="text-right px-4 py-3 font-semibold text-slate-600">Apport. %</th>
-                  <th className="text-right px-4 py-3 font-semibold text-slate-600">Apport. $</th>
-                  <th className="text-right px-4 py-3 font-semibold text-slate-600">Other Revenue</th>
-                  <th className="text-right px-4 py-3 font-semibold text-slate-600">Total Inflow</th>
-                  <th className="text-right px-4 py-3 font-semibold text-slate-600">Payroll</th>
-                  <th className="text-right px-4 py-3 font-semibold text-slate-600">Other Expenses</th>
-                  <th className="text-right px-4 py-3 font-semibold text-slate-600">Net Cash Flow</th>
-                  <th className="text-right px-4 py-3 font-semibold text-slate-600">Cumulative Balance</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Month</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Apport. %</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Apport. $</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Other Revenue</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Total Inflow</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Payroll</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Other Expenses</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Net Cash Flow</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Cumulative Balance</th>
                 </tr>
               </thead>
               <tbody>
                 {cashFlow.map((m) => (
                   <tr key={m.month} className="border-b border-slate-100">
                     <td className="px-4 py-3 font-medium text-slate-800">{m.month}</td>
-                    <td className="px-4 py-3 text-right text-slate-500">{(m.apportionmentPct * 100).toFixed(1)}%</td>
-                    <td className="px-4 py-3 text-right text-slate-600">{fmt(m.apportionmentAmt)}</td>
-                    <td className="px-4 py-3 text-right text-slate-600">{fmt(m.otherRevenue)}</td>
-                    <td className="px-4 py-3 text-right text-slate-800 font-medium">{fmt(m.totalInflow)}</td>
-                    <td className="px-4 py-3 text-right text-slate-600">{fmt(m.payroll)}</td>
-                    <td className="px-4 py-3 text-right text-slate-600">{fmt(m.otherExpenses)}</td>
-                    <td className={`px-4 py-3 text-right font-medium ${m.netCashFlow >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    <td className="px-4 py-3 text-right text-slate-500 num">{(m.apportionmentPct * 100).toFixed(1)}%</td>
+                    <td className="px-4 py-3 text-right text-slate-600 num">{fmt(m.apportionmentAmt)}</td>
+                    <td className="px-4 py-3 text-right text-slate-600 num">{fmt(m.otherRevenue)}</td>
+                    <td className="px-4 py-3 text-right text-slate-800 font-medium num">{fmt(m.totalInflow)}</td>
+                    <td className="px-4 py-3 text-right text-slate-600 num">{fmt(m.payroll)}</td>
+                    <td className="px-4 py-3 text-right text-slate-600 num">{fmt(m.otherExpenses)}</td>
+                    <td className={`px-4 py-3 text-right font-medium num ${m.netCashFlow >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                       {fmt(m.netCashFlow)}
                     </td>
-                    <td className={`px-4 py-3 text-right font-bold ${m.cumulativeBalance >= 0 ? 'text-slate-800' : 'text-red-600 bg-red-50'}`}>
+                    <td className={`px-4 py-3 text-right font-bold num ${m.cumulativeBalance >= 0 ? 'text-slate-800' : 'text-red-600 bg-red-50'}`}>
                       {fmt(m.cumulativeBalance)}
                     </td>
                   </tr>

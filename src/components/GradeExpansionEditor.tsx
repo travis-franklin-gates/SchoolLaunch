@@ -139,7 +139,7 @@ export default function GradeExpansionEditor({
               onClick={() => toggleGrade(g, openingGrades, setOpeningGrades)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all ${
                 openingGrades.includes(g)
-                  ? 'border-blue-600 bg-blue-50 text-blue-700'
+                  ? 'border-teal-600 bg-teal-50 text-teal-700'
                   : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
               }`}
             >
@@ -165,7 +165,7 @@ export default function GradeExpansionEditor({
                 buildoutGrades.includes(g)
                   ? 'border-emerald-600 bg-emerald-50 text-emerald-700'
                   : openingGrades.includes(g)
-                  ? 'border-blue-300 bg-blue-50/50 text-blue-500'
+                  ? 'border-blue-300 bg-teal-50/50 text-teal-500'
                   : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
               }`}
             >
@@ -209,7 +209,7 @@ export default function GradeExpansionEditor({
             max={100}
             value={retentionRate}
             onChange={(e) => setRetentionRate(Number(e.target.value))}
-            className="w-full accent-blue-600 mt-2"
+            className="w-full accent-teal-600 mt-2"
           />
           <div className="flex justify-between text-[10px] text-slate-400">
             <span>70%</span>
@@ -244,7 +244,7 @@ export default function GradeExpansionEditor({
                         key={g}
                         className={`inline-block px-1.5 py-0.5 rounded text-xs font-medium mr-1 ${
                           e.newGrades.includes(g)
-                            ? 'bg-blue-100 text-blue-700'
+                            ? 'bg-teal-100 text-teal-700'
                             : 'bg-slate-100 text-slate-600'
                         }`}
                       >
@@ -254,7 +254,7 @@ export default function GradeExpansionEditor({
                   </td>
                   <td className="px-3 py-2.5">
                     {e.newGrades.length > 0 ? (
-                      <span className="text-blue-600 font-medium text-xs">
+                      <span className="text-teal-600 font-medium text-xs">
                         +{e.newGrades.join(', ')}
                       </span>
                     ) : (
@@ -264,7 +264,7 @@ export default function GradeExpansionEditor({
                   <td className="px-3 py-2.5 text-right text-slate-600">
                     {e.year === 1 ? '—' : e.returning}
                   </td>
-                  <td className="px-3 py-2.5 text-right text-blue-600 font-medium">
+                  <td className="px-3 py-2.5 text-right text-teal-600 font-medium">
                     {e.year === 1 ? e.total : (e.newGrade > 0 ? `+${e.newGrade}` : '—')}
                   </td>
                   <td className="px-3 py-2.5 text-right font-bold text-slate-800">
@@ -279,7 +279,7 @@ export default function GradeExpansionEditor({
 
       {/* Per-year grade detail (expandable) */}
       <details className="text-sm">
-        <summary className="text-xs font-medium text-blue-600 cursor-pointer hover:text-blue-800">
+        <summary className="text-xs font-medium text-teal-600 cursor-pointer hover:text-teal-800">
           Edit sections per grade by year
         </summary>
         <div className="mt-3 overflow-x-auto">
@@ -298,12 +298,12 @@ export default function GradeExpansionEditor({
                 plan
                   .filter((e) => e.year === year)
                   .map((entry) => (
-                    <tr key={`${year}-${entry.grade_level}`} className={`border-b border-slate-100 ${entry.is_new_grade ? 'bg-blue-50/50' : ''}`}>
+                    <tr key={`${year}-${entry.grade_level}`} className={`border-b border-slate-100 ${entry.is_new_grade ? 'bg-teal-50/50' : ''}`}>
                       <td className="px-2 py-1.5 text-slate-600">{entry.grade_level === plan.filter(e => e.year === year)[0]?.grade_level ? `Year ${year}` : ''}</td>
                       <td className="px-2 py-1.5">
-                        <span className={`${entry.is_new_grade ? 'text-blue-700 font-medium' : 'text-slate-600'}`}>
+                        <span className={`${entry.is_new_grade ? 'text-teal-700 font-medium' : 'text-slate-600'}`}>
                           {entry.grade_level === 'K' ? 'K' : entry.grade_level}
-                          {entry.is_new_grade && <span className="text-[10px] ml-1 text-blue-500">NEW</span>}
+                          {entry.is_new_grade && <span className="text-[10px] ml-1 text-teal-500">NEW</span>}
                         </span>
                       </td>
                       <td className="px-2 py-1.5 text-center">

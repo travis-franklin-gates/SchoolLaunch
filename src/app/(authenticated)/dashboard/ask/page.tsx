@@ -233,7 +233,7 @@ export default function AskPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-3" />
+          <div className="w-8 h-8 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin mx-auto mb-3" />
           <p className="text-slate-500 text-sm">Loading school data...</p>
         </div>
       </div>
@@ -241,14 +241,14 @@ export default function AskPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="flex flex-col h-[calc(100vh-4rem)] animate-fade-in">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto bg-white border border-slate-200 rounded-xl p-4 mb-4 space-y-4">
+      <div className="flex-1 overflow-y-auto bg-white border border-slate-200 rounded-xl p-4 mb-4 space-y-4 sl-scroll">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-12">
-            <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mb-4">
+            <div className="w-14 h-14 bg-teal-50 rounded-2xl flex items-center justify-center mb-4">
               <svg
-                className="w-7 h-7 text-blue-600"
+                className="w-7 h-7 text-teal-500"
                 fill="none"
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
@@ -261,8 +261,8 @@ export default function AskPage() {
                 />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-slate-800 mb-1">Ask SchoolLaunch</h2>
-            <p className="text-sm text-slate-500 mb-8">
+            <h2 className="text-[24px] font-semibold text-slate-900 mb-1" style={{ fontFamily: 'var(--font-heading-var)' }}>Ask SchoolLaunch</h2>
+            <p className="text-[15px] text-slate-400 mb-8">
               Ask questions about your financial model in plain English
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl w-full px-4">
@@ -271,7 +271,7 @@ export default function AskPage() {
                   key={q}
                   onClick={() => sendMessage(q)}
                   disabled={streaming || cooldown}
-                  className="text-left text-sm text-slate-600 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 hover:border-blue-200 rounded-xl px-4 py-3 transition-colors disabled:opacity-50"
+                  className="text-left text-sm text-slate-600 bg-slate-50 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 hover:border-teal-300 rounded-xl px-4 py-3 transition-colors disabled:opacity-50"
                 >
                   {q}
                 </button>
@@ -285,12 +285,12 @@ export default function AskPage() {
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[75%] rounded-xl px-4 py-3 text-sm whitespace-pre-wrap ${
+                className={`max-w-[75%] px-4 py-3 text-sm whitespace-pre-wrap ${
                   msg.role === 'user'
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-teal-600 text-white rounded-2xl rounded-br-sm'
                     : msg.role === 'system'
-                      ? 'bg-red-50 text-red-700 border border-red-200'
-                      : 'bg-slate-100 text-slate-800'
+                      ? 'bg-red-50 text-red-700 border border-red-200 rounded-2xl'
+                      : 'bg-white text-slate-700 border border-slate-200 rounded-2xl rounded-bl-sm'
                 }`}
               >
                 {msg.content ||
@@ -317,17 +317,18 @@ export default function AskPage() {
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask about your budget, staffing, cash flow, or WA charter finance..."
           disabled={streaming}
-          className="flex-1 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+          className="flex-1 border border-slate-200 rounded-full bg-slate-50 px-4 h-11 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50"
         />
         <button
           type="submit"
           disabled={streaming || cooldown || !input.trim()}
-          className="px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+          className={`w-11 h-11 rounded-full text-white flex items-center justify-center transition-colors ${
+            streaming || cooldown || !input.trim() ? 'bg-slate-300' : 'bg-teal-600 hover:bg-teal-700'
+          }`}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
           </svg>
-          Send
         </button>
       </form>
     </div>

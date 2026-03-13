@@ -154,11 +154,11 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-3xl">
-      <h1 className="text-2xl font-bold text-slate-800 mb-6">Settings</h1>
+    <div className="max-w-3xl animate-fade-in">
+      <h1 className="text-[28px] font-semibold text-slate-900 mb-6">Settings</h1>
 
       {toast && (
-        <div className={`mb-6 px-4 py-3 rounded-lg text-sm font-medium ${
+        <div className={`mb-6 px-4 py-3 rounded-lg text-sm font-medium animate-slide-in-right ${
           toast.includes('Error') ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
         }`}>
           {toast}
@@ -166,8 +166,8 @@ export default function SettingsPage() {
       )}
 
       {/* Section 1: School Profile */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
-        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">School Profile</h2>
+      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+        <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">School Profile</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">School Name</label>
@@ -175,7 +175,7 @@ export default function SettingsPage() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
           </div>
           <div>
@@ -183,7 +183,7 @@ export default function SettingsPage() {
             <select
               value={region}
               onChange={(e) => setRegion(e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             >
               <option value="">Select region...</option>
               {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
@@ -195,7 +195,7 @@ export default function SettingsPage() {
               type="number"
               value={openYear}
               onChange={(e) => setOpenYear(Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
           </div>
           <div>
@@ -203,7 +203,7 @@ export default function SettingsPage() {
             <select
               value={gradeConfig}
               onChange={(e) => setGradeConfig(e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             >
               <option value="">Select grades...</option>
               {GRADE_CONFIGS.map((g) => <option key={g} value={g}>{g}</option>)}
@@ -213,34 +213,34 @@ export default function SettingsPage() {
       </div>
 
       {/* Section 2: Enrollment & Demographics */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
-        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Enrollment & Demographics</h2>
+      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+        <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Enrollment & Demographics</h2>
 
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Year 1 Enrollment</label>
             <input type="number" value={enrollY1} onChange={(e) => setEnrollY1(Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Year 2 Enrollment</label>
             <input type="number" value={enrollY2} onChange={(e) => setEnrollY2(Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Year 3 Enrollment</label>
             <input type="number" value={enrollY3} onChange={(e) => setEnrollY3(Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Year 4 Enrollment</label>
             <input type="number" value={enrollY4} onChange={(e) => setEnrollY4(Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Year 5 Enrollment</label>
             <input type="number" value={enrollY5} onChange={(e) => setEnrollY5(Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
         </div>
 
@@ -259,7 +259,7 @@ export default function SettingsPage() {
               <input
                 type="range" min={0} max={100} step={1} value={value}
                 onChange={(e) => set(Number(e.target.value))}
-                className="w-full accent-blue-600"
+                className="w-full accent-teal-600"
               />
             </div>
           ))}
@@ -282,8 +282,8 @@ export default function SettingsPage() {
       </div>
 
       {/* Section: Grade Expansion Plan */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
-        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-1">Grade Expansion Plan</h2>
+      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+        <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">Grade Expansion Plan</h2>
         <p className="text-xs text-slate-500 mb-4">
           Define which grade levels you open with and how you expand year over year. This produces cohort-based enrollment projections that authorizers find more credible than flat growth rates.
         </p>
@@ -299,8 +299,8 @@ export default function SettingsPage() {
       </div>
 
       {/* Section 3: Programs */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
-        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Programs</h2>
+      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+        <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Programs</h2>
         <p className="text-xs text-slate-500 mb-4">
           Toggle programs your school plans to offer. Enabling a program adds its line item to the Operations budget.
         </p>
@@ -316,7 +316,7 @@ export default function SettingsPage() {
             <button
               onClick={() => updateFa('food_service_offered', !fa.food_service_offered)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                fa.food_service_offered ? 'bg-blue-600' : 'bg-slate-300'
+                fa.food_service_offered ? 'bg-teal-600' : 'bg-slate-300'
               }`}
             >
               <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -336,7 +336,7 @@ export default function SettingsPage() {
             <button
               onClick={() => updateFa('transportation_offered', !fa.transportation_offered)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                fa.transportation_offered ? 'bg-blue-600' : 'bg-slate-300'
+                fa.transportation_offered ? 'bg-teal-600' : 'bg-slate-300'
               }`}
             >
               <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -348,159 +348,159 @@ export default function SettingsPage() {
       </div>
 
       {/* Section 4: Revenue Assumptions */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
-        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Revenue Assumptions</h2>
+      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+        <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Revenue Assumptions</h2>
         <p className="text-xs text-slate-500 mb-4">Commission-aligned per-pupil rates. State apportionment uses AAFTE (Annual Average FTE).</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Regular Ed per Pupil ($)</label>
             <input type="number" step={100} value={fa.regular_ed_per_pupil}
               onChange={(e) => { updateFa('regular_ed_per_pupil', Number(e.target.value)); updateFa('per_pupil_rate', Number(e.target.value)) }}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">SPED per Pupil ($)</label>
             <input type="number" step={100} value={fa.sped_per_pupil}
               onChange={(e) => updateFa('sped_per_pupil', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Facilities per Pupil ($)</label>
             <input type="number" step={100} value={fa.facilities_per_pupil}
               onChange={(e) => updateFa('facilities_per_pupil', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
             <p className="text-[10px] text-slate-400 mt-0.5">Usually $0 for WA charters</p>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Levy Equity per Student ($)</label>
             <input type="number" step={100} value={fa.levy_equity_per_student}
               onChange={(e) => updateFa('levy_equity_per_student', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Revenue COLA (%)</label>
             <input type="number" step={0.5} value={fa.revenue_cola_pct}
               onChange={(e) => updateFa('revenue_cola_pct', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
             <p className="text-[10px] text-slate-400 mt-0.5">Annual per-pupil rate escalation</p>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">AAFTE % of Headcount</label>
             <input type="number" step={1} min={80} max={100} value={fa.aafte_pct}
               onChange={(e) => updateFa('aafte_pct', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
             <p className="text-[10px] text-slate-400 mt-0.5">Typical: 95%. State revenue uses AAFTE, not headcount.</p>
           </div>
         </div>
       </div>
 
       {/* Section 4b: Expense Assumptions */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
-        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Expense Assumptions</h2>
+      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+        <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Expense Assumptions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Benefits Load (%)</label>
             <input type="number" step={1} value={fa.benefits_load_pct}
               onChange={(e) => updateFa('benefits_load_pct', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Authorizer Fee (%)</label>
             <input type="number" step={0.5} value={fa.authorizer_fee_pct}
               onChange={(e) => updateFa('authorizer_fee_pct', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
             <p className="text-[10px] text-slate-400 mt-0.5">Applied to state apportionment</p>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Annual Salary Escalator (%)</label>
             <input type="number" step={0.1} value={fa.salary_escalator_pct}
               onChange={(e) => updateFa('salary_escalator_pct', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Annual Operations Escalator (%)</label>
             <input type="number" step={0.1} value={fa.ops_escalator_pct}
               onChange={(e) => updateFa('ops_escalator_pct', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Interest Rate on Cash (%)</label>
             <input type="number" step={0.5} value={fa.interest_rate_on_cash}
               onChange={(e) => updateFa('interest_rate_on_cash', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
         </div>
       </div>
 
       {/* Section 5: Operations Benchmarks */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
-        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Operations Benchmarks</h2>
+      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+        <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Operations Benchmarks</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Supplies per Student ($)</label>
             <input type="number" step={10} value={fa.supplies_per_student}
               onChange={(e) => updateFa('supplies_per_student', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Contracted Services per Student ($)</label>
             <input type="number" step={10} value={fa.contracted_services_per_student}
               onChange={(e) => updateFa('contracted_services_per_student', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Technology per Student ($)</label>
             <input type="number" step={10} value={fa.technology_per_student}
               onChange={(e) => updateFa('technology_per_student', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Insurance Annual ($)</label>
             <input type="number" step={1000} value={fa.insurance_annual}
               onChange={(e) => updateFa('insurance_annual', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Contingency % of Total Expenses</label>
             <input type="number" step={0.5} value={fa.contingency_pct}
               onChange={(e) => updateFa('contingency_pct', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Curriculum per Student ($)</label>
             <input type="number" step={50} value={fa.curriculum_per_student}
               onChange={(e) => updateFa('curriculum_per_student', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Professional Development per FTE ($)</label>
             <input type="number" step={100} value={fa.professional_development_per_fte}
               onChange={(e) => updateFa('professional_development_per_fte', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Food Service per Student ($)</label>
             <input type="number" step={50} value={fa.food_service_per_student}
               onChange={(e) => updateFa('food_service_per_student', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Transportation per Student ($)</label>
             <input type="number" step={50} value={fa.transportation_per_student}
               onChange={(e) => updateFa('transportation_per_student', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Marketing per Student ($)</label>
             <input type="number" step={10} value={fa.marketing_per_student}
               onChange={(e) => updateFa('marketing_per_student', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Fundraising Annual ($)</label>
             <input type="number" step={1000} value={fa.fundraising_annual}
               onChange={(e) => updateFa('fundraising_annual', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
         </div>
       </div>
@@ -508,7 +508,7 @@ export default function SettingsPage() {
       <button
         onClick={handleSave}
         disabled={saving}
-        className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+        className="px-6 py-2.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
       >
         {saving ? 'Saving...' : 'Save Changes'}
       </button>

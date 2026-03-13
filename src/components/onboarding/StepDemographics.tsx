@@ -75,18 +75,18 @@ export default function StepDemographics({ enrollment, region, initialData, onNe
         <button
           type="button"
           onClick={() => setShowRegionalHint(!showRegionalHint)}
-          className="text-xs text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap ml-4"
+          className="text-xs text-teal-600 hover:text-teal-800 font-medium whitespace-nowrap ml-4"
         >
           Use {region} defaults
         </button>
       </div>
 
       {showRegionalHint && (
-        <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
-          <p className="text-sm text-blue-800 mb-2">
+        <div className="bg-teal-50 border border-teal-100 rounded-lg p-4">
+          <p className="text-sm text-teal-800 mb-2">
             Regional averages for <span className="font-medium">{region}</span>:
           </p>
-          <div className="grid grid-cols-4 gap-3 text-xs text-blue-700 mb-3">
+          <div className="grid grid-cols-4 gap-3 text-xs text-teal-700 mb-3">
             <div>FRL: {regionDefaults.frl}%</div>
             <div>IEP: {regionDefaults.iep}%</div>
             <div>ELL: {regionDefaults.ell}%</div>
@@ -95,7 +95,7 @@ export default function StepDemographics({ enrollment, region, initialData, onNe
           <button
             type="button"
             onClick={applyRegionalDefaults}
-            className="text-xs font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 px-3 py-1.5 rounded-lg transition-colors"
+            className="text-xs font-medium text-teal-700 bg-teal-100 hover:bg-teal-200 px-3 py-1.5 rounded-lg transition-colors"
           >
             Apply These Defaults
           </button>
@@ -168,8 +168,8 @@ export default function StepDemographics({ enrollment, region, initialData, onNe
               </div>
             )}
             {highIep && (
-              <div className="mt-4 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-                <p className="text-xs text-blue-700">
+              <div className="mt-4 bg-teal-50 border border-teal-100 rounded-lg px-3 py-2">
+                <p className="text-xs text-teal-700">
                   IEP at {pctIep}% — above typical ({regionDefaults.iep}%). Budget for additional special education staff and contracted services.
                 </p>
               </div>
@@ -190,7 +190,7 @@ export default function StepDemographics({ enrollment, region, initialData, onNe
         </button>
         <button
           type="submit"
-          className="bg-blue-600 text-white px-8 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          className="bg-teal-600 text-white px-8 py-2.5 rounded-lg font-medium hover:bg-teal-700 transition-colors"
         >
           Continue
         </button>
@@ -226,7 +226,7 @@ function SliderField({
         max={max}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-blue-600"
+        className="w-full accent-teal-600"
       />
       <div className="flex justify-between text-xs text-slate-400">
         <span>{min}%</span>

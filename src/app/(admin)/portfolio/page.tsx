@@ -178,7 +178,7 @@ export default function PortfolioPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-3" />
+          <div className="w-8 h-8 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin mx-auto mb-3" />
           <p className="text-slate-500 text-sm">Loading portfolio...</p>
         </div>
       </div>
@@ -194,16 +194,16 @@ export default function PortfolioPage() {
   const belowThreshold = schoolsWithData.filter((s) => s.summary.reserveDays < 60).length
 
   return (
-    <div>
+    <div className="animate-fade-in">
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Portfolio</h1>
+          <h1 className="text-[28px] font-semibold text-slate-900">Portfolio</h1>
           <p className="text-sm text-slate-500 mt-1">{orgName}</p>
         </div>
         <button
           onClick={() => setShowInviteModal(true)}
-          className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
+          className="px-5 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-medium hover:bg-teal-700 transition-colors"
         >
           Invite School
         </button>
@@ -211,15 +211,15 @@ export default function PortfolioPage() {
 
       {/* Summary stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
           <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Schools</div>
           <div className="text-2xl font-bold text-slate-800">{totalSchools}</div>
         </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
           <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Avg Reserve Days</div>
           <div className={`text-2xl font-bold ${reserveColor(avgReserveDays)}`}>{avgReserveDays} days</div>
         </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
           <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Below 60-Day Threshold</div>
           <div className={`text-2xl font-bold ${belowThreshold > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
             {belowThreshold} {belowThreshold === 1 ? 'school' : 'schools'}
@@ -236,7 +236,7 @@ export default function PortfolioPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {schools.map((school) => (
-            <div key={school.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+            <div key={school.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
               {/* Card header */}
               <div className="p-5 border-b border-slate-100">
                 <div className="flex items-start justify-between mb-2">
@@ -298,7 +298,7 @@ export default function PortfolioPage() {
                         onChange={(e) => setNoteInputs((prev) => ({ ...prev, [school.id]: e.target.value }))}
                         onKeyDown={(e) => e.key === 'Enter' && addNote(school.id)}
                         placeholder="Add a note..."
-                        className="flex-1 text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="flex-1 text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-500"
                       />
                       <button
                         onClick={() => addNote(school.id)}
@@ -328,7 +328,7 @@ export default function PortfolioPage() {
                 <div className="border-t border-slate-100 px-5 py-3">
                   <Link
                     href={`/portfolio/${school.id}`}
-                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    className="text-sm text-teal-600 hover:text-teal-800 font-medium"
                   >
                     View Details
                   </Link>
@@ -386,8 +386,8 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-slate-800">Invite School</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
@@ -412,7 +412,7 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
               />
               <button
                 onClick={copyLink}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors"
               >
                 Copy
               </button>
@@ -436,7 +436,7 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
                 value={schoolName}
                 onChange={(e) => setSchoolName(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
                 placeholder="e.g., Cascade Charter Elementary"
               />
             </div>
@@ -447,7 +447,7 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
                 value={ceoEmail}
                 onChange={(e) => setCeoEmail(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
                 placeholder="ceo@school.org"
               />
             </div>
@@ -456,7 +456,7 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
               <select
                 value={gradeConfig}
                 onChange={(e) => setGradeConfig(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
               >
                 <option value="K-5">K-5</option>
                 <option value="K-8">K-8</option>
@@ -472,7 +472,7 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="w-full py-2.5 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors disabled:opacity-50"
             >
               {loading ? 'Creating...' : 'Create Invitation'}
             </button>

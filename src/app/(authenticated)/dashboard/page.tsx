@@ -28,23 +28,22 @@ function fmt(n: number) {
   return `$${n.toLocaleString()}`
 }
 
-// Stage 1 (Years 1-2) thresholds per WA Commission Financial Performance Framework
 function reserveColor(days: number) {
-  if (days >= 30) return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' }
-  if (days >= 21) return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' }
-  return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' }
+  if (days >= 30) return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
+  if (days >= 21) return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-l-amber-500' }
+  return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
 }
 
 function facilityColor(pct: number) {
-  if (pct <= 12) return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' }
-  if (pct <= 15) return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' }
-  return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' }
+  if (pct <= 12) return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
+  if (pct <= 15) return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-l-amber-500' }
+  return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
 }
 
-const STATUS_COLORS: Record<string, { dot: string; text: string }> = {
-  strong: { dot: 'bg-emerald-500', text: 'text-emerald-700' },
-  needs_attention: { dot: 'bg-amber-500', text: 'text-amber-700' },
-  risk: { dot: 'bg-red-500', text: 'text-red-700' },
+const STATUS_COLORS: Record<string, { dot: string; text: string; bg: string }> = {
+  strong: { dot: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50' },
+  needs_attention: { dot: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50' },
+  risk: { dot: 'bg-red-500', text: 'text-red-700', bg: 'bg-red-50' },
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -61,12 +60,12 @@ function HealthTile({ label, value, subtitle, colorClass }: {
 }) {
   const bg = colorClass?.bg || 'bg-white'
   const text = colorClass?.text || 'text-slate-800'
-  const border = colorClass?.border || 'border-slate-200'
+  const border = colorClass?.border || 'border-l-slate-300'
   return (
-    <div className={`${bg} ${border} border rounded-xl p-5`}>
-      <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">{label}</div>
-      <div className={`text-2xl font-bold ${text}`}>{value}</div>
-      {subtitle && <div className="text-xs text-slate-400 mt-1">{subtitle}</div>}
+    <div className={`${bg} bg-white border border-slate-200 ${border} border-l-4 rounded-xl p-5 shadow-sm`}>
+      <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wide mb-1.5">{label}</div>
+      <div className={`text-[32px] leading-tight font-semibold tabular-nums ${text}`}>{value}</div>
+      {subtitle && <div className={`text-xs mt-1.5 ${text} opacity-75`}>{subtitle}</div>}
     </div>
   )
 }
@@ -144,15 +143,15 @@ export default function DashboardPage() {
 
   const rc = reserveColor(current.reserveDays)
   const surplusColor = current.netPosition >= 0
-    ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' }
-    : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' }
+    ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
+    : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
   const personnelColor = current.personnelPctRevenue < 72
-    ? { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' }
+    ? { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
     : current.personnelPctRevenue <= 78
-    ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' }
+    ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
     : current.personnelPctRevenue <= 80
-    ? { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' }
-    : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' }
+    ? { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-l-amber-500' }
+    : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
 
   const facilityCost = projections.find((p) => p.subcategory === 'Facilities' && !p.is_revenue)?.amount || 0
   const fc = facilityColor(current.facilityPct)
@@ -170,7 +169,6 @@ export default function DashboardPage() {
   async function handleExport() {
     setExporting(true)
     try {
-      // Ensure advisory data is available for PDF
       let advisoryForPdf = advisory
       if (!advisoryForPdf) {
         const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
@@ -257,37 +255,37 @@ export default function DashboardPage() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-slate-800 mb-6">Overview</h1>
+    <div className="animate-fade-in">
+      <h1 className="text-[28px] font-semibold text-slate-900 mb-6">Overview</h1>
 
       {/* AI Briefing */}
       {advisoryLoading && !advisory ? (
-        <div className="bg-white border-l-4 border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-6 animate-pulse">
+        <div className="bg-white border-l-[3px] border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-5 h-5 bg-slate-200 rounded" />
-            <div className="h-4 bg-slate-200 rounded w-44" />
+            <div className="w-5 h-5 rounded animate-shimmer" />
+            <div className="h-4 rounded w-44 animate-shimmer" />
           </div>
           <div className="space-y-2.5">
-            <div className="h-3 bg-slate-100 rounded w-full" />
-            <div className="h-3 bg-slate-100 rounded w-full" />
-            <div className="h-3 bg-slate-100 rounded w-5/6" />
-            <div className="h-3 bg-slate-100 rounded w-full mt-3" />
-            <div className="h-3 bg-slate-100 rounded w-4/6" />
+            <div className="h-3 rounded w-full animate-shimmer" />
+            <div className="h-3 rounded w-full animate-shimmer" />
+            <div className="h-3 rounded w-5/6 animate-shimmer" />
+            <div className="h-3 rounded w-full mt-3 animate-shimmer" />
+            <div className="h-3 rounded w-4/6 animate-shimmer" />
           </div>
         </div>
       ) : advisory ? (
-        <div className="bg-white border-l-4 border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-6">
+        <div className="bg-white border-l-[3px] border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-6 shadow-sm animate-fade-in-up">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
-              <span className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Financial Advisor Briefing</span>
+              <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Financial Advisor Briefing</span>
             </div>
             <button
               onClick={fetchAdvisory}
               disabled={advisoryLoading}
-              className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1"
+              className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors"
             >
               <svg className={`w-3.5 h-3.5 ${advisoryLoading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -295,7 +293,7 @@ export default function DashboardPage() {
               Refresh
             </button>
           </div>
-          <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line mb-4">
+          <div className="text-[15px] text-slate-700 leading-[1.7] whitespace-pre-line mb-4">
             {advisory.briefing}
           </div>
 
@@ -304,57 +302,57 @@ export default function DashboardPage() {
             {advisory.agents.map((agent) => {
               const sc = STATUS_COLORS[agent.status] || STATUS_COLORS.needs_attention
               return (
-                <span key={agent.id} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-50 ${sc.text}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
+                <span key={agent.id} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${sc.bg} ${sc.text}`}>
+                  <span className={`w-2 h-2 rounded-full ${sc.dot}`} />
                   {agent.name.split(' ')[0]}
                 </span>
               )
             })}
             <Link
               href="/dashboard/advisory"
-              className="ml-auto text-xs font-medium text-teal-600 hover:text-teal-800"
+              className="ml-auto text-xs font-medium text-teal-600 hover:text-teal-800 transition-colors"
             >
               View Full Advisory Panel &rarr;
             </Link>
           </div>
           {advisory.generatedAt && (
-            <div className="text-xs text-slate-400 mt-2">
+            <div className="text-[11px] text-slate-400 mt-2">
               Last updated: {new Date(advisory.generatedAt).toLocaleTimeString()}
             </div>
           )}
         </div>
       ) : null}
 
-      {/* Commission FPF Scorecard (compact) */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Commission Financial Performance Scorecard</h2>
+      {/* Commission FPF Scorecard */}
+      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm animate-fade-in-up stagger-1">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide">Commission Scorecard</h2>
           <div className="flex gap-4 text-[10px] text-slate-400">
-            <span>Years 1-2: <strong className="text-slate-600">Stage 1</strong></span>
-            <span>Years 3-5: <strong className="text-slate-600">Stage 2</strong></span>
+            <span className="inline-flex items-center gap-1.5"><span className="px-1.5 py-0.5 rounded text-[9px] font-semibold text-white" style={{ background: 'var(--navy-light)' }}>Stage 1</span> Years 1-2</span>
+            <span className="inline-flex items-center gap-1.5"><span className="px-1.5 py-0.5 rounded text-[9px] font-semibold text-white" style={{ background: 'var(--navy-light)' }}>Stage 2</span> Years 3-5</span>
           </div>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto sl-scroll">
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-slate-200">
-                <th className="text-left py-2 pr-3 font-semibold text-slate-600 min-w-[160px]">Measure</th>
+                <th className="text-left py-2 pr-3 font-medium text-slate-400 uppercase tracking-wide text-[11px] min-w-[160px]">Measure</th>
                 {[1, 3, 5].map((y) => (
-                  <th key={y} className="text-center px-3 py-2 font-semibold text-slate-600 min-w-[70px]">Year {y}</th>
+                  <th key={y} className="text-center px-3 py-2 font-medium text-slate-400 uppercase tracking-wide text-[11px] min-w-[70px]">Year {y}</th>
                 ))}
-                <th className="text-center px-3 py-2 font-semibold text-slate-500">Target</th>
+                <th className="text-center px-3 py-2 font-medium text-slate-400 uppercase tracking-wide text-[11px]">Target</th>
               </tr>
             </thead>
             <tbody>
               {scorecard.measures.filter(m => m.name !== 'DSCR').map((m) => (
                 <tr key={m.name} className="border-b border-slate-100">
-                  <td className="py-2 pr-3 text-slate-600 font-medium">{m.name}</td>
+                  <td className="py-2.5 pr-3 text-slate-600 font-medium text-[13px]">{m.name}</td>
                   {[0, 2, 4].map((idx) => {
                     const v = m.values[idx]
                     const s = m.statuses[idx]
                     const color = s === 'meets' ? 'bg-emerald-50 text-emerald-700'
-                      : s === 'approaches' ? 'bg-amber-50 text-amber-700'
-                      : s === 'does_not_meet' ? 'bg-red-50 text-red-700'
+                      : s === 'approaches' ? 'bg-amber-50 text-amber-600'
+                      : s === 'does_not_meet' ? 'bg-rose-50 text-rose-600'
                       : 'bg-slate-50 text-slate-400'
                     const display = v === null ? 'N/A'
                       : m.name.includes('Margin') || m.name === 'Enrollment Variance' ? `${v}%`
@@ -362,12 +360,12 @@ export default function DashboardPage() {
                       : m.name === 'Days of Cash' ? `${v}`
                       : typeof v === 'number' ? v.toFixed(2) : String(v)
                     return (
-                      <td key={idx} className="px-3 py-2 text-center">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${color}`}>{display}</span>
+                      <td key={idx} className="px-3 py-2.5 text-center">
+                        <span className={`inline-block px-2.5 py-1 rounded text-xs font-medium tabular-nums ${color}`}>{display}</span>
                       </td>
                     )
                   })}
-                  <td className="px-3 py-2 text-center text-slate-400">
+                  <td className="px-3 py-2.5 text-center text-slate-400 text-[11px]">
                     {m.stage1Target === m.stage2Target ? m.stage1Target : `${m.stage1Target} / ${m.stage2Target}`}
                   </td>
                 </tr>
@@ -375,7 +373,7 @@ export default function DashboardPage() {
             </tbody>
           </table>
         </div>
-        <div className={`mt-3 px-4 py-2 rounded-lg text-xs font-medium ${
+        <div className={`mt-3 px-4 py-2.5 rounded-lg text-xs font-medium ${
           scorecard.overallStatus === 'green' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
             : scorecard.overallStatus === 'yellow' ? 'bg-amber-50 text-amber-700 border border-amber-200'
             : 'bg-red-50 text-red-700 border border-red-200'
@@ -398,35 +396,35 @@ export default function DashboardPage() {
         <HealthTile
           label="Year-End Reserve"
           value={`${current.reserveDays} days`}
-          subtitle={delta(baseSummary.reserveDays, current.reserveDays, 'days') || (current.reserveDays >= 30 ? 'Meets Stage 1 · Stage 2 target: 60 days' : current.reserveDays >= 21 ? 'Approaches Stage 1 · Target: 30 days' : 'Below Stage 1 minimum (21 days)')}
+          subtitle={delta(baseSummary.reserveDays, current.reserveDays, 'days') || (current.reserveDays >= 30 ? 'Meets Stage 1' : current.reserveDays >= 21 ? 'Approaches Stage 1' : 'Below Stage 1 minimum')}
           colorClass={rc}
         />
         <HealthTile
-          label="Personnel % of Revenue"
+          label="Personnel % Revenue"
           value={`${current.personnelPctRevenue.toFixed(1)}%`}
           subtitle={delta(baseSummary.personnelPctRevenue, current.personnelPctRevenue, '%', true) || undefined}
           colorClass={personnelColor}
         />
         <HealthTile
-          label="Year 1 Surplus/Deficit"
+          label="Year 1 Net"
           value={fmt(current.netPosition)}
           subtitle={delta(baseSummary.netPosition, current.netPosition, '') || undefined}
           colorClass={surplusColor}
         />
         <HealthTile
-          label="Break-Even Enrollment"
-          value={`${current.breakEvenEnrollment} students`}
-          subtitle={delta(baseSummary.breakEvenEnrollment, current.breakEvenEnrollment, 'students', true) || undefined}
+          label="Break-Even"
+          value={`${current.breakEvenEnrollment}`}
+          subtitle={delta(baseSummary.breakEvenEnrollment, current.breakEvenEnrollment, 'students', true) || `Target: ${profile.target_enrollment_y1}`}
         />
         <HealthTile
-          label="Facility % of Revenue"
+          label="Facility % Revenue"
           value={`${current.facilityPct.toFixed(1)}%`}
           subtitle={facilityCost > 0 ? `${fmt(facilityCost)}/yr` : undefined}
           colorClass={fc}
         />
       </div>
 
-      {/* 90% enrollment sensitivity alert — always visible */}
+      {/* 90% enrollment sensitivity */}
       {!conservativeMode && baseSummary.reserveDays !== conservativeSummary.reserveDays && (
         <div className="mb-8 bg-slate-50 border border-slate-200 rounded-xl px-5 py-3 text-sm text-slate-600">
           <strong>90% enrollment sensitivity:</strong> At {conservativeEnrollment} students,
@@ -452,12 +450,12 @@ export default function DashboardPage() {
       )}
 
       {/* Scenario panel */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8">
-        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Scenario Controls</h2>
+      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 shadow-sm">
+        <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Scenario Controls</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-5">
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">
-              Opening Enrollment: {scenarioInputs.enrollment}
+              Opening Enrollment: <span className="tabular-nums">{scenarioInputs.enrollment}</span>
             </label>
             <input
               type="range"
@@ -466,10 +464,10 @@ export default function DashboardPage() {
               step={1}
               value={scenarioInputs.enrollment}
               onChange={(e) => updateScenario({ enrollment: Number(e.target.value) })}
-              className="w-full accent-blue-600"
+              className="w-full"
               disabled={conservativeMode}
             />
-            <div className="flex justify-between text-[10px] text-slate-400">
+            <div className="flex justify-between text-[10px] text-slate-400 tabular-nums">
               <span>{Math.round(profile.target_enrollment_y1 * 0.5)}</span>
               <span>{Math.round(profile.target_enrollment_y1 * 1.5)}</span>
             </div>
@@ -483,7 +481,7 @@ export default function DashboardPage() {
               max={30}
               value={scenarioInputs.classSize}
               onChange={(e) => updateScenario({ classSize: Number(e.target.value) })}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
           </div>
 
@@ -494,7 +492,7 @@ export default function DashboardPage() {
               step={1000}
               value={scenarioInputs.leadTeacherSalary}
               onChange={(e) => updateScenario({ leadTeacherSalary: Number(e.target.value) })}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
           </div>
 
@@ -505,7 +503,7 @@ export default function DashboardPage() {
               step={500}
               value={scenarioInputs.monthlyLease}
               onChange={(e) => updateScenario({ monthlyLease: Number(e.target.value) })}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
           </div>
 
@@ -515,7 +513,7 @@ export default function DashboardPage() {
               onClick={() => updateScenario({ extraTeacher: !scenarioInputs.extraTeacher })}
               className={`mt-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 scenarioInputs.extraTeacher
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-teal-600 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -544,7 +542,7 @@ export default function DashboardPage() {
         {(isModified || conservativeMode) && (
           <button
             onClick={() => { resetScenario(); setConservativeMode(false) }}
-            className="mt-4 text-xs text-blue-600 hover:text-blue-800 font-medium"
+            className="mt-4 text-xs text-teal-600 hover:text-teal-800 font-medium transition-colors"
           >
             Reset to Base Case
           </button>
@@ -552,14 +550,14 @@ export default function DashboardPage() {
       </div>
 
       {/* Budget summary table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-6">
-        <table className="w-full text-sm">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-6 shadow-sm">
+        <table className="sl-table">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-6 py-3 font-semibold text-slate-600"></th>
-              <th className="text-right px-6 py-3 font-semibold text-slate-600">Base Case</th>
-              {(isModified || conservativeMode) && <th className="text-right px-6 py-3 font-semibold text-blue-600">{conservativeMode ? 'Conservative (90%)' : 'Scenario'}</th>}
-              {(isModified || conservativeMode) && <th className="text-right px-6 py-3 font-semibold text-slate-500">Delta</th>}
+            <tr>
+              <th></th>
+              <th className="num">Base Case</th>
+              {(isModified || conservativeMode) && <th className="num text-teal-600">{conservativeMode ? 'Conservative (90%)' : 'Scenario'}</th>}
+              {(isModified || conservativeMode) && <th className="num">Delta</th>}
             </tr>
           </thead>
           <tbody>
@@ -572,26 +570,26 @@ export default function DashboardPage() {
             ].map((row) => {
               const diff = row.curr - row.base
               return (
-                <tr key={row.label} className="border-b border-slate-100 last:border-0">
-                  <td className={`px-6 py-3 ${row.bold ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>
+                <tr key={row.label}>
+                  <td className={row.bold ? 'font-semibold text-slate-800' : ''}>
                     {row.label}
                   </td>
-                  <td className={`px-6 py-3 text-right ${row.bold ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>
+                  <td className={`num ${row.bold ? 'font-semibold text-slate-800' : ''}`}>
                     {row.isDays ? `${row.base} days` : fmt(row.base)}
                   </td>
                   {(isModified || conservativeMode) && (
-                    <td className={`px-6 py-3 text-right ${row.bold ? 'font-semibold' : ''} ${
+                    <td className={`num ${row.bold ? 'font-semibold' : ''} ${
                       row.isDays
                         ? (row.curr >= 30 ? 'text-emerald-600' : row.curr >= 21 ? 'text-amber-600' : 'text-red-600')
                         : row.label === 'Net Position'
                         ? (row.curr >= 0 ? 'text-emerald-600' : 'text-red-600')
-                        : 'text-blue-600'
+                        : 'text-teal-600'
                     }`}>
                       {row.isDays ? `${row.curr} days` : fmt(row.curr)}
                     </td>
                   )}
                   {(isModified || conservativeMode) && (
-                    <td className={`px-6 py-3 text-right text-sm ${diff >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    <td className={`num text-sm ${diff >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                       {diff === 0 ? '—' : row.isDays ? `${diff > 0 ? '+' : ''}${diff}` : `${diff > 0 ? '+' : ''}${fmt(diff)}`}
                     </td>
                   )}
@@ -603,11 +601,11 @@ export default function DashboardPage() {
       </div>
 
       {/* Export buttons */}
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <button
           onClick={handleExport}
           disabled={exporting}
-          className="px-5 py-2.5 bg-slate-800 text-white rounded-xl text-sm font-medium hover:bg-slate-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+          className="px-5 py-2.5 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 h-10"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
@@ -617,7 +615,7 @@ export default function DashboardPage() {
         <button
           onClick={handleCommissionExport}
           disabled={commissionExporting}
-          className="px-5 py-2.5 bg-blue-700 text-white rounded-xl text-sm font-medium hover:bg-blue-800 transition-colors disabled:opacity-50 flex items-center gap-2"
+          className="px-5 py-2.5 bg-white text-teal-600 border border-teal-600 rounded-lg text-sm font-medium hover:bg-teal-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 h-10"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
