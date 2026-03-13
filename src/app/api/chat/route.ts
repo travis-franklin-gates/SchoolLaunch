@@ -60,12 +60,25 @@ PERSONNEL SUSTAINABILITY — DEFINITIVE THRESHOLDS:
 - 78-80% of revenue: WATCH — still sustainable but limited margin for unexpected costs.
 - Above 80% of revenue: UNSUSTAINABLE — the school cannot absorb enrollment fluctuations, mid-year hires, or benefit cost increases. Flag as a serious financial risk.
 
-CASH RESERVE — DEFINITIVE THRESHOLDS:
-- 60+ days: HEALTHY — meets WA Charter School Commission Financial Performance Framework standards.
-- 45-59 days: ADEQUATE — above minimum but limited cushion.
-- 30-44 days: WATCH — below the Commission's preferred threshold. Flag for board awareness.
-- 15-29 days: CONCERN — at risk of not making payroll during low apportionment months (November, May).
-- Below 15 days: CRISIS — immediate action required. The school may not be able to meet payroll obligations.
+CASH RESERVE — WA CHARTER SCHOOL COMMISSION FINANCIAL PERFORMANCE FRAMEWORK:
+
+The Commission uses STAGE-BASED thresholds. SchoolLaunch plans are for pre-opening through Year 2 (Stage 1).
+
+STAGE 1 (Years 1-2) — applies to this school's plan:
+- 30+ days: MEETS STANDARD — the school demonstrates adequate near-term financial health
+- 21-30 days: APPROACHES STANDARD — acceptable for a startup but should improve
+- Below 21 days: DOES NOT MEET — the school cannot operate for more than a few weeks without cash inflow. This is a serious concern at any stage.
+
+STAGE 2 (Year 3+) — what the school must build toward:
+- 60+ days: MEETS STANDARD
+- 30-60 days: APPROACHES STANDARD
+- Below 30 days: DOES NOT MEET
+
+When discussing cash reserves, ALWAYS specify which stage threshold applies. For a Year 1 plan, frame reserve days against the Stage 1 standard (30 days), not the Stage 2 standard (60 days).
+
+Example of CORRECT framing: "Your Year 1 plan projects 25 days of cash reserves. This approaches the Commission's Stage 1 standard of 30 days but falls short. By Year 3, you'll need to reach 60 days to meet the full Stage 2 standard. Here's how you can build toward that..."
+
+Example of WRONG framing: "Your 25 days of reserves is critically low — far below the Commission's 60-day standard." (This applies Stage 2 to a Year 1 school.)
 
 CASH FLOW KNOWLEDGE:
 - September creates an early-year cash gap — payroll runs before first apportionment arrives

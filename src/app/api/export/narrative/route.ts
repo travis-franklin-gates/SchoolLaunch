@@ -126,16 +126,24 @@ function pct(n: number, total: number): string {
 }
 
 // Color helpers
+// Stage 1 (Years 1-2) thresholds per WA Commission Financial Performance Framework
 function reserveColor(days: number): string {
-  if (days >= 60) return '#0F6E56'
-  if (days >= 30) return '#B45309'
+  if (days >= 30) return '#0F6E56'
+  if (days >= 21) return '#B45309'
   return '#D85A30'
 }
 
 function metricCardBg(days: number): string {
-  if (days >= 60) return '#ECFDF5'
-  if (days >= 30) return '#FFFBEB'
+  if (days >= 30) return '#ECFDF5'
+  if (days >= 21) return '#FFFBEB'
   return '#FEF2F2'
+}
+
+// Stage 2 (Year 3+) thresholds
+function reserveColorStage2(days: number): string {
+  if (days >= 60) return '#0F6E56'
+  if (days >= 30) return '#B45309'
+  return '#D85A30'
 }
 
 async function generateAIContent(prompt: string, context: string): Promise<string> {
@@ -245,10 +253,11 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
   const yScale = (d: number) => chartH - 20 - ((d + maxDays) / (maxDays * 2)) * (chartH - 40)
   const xStep = chartW / 5
   const linePoints = multiYear.map((y, i) => `${50 + (i + 1) * xStep},${yScale(y.reserveDays)}`).join(' ')
-  const dotsSvg = multiYear.map((y, i) =>
-    `<circle cx="${50 + (i + 1) * xStep}" cy="${yScale(y.reserveDays)}" r="5" fill="${reserveColor(y.reserveDays)}" />
-     <text x="${50 + (i + 1) * xStep}" y="${yScale(y.reserveDays) - 12}" text-anchor="middle" font-size="11" font-weight="600" fill="${reserveColor(y.reserveDays)}">${y.reserveDays}d</text>`
-  ).join('\n')
+  const dotsSvg = multiYear.map((y, i) => {
+    const color = y.year <= 2 ? reserveColor(y.reserveDays) : reserveColorStage2(y.reserveDays)
+    return `<circle cx="${50 + (i + 1) * xStep}" cy="${yScale(y.reserveDays)}" r="5" fill="${color}" />
+     <text x="${50 + (i + 1) * xStep}" y="${yScale(y.reserveDays) - 12}" text-anchor="middle" font-size="11" font-weight="600" fill="${color}">${y.reserveDays}d</text>`
+  }).join('\n')
 
   // Revenue formula strings
   function revenueFormula(sub: string): string {
@@ -453,7 +462,7 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
   <div class="metric-card" style="background:${metricCardBg(baseSummary.reserveDays)};">
     <div class="label">Reserve Days</div>
     <div class="value" style="color:${reserveColor(baseSummary.reserveDays)};">${baseSummary.reserveDays}</div>
-    <div class="sub">${baseSummary.reserveDays >= 60 ? 'Strong reserve' : baseSummary.reserveDays >= 30 ? 'Adequate' : 'Below target'}</div>
+    <div class="sub">${baseSummary.reserveDays >= 30 ? 'Meets Stage 1' : baseSummary.reserveDays >= 21 ? 'Approaches Stage 1' : 'Below Stage 1'} &bull; Stage 2: 60 days</div>
   </div>
   <div class="metric-card" style="background:${baseSummary.personnelPctRevenue >= 72 && baseSummary.personnelPctRevenue <= 78 ? '#ECFDF5' : baseSummary.personnelPctRevenue <= 80 ? '#FFFBEB' : '#FEF2F2'};">
     <div class="label">Personnel % of Revenue</div>
@@ -624,7 +633,7 @@ ${cashFlow.some((m) => m.cumulativeBalance < 0)
     <tr><td>Total Expenses</td>${multiYear.map((y) => `<td style="text-align:right;">${fmtDollars(y.totalExpenses)}</td>`).join('')}</tr>
     <tr class="total-row"><td>Net Position</td>${multiYear.map((y) => `<td style="text-align:right;color:${y.net >= 0 ? '#0F6E56' : '#D85A30'};">${fmtDollars(y.net)}</td>`).join('')}</tr>
     <tr><td>Cumulative Net</td>${multiYear.map((y) => `<td style="text-align:right;font-weight:600;color:${y.cumulativeNet >= 0 ? '#0F6E56' : '#D85A30'};">${fmtDollars(y.cumulativeNet)}</td>`).join('')}</tr>
-    <tr class="total-row"><td>Reserve Days</td>${multiYear.map((y) => `<td style="text-align:right;color:${reserveColor(y.reserveDays)};">${y.reserveDays}</td>`).join('')}</tr>
+    <tr class="total-row"><td>Reserve Days</td>${multiYear.map((y) => `<td style="text-align:right;color:${y.year <= 2 ? reserveColor(y.reserveDays) : reserveColorStage2(y.reserveDays)};">${y.reserveDays}</td>`).join('')}</tr>
   </tbody>
 </table>
 
@@ -634,9 +643,12 @@ ${cashFlow.some((m) => m.cumulativeBalance < 0)
     <!-- Zero line -->
     <line x1="50" y1="${yScale(0)}" x2="${chartW - 20}" y2="${yScale(0)}" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4,4" />
     <text x="45" y="${yScale(0) + 4}" text-anchor="end" font-size="10" fill="#94A3B8">0</text>
-    <!-- 60 day line -->
+    <!-- 30 day line (Stage 1) -->
+    <line x1="50" y1="${yScale(30)}" x2="${chartW - 20}" y2="${yScale(30)}" stroke="#FDE68A" stroke-width="1" stroke-dasharray="4,4" />
+    <text x="45" y="${yScale(30) + 4}" text-anchor="end" font-size="9" fill="#D97706">30d</text>
+    <!-- 60 day line (Stage 2) -->
     <line x1="50" y1="${yScale(60)}" x2="${chartW - 20}" y2="${yScale(60)}" stroke="#A7F3D0" stroke-width="1" stroke-dasharray="4,4" />
-    <text x="45" y="${yScale(60) + 4}" text-anchor="end" font-size="10" fill="#6EE7B7">60d</text>
+    <text x="45" y="${yScale(60) + 4}" text-anchor="end" font-size="9" fill="#6EE7B7">60d</text>
     <!-- X axis labels -->
     ${multiYear.map((y, i) => `<text x="${50 + (i + 1) * xStep}" y="${chartH - 4}" text-anchor="middle" font-size="11" fill="#64748B">Y${y.year}</text>`).join('')}
     <!-- Line -->
@@ -692,7 +704,7 @@ ${securedFunding < totalFunding * 0.5 ? `<div class="callout warning"><strong>Fu
 <!-- PAGE 9: Sensitivity -->
 <div class="page-break"></div>
 <h2>Sensitivity Analysis &mdash; Conservative Enrollment</h2>
-<p style="font-size:12px;color:#64748B;margin-bottom:16px;">Industry best practice: budget for revenue at 90% of projected enrollment while maintaining 100% of planned expenses.</p>
+<p style="font-size:12px;color:#64748B;margin-bottom:16px;">Industry best practice: budget for revenue at 90% of projected enrollment while maintaining 100% of planned expenses. The WA Charter Commission uses Stage 1 thresholds (30+ days cash) for Years 1-2 and Stage 2 thresholds (60+ days) for Year 3+.</p>
 
 <table>
   <thead>

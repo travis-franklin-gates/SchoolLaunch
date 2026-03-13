@@ -28,9 +28,10 @@ function fmt(n: number) {
   return `$${n.toLocaleString()}`
 }
 
+// Stage 1 (Years 1-2) thresholds per WA Commission Financial Performance Framework
 function reserveColor(days: number) {
-  if (days >= 60) return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' }
-  if (days >= 30) return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' }
+  if (days >= 30) return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' }
+  if (days >= 21) return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' }
   return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' }
 }
 
@@ -296,7 +297,7 @@ export default function DashboardPage() {
         <HealthTile
           label="Year-End Reserve"
           value={`${current.reserveDays} days`}
-          subtitle={delta(baseSummary.reserveDays, current.reserveDays, 'days') || undefined}
+          subtitle={delta(baseSummary.reserveDays, current.reserveDays, 'days') || (current.reserveDays >= 30 ? 'Meets Stage 1 · Stage 2 target: 60 days' : current.reserveDays >= 21 ? 'Approaches Stage 1 · Target: 30 days' : 'Below Stage 1 minimum (21 days)')}
           colorClass={rc}
         />
         <HealthTile
@@ -329,10 +330,10 @@ export default function DashboardPage() {
         <div className="mb-8 bg-slate-50 border border-slate-200 rounded-xl px-5 py-3 text-sm text-slate-600">
           <strong>90% enrollment sensitivity:</strong> At {conservativeEnrollment} students,
           reserve days drop from {baseSummary.reserveDays} to{' '}
-          <span className={conservativeSummary.reserveDays < 30 ? 'text-red-600 font-semibold' : conservativeSummary.reserveDays < 60 ? 'text-amber-600 font-semibold' : 'text-emerald-600 font-semibold'}>
+          <span className={conservativeSummary.reserveDays < 21 ? 'text-red-600 font-semibold' : conservativeSummary.reserveDays < 30 ? 'text-amber-600 font-semibold' : 'text-emerald-600 font-semibold'}>
             {conservativeSummary.reserveDays} days
           </span>.
-          {conservativeSummary.reserveDays < 60 && ' Toggle conservative mode below to plan for this scenario.'}
+          {conservativeSummary.reserveDays < 30 && ' Toggle conservative mode below to plan for this scenario.'}
         </div>
       )}
 
@@ -480,7 +481,7 @@ export default function DashboardPage() {
                   {(isModified || conservativeMode) && (
                     <td className={`px-6 py-3 text-right ${row.bold ? 'font-semibold' : ''} ${
                       row.isDays
-                        ? (row.curr >= 60 ? 'text-emerald-600' : row.curr >= 30 ? 'text-amber-600' : 'text-red-600')
+                        ? (row.curr >= 30 ? 'text-emerald-600' : row.curr >= 21 ? 'text-amber-600' : 'text-red-600')
                         : row.label === 'Net Position'
                         ? (row.curr >= 0 ? 'text-emerald-600' : 'text-red-600')
                         : 'text-blue-600'
