@@ -101,8 +101,6 @@ export async function POST(request: Request) {
     category: p.category,
     fte: p.fte,
     annual_salary: p.salary,
-    benefits_rate: 0.30,
-    total_cost: Math.round(p.fte * p.salary * 1.3),
   }))
 
   if (staffRows.length > 0) {

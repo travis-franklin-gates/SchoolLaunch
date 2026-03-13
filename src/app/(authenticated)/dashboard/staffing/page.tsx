@@ -75,8 +75,6 @@ export default function StaffingPage() {
       category: p.category,
       fte: p.fte,
       annual_salary: p.salary,
-      benefits_rate: 0.30,
-      total_cost: Math.round(p.fte * p.salary * 1.3),
     }))
     if (rows.length > 0) await supabase.from('staffing_positions').insert(rows)
 

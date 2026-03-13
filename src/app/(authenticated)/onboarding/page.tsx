@@ -196,8 +196,6 @@ export default function OnboardingPage() {
       category: p.category,
       fte: p.fte,
       annual_salary: p.salary,
-      benefits_rate: 0.30,
-      total_cost: Math.round(p.fte * p.salary * 1.3),
     }))
 
     if (rows.length > 0) {

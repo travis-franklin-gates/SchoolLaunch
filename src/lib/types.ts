@@ -23,8 +23,8 @@ export interface StaffingPosition {
   category: 'certificated' | 'classified' | 'admin'
   fte: number
   annual_salary: number
-  benefits_rate: number
-  total_cost: number
+  funding_source?: string
+  notes?: string
 }
 
 export interface BudgetProjection {
