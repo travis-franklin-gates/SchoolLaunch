@@ -26,11 +26,6 @@ export default function SettingsPage() {
   const [region, setRegion] = useState(profile.region)
   const [openYear, setOpenYear] = useState(profile.planned_open_year)
   const [gradeConfig, setGradeConfig] = useState(profile.grade_config)
-  const [enrollY1, setEnrollY1] = useState(profile.target_enrollment_y1)
-  const [enrollY2, setEnrollY2] = useState(profile.target_enrollment_y2)
-  const [enrollY3, setEnrollY3] = useState(profile.target_enrollment_y3)
-  const [enrollY4, setEnrollY4] = useState(profile.target_enrollment_y4)
-  const [enrollY5, setEnrollY5] = useState(profile.target_enrollment_y5)
   const [pctFrl, setPctFrl] = useState(profile.pct_frl)
   const [pctIep, setPctIep] = useState(profile.pct_iep)
   const [pctEll, setPctEll] = useState(profile.pct_ell)
@@ -47,6 +42,7 @@ export default function SettingsPage() {
     buildoutGrades: string[]
     retentionRate: number
     plan: GradeExpansionEntry[]
+    enrollments: { year: number; total: number; returning: number; newGrade: number; grades: string[]; newGrades: string[] }[]
   } | null>(null)
 
   const handleExpansionChange = useCallback((data: {
@@ -54,9 +50,17 @@ export default function SettingsPage() {
     buildoutGrades: string[]
     retentionRate: number
     plan: GradeExpansionEntry[]
+    enrollments: { year: number; total: number; returning: number; newGrade: number; grades: string[]; newGrades: string[] }[]
   }) => {
     setExpansionData(data)
   }, [])
+
+  // Enrollment is derived from expansion plan (read-only)
+  const enrollY1 = expansionData?.enrollments.find((e) => e.year === 1)?.total ?? profile.target_enrollment_y1
+  const enrollY2 = expansionData?.enrollments.find((e) => e.year === 2)?.total ?? profile.target_enrollment_y2
+  const enrollY3 = expansionData?.enrollments.find((e) => e.year === 3)?.total ?? profile.target_enrollment_y3
+  const enrollY4 = expansionData?.enrollments.find((e) => e.year === 4)?.total ?? profile.target_enrollment_y4
+  const enrollY5 = expansionData?.enrollments.find((e) => e.year === 5)?.total ?? profile.target_enrollment_y5
 
   // Initialize from loaded data (runs once when loading finishes)
   const [initialized, setInitialized] = useState(false)
@@ -65,11 +69,6 @@ export default function SettingsPage() {
     setRegion(profile.region)
     setOpenYear(profile.planned_open_year)
     setGradeConfig(profile.grade_config)
-    setEnrollY1(profile.target_enrollment_y1)
-    setEnrollY2(profile.target_enrollment_y2)
-    setEnrollY3(profile.target_enrollment_y3)
-    setEnrollY4(profile.target_enrollment_y4)
-    setEnrollY5(profile.target_enrollment_y5)
     setPctFrl(profile.pct_frl)
     setPctIep(profile.pct_iep)
     setPctEll(profile.pct_ell)
@@ -216,33 +215,22 @@ export default function SettingsPage() {
       <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Enrollment & Demographics</h2>
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Year 1 Enrollment</label>
-            <input type="number" value={enrollY1} onChange={(e) => setEnrollY1(Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Year 2 Enrollment</label>
-            <input type="number" value={enrollY2} onChange={(e) => setEnrollY2(Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Year 3 Enrollment</label>
-            <input type="number" value={enrollY3} onChange={(e) => setEnrollY3(Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Year 4 Enrollment</label>
-            <input type="number" value={enrollY4} onChange={(e) => setEnrollY4(Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Year 5 Enrollment</label>
-            <input type="number" value={enrollY5} onChange={(e) => setEnrollY5(Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-2">
+          {[
+            { label: 'Year 1', value: enrollY1 },
+            { label: 'Year 2', value: enrollY2 },
+            { label: 'Year 3', value: enrollY3 },
+            { label: 'Year 4', value: enrollY4 },
+            { label: 'Year 5', value: enrollY5 },
+          ].map(({ label, value }) => (
+            <div key={label}>
+              <label className="block text-xs font-medium text-slate-500 mb-1">{label} Enrollment</label>
+              <input type="number" value={value} readOnly tabIndex={-1}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-600 cursor-default" />
+            </div>
+          ))}
         </div>
+        <p className="text-[11px] text-slate-400 mb-6">Enrollment is calculated from your Grade Expansion Plan below.</p>
 
         <div className="space-y-4">
           {[
@@ -376,6 +364,7 @@ export default function SettingsPage() {
             <input type="number" step={100} value={fa.levy_equity_per_student}
               onChange={(e) => updateFa('levy_equity_per_student', Number(e.target.value))}
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+            <p className="text-[10px] text-slate-400 mt-0.5">$0 — WA legislature has not reinstated levy equity funding</p>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Revenue COLA (%)</label>

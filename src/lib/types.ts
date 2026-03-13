@@ -30,7 +30,7 @@ export interface FinancialAssumptions {
 
 export const DEFAULT_ASSUMPTIONS: FinancialAssumptions = {
   per_pupil_rate: 12000, // Now defaults to regular_ed rate (legacy field)
-  levy_equity_per_student: 1500,
+  levy_equity_per_student: 0,
   benefits_load_pct: 30,
   authorizer_fee_pct: 3,
   salary_escalator_pct: 2.5,
