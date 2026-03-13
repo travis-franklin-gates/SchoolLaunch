@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import type { GradeExpansionEntry } from '@/lib/types'
 import {
   ALL_GRADES,
@@ -88,7 +88,7 @@ export default function GradeExpansionEditor({
   )
 
   // Notify parent on changes
-  const notifyChange = useCallback(() => {
+  useEffect(() => {
     onChange({
       openingGrades: sortGrades(openingGrades),
       buildoutGrades: sortGrades(buildoutGrades),
@@ -97,11 +97,6 @@ export default function GradeExpansionEditor({
       enrollments,
     })
   }, [openingGrades, buildoutGrades, retentionRate, plan, enrollments, onChange])
-
-  // Call onChange whenever computed data changes
-  useMemo(() => {
-    notifyChange()
-  }, [notifyChange])
 
   function toggleGrade(grade: string, list: string[], setList: (g: string[]) => void) {
     if (list.includes(grade)) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { calcCommissionRevenue, calcAAFTE } from '@/lib/calculations'
 
@@ -157,8 +157,8 @@ export default function RevenuePage() {
               const groupRows = rows.filter((r) => r.group === group)
               const groupTotal = groupRows.reduce((s, r) => s + (r.override ?? r.calculated), 0)
               return (
-                <>{/* group header */}
-                  <tr key={`header-${group}`} className="section-header">
+                <React.Fragment key={`group-${group}`}>
+                  <tr className="section-header">
                     <td colSpan={isModified ? 6 : 5} className="px-6 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide">
                       {group}
                     </td>
@@ -197,7 +197,7 @@ export default function RevenuePage() {
                       </tr>
                     )
                   })}
-                </>
+                </React.Fragment>
               )
             })}
           </tbody>
