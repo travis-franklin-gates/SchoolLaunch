@@ -32,6 +32,10 @@ export async function POST(request: Request) {
   const body = await request.json()
   const { positions, operations } = body
 
+  console.log('[onboarding/complete] received request for school_id:', schoolId)
+  console.log('[onboarding/complete] positions received:', JSON.stringify(positions))
+  console.log('[onboarding/complete] operations received:', JSON.stringify(operations))
+
   if (!positions || !operations) {
     return NextResponse.json({ error: 'Missing positions or operations data' }, { status: 400 })
   }
@@ -78,6 +82,7 @@ export async function POST(request: Request) {
   const misc = Math.round(subtotalExpenses * (operations.miscPct / 100))
 
   // --- Save staffing positions (fixes G4: uses service role) ---
+  console.log('[onboarding/complete] deleting staffing_positions for school_id:', schoolId, 'year: 1')
   const { error: delStaffError } = await admin
     .from('staffing_positions')
     .delete()
@@ -85,6 +90,7 @@ export async function POST(request: Request) {
     .eq('year', 1)
 
   if (delStaffError) {
+    console.error('[onboarding/complete] delete staffing_positions failed:', JSON.stringify(delStaffError))
     return NextResponse.json({ error: 'Failed to clear staffing positions', detail: delStaffError }, { status: 500 })
   }
 
@@ -100,10 +106,15 @@ export async function POST(request: Request) {
   }))
 
   if (staffRows.length > 0) {
+    console.log('[onboarding/complete] inserting staffing_positions, count:', staffRows.length, 'payload:', JSON.stringify(staffRows))
     const { error: staffError } = await admin.from('staffing_positions').insert(staffRows)
     if (staffError) {
+      console.error('[onboarding/complete] insert staffing_positions failed:', JSON.stringify(staffError))
       return NextResponse.json({ error: 'Failed to save staffing positions', detail: staffError }, { status: 500 })
     }
+    console.log('[onboarding/complete] staffing_positions insert succeeded')
+  } else {
+    console.log('[onboarding/complete] no staffing positions to insert (empty array)')
   }
 
   // --- Delete existing projections and scenario ---
