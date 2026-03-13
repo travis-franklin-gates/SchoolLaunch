@@ -117,6 +117,7 @@ export async function POST(request: Request) {
   }
 
   // --- Delete existing projections and scenario ---
+  console.log('[onboarding/complete] deleting budget_projections for school_id:', schoolId, 'year: 1')
   const { error: delProjError } = await admin
     .from('budget_projections')
     .delete()
@@ -124,9 +125,12 @@ export async function POST(request: Request) {
     .eq('year', 1)
 
   if (delProjError) {
+    console.error('[onboarding/complete] delete budget_projections failed:', JSON.stringify(delProjError))
     return NextResponse.json({ error: 'Failed to clear projections', detail: delProjError }, { status: 500 })
   }
+  console.log('[onboarding/complete] delete budget_projections succeeded')
 
+  console.log('[onboarding/complete] deleting scenarios for school_id:', schoolId)
   const { error: delScenError } = await admin
     .from('scenarios')
     .delete()
@@ -134,10 +138,13 @@ export async function POST(request: Request) {
     .eq('is_base_case', true)
 
   if (delScenError) {
+    console.error('[onboarding/complete] delete scenarios failed:', JSON.stringify(delScenError))
     return NextResponse.json({ error: 'Failed to clear scenarios', detail: delScenError }, { status: 500 })
   }
+  console.log('[onboarding/complete] delete scenarios succeeded')
 
   // --- Create base scenario ---
+  console.log('[onboarding/complete] inserting base scenario')
   const { error: scenError } = await admin.from('scenarios').insert({
     school_id: schoolId,
     name: 'Base Case',
@@ -157,8 +164,10 @@ export async function POST(request: Request) {
   })
 
   if (scenError) {
+    console.error('[onboarding/complete] insert scenario failed:', JSON.stringify(scenError))
     return NextResponse.json({ error: 'Failed to create scenario', detail: scenError }, { status: 500 })
   }
+  console.log('[onboarding/complete] insert scenario succeeded')
 
   // --- Insert budget projections (fixes G1: uses service role) ---
   const projections = [
@@ -179,20 +188,27 @@ export async function POST(request: Request) {
     { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Misc/Contingency', amount: misc, is_revenue: false },
   ]
 
+  console.log('[onboarding/complete] inserting budget_projections, count:', projections.length)
+  console.log('[onboarding/complete] projections payload:', JSON.stringify(projections))
   const { error: projError } = await admin.from('budget_projections').insert(projections)
   if (projError) {
+    console.error('[onboarding/complete] insert budget_projections FAILED:', JSON.stringify(projError))
     return NextResponse.json({ error: 'Failed to save projections', detail: projError }, { status: 500 })
   }
+  console.log('[onboarding/complete] insert budget_projections succeeded')
 
   // --- Mark onboarding complete only after all inserts succeeded (fixes G3) ---
+  console.log('[onboarding/complete] marking onboarding complete')
   const { error: completeError } = await admin.from('school_profiles').upsert({
     school_id: schoolId,
     onboarding_complete: true,
   }, { onConflict: 'school_id' })
 
   if (completeError) {
+    console.error('[onboarding/complete] upsert onboarding_complete failed:', JSON.stringify(completeError))
     return NextResponse.json({ error: 'Failed to mark onboarding complete', detail: completeError }, { status: 500 })
   }
 
+  console.log('[onboarding/complete] all steps succeeded, returning success')
   return NextResponse.json({ success: true })
 }
