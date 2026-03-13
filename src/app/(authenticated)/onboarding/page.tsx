@@ -3,15 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import {
-  calcTotalBaseRevenue,
-  calcRevenue,
-  calcLevyEquity,
-  calcAllGrants,
-  calcBenefits,
-  calcAuthorizerFee,
-  PER_PUPIL_RATE,
-} from '@/lib/calculations'
+import { calcBenefits } from '@/lib/calculations'
 import StepIdentity from '@/components/onboarding/StepIdentity'
 import StepEnrollment from '@/components/onboarding/StepEnrollment'
 import StepDemographics from '@/components/onboarding/StepDemographics'
@@ -76,6 +68,7 @@ export default function OnboardingPage() {
   const [schoolId, setSchoolId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -217,99 +210,33 @@ export default function OnboardingPage() {
   const completeOnboarding = useCallback(async (opsData: WizardData['operations']) => {
     if (!schoolId) return
     setSaving(true)
+    setError(null)
 
-    const finalData = { ...data, operations: opsData }
-    const enrollment = finalData.enrollmentY1
+    try {
+      const res = await fetch('/api/onboarding/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          positions: data.positions,
+          operations: opsData,
+        }),
+      })
 
-    // Calculate all revenue lines
-    const apportionment = calcRevenue(enrollment)
-    const levyEquity = calcLevyEquity(enrollment)
-    const grants = calcAllGrants(enrollment, finalData.pctFrl, finalData.pctIep, finalData.pctEll, finalData.pctHicap)
+      if (!res.ok) {
+        const err = await res.json()
+        console.error('[onboarding] completion failed:', err)
+        setError(err.error || 'Failed to save budget data. Please try again.')
+        setSaving(false)
+        return
+      }
 
-    // Calculate operations costs
-    const facilityCost = opsData.facilityMode === 'sqft'
-      ? opsData.facilitySqft * opsData.facilityCostPerSqft
-      : opsData.facilityMonthly * 12
-    const supplies = opsData.suppliesPerPupil * enrollment
-    const contracted = opsData.contractedPerPupil * enrollment
-    const technology = opsData.technologyPerPupil * enrollment
-    const authorizerFee = calcAuthorizerFee(enrollment)
-    const insurance = opsData.insurance
-
-    // Personnel total
-    let totalPersonnel = 0
-    for (const p of finalData.positions) {
-      const sal = p.fte * p.salary
-      totalPersonnel += sal + calcBenefits(sal)
+      router.push('/dashboard')
+    } catch (e) {
+      console.error('[onboarding] network error:', e)
+      setError('Network error. Please check your connection and try again.')
+      setSaving(false)
     }
-
-    const subtotalExpenses = totalPersonnel + facilityCost + supplies + contracted + technology + authorizerFee + insurance
-    const misc = Math.round(subtotalExpenses * (opsData.miscPct / 100))
-
-    // Delete existing projections and scenario for year 1
-    const { error: delProjError } = await supabase.from('budget_projections').delete().eq('school_id', schoolId).eq('year', 1)
-    if (delProjError) console.error('[onboarding] delete budget_projections failed:', delProjError)
-
-    const { error: delScenarioError } = await supabase.from('scenarios').delete().eq('school_id', schoolId).eq('is_base_case', true)
-    if (delScenarioError) console.error('[onboarding] delete scenarios failed:', delScenarioError)
-
-    // Create base scenario
-    const { error: scenarioError } = await supabase.from('scenarios').insert({
-      school_id: schoolId,
-      name: 'Base Case',
-      is_base_case: true,
-      assumptions: {
-        enrollment: finalData.enrollmentY1,
-        maxClassSize: finalData.maxClassSize,
-        pctFrl: finalData.pctFrl,
-        pctIep: finalData.pctIep,
-        pctEll: finalData.pctEll,
-        pctHicap: finalData.pctHicap,
-        operations: opsData,
-        growthPreset: finalData.growthPreset,
-        enrollmentY2: finalData.enrollmentY2,
-        enrollmentY3: finalData.enrollmentY3,
-        enrollmentY4: finalData.enrollmentY4,
-      },
-    })
-    if (scenarioError) console.error('[onboarding] insert scenario failed:', scenarioError)
-
-    // Build projection rows
-    const projections = [
-      // Revenue
-      { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'State Apportionment', amount: apportionment, is_revenue: true },
-      { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'Levy Equity', amount: levyEquity, is_revenue: true },
-      { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'Title I', amount: grants.titleI, is_revenue: true },
-      { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'IDEA', amount: grants.idea, is_revenue: true },
-      { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'LAP', amount: grants.lap, is_revenue: true },
-      { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'TBIP', amount: grants.tbip, is_revenue: true },
-      { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'HiCap', amount: grants.hicap, is_revenue: true },
-      // Expenses
-      { school_id: schoolId, year: 1, category: 'Personnel', line_item: 'Total Personnel', amount: totalPersonnel, is_revenue: false },
-      { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Facilities', amount: facilityCost, is_revenue: false },
-      { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Supplies & Materials', amount: supplies, is_revenue: false },
-      { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Contracted Services', amount: contracted, is_revenue: false },
-      { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Technology', amount: technology, is_revenue: false },
-      { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Authorizer Fee', amount: authorizerFee, is_revenue: false },
-      { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Insurance', amount: insurance, is_revenue: false },
-      { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Misc/Contingency', amount: misc, is_revenue: false },
-    ]
-
-    console.log('[onboarding] inserting projections, count:', projections.length, 'school_id:', schoolId)
-    const { error: projError } = await supabase.from('budget_projections').insert(projections)
-    if (projError) console.error('[onboarding] insert budget_projections failed:', projError)
-    else console.log('[onboarding] budget_projections insert succeeded')
-
-    // Mark onboarding complete
-    const { error: profileError } = await supabase.from('school_profiles').upsert({
-      school_id: schoolId,
-      onboarding_complete: true,
-    }, { onConflict: 'school_id' })
-    if (profileError) console.error('[onboarding] upsert school_profiles failed:', profileError)
-
-    setSaving(false)
-    router.push('/dashboard')
-  }, [schoolId, data, supabase, router])
+  }, [schoolId, data.positions, router])
 
   // Calculate total personnel cost for operations step
   const totalPersonnelCost = data.positions.reduce((sum, p) => {
@@ -351,6 +278,12 @@ export default function OnboardingPage() {
         </div>
         <h2 className="text-xl font-bold text-slate-800">{STEPS[step]}</h2>
       </div>
+
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+          <strong>Error:</strong> {error}
+        </div>
+      )}
 
       {step === 0 && (
         <StepIdentity

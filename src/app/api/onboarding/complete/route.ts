@@ -1,0 +1,188 @@
+import { NextResponse } from 'next/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import {
+  calcRevenue,
+  calcLevyEquity,
+  calcAllGrants,
+  calcBenefits,
+  calcAuthorizerFee,
+} from '@/lib/calculations'
+
+export async function POST(request: Request) {
+  // Authenticate the user via their session cookie
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Verify user has school_ceo role and get school_id
+  const { data: roleData } = await supabase
+    .from('user_roles')
+    .select('school_id')
+    .eq('user_id', user.id)
+    .eq('role', 'school_ceo')
+    .single()
+
+  if (!roleData?.school_id) {
+    return NextResponse.json({ error: 'No school found for this user' }, { status: 403 })
+  }
+
+  const schoolId = roleData.school_id
+  const body = await request.json()
+  const { positions, operations } = body
+
+  if (!positions || !operations) {
+    return NextResponse.json({ error: 'Missing positions or operations data' }, { status: 400 })
+  }
+
+  // Use service role client for all writes (bypasses RLS)
+  const admin = createServiceRoleClient()
+
+  // Read profile from DB for enrollment/demographics
+  const { data: profile, error: profileError } = await admin
+    .from('school_profiles')
+    .select('*')
+    .eq('school_id', schoolId)
+    .single()
+
+  if (profileError || !profile) {
+    return NextResponse.json({ error: 'School profile not found', detail: profileError }, { status: 404 })
+  }
+
+  const enrollment = profile.target_enrollment_y1
+
+  // --- Calculate revenue ---
+  const apportionment = calcRevenue(enrollment)
+  const levyEquity = calcLevyEquity(enrollment)
+  const grants = calcAllGrants(enrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap)
+
+  // --- Calculate operations costs ---
+  const facilityCost = operations.facilityMode === 'sqft'
+    ? operations.facilitySqft * operations.facilityCostPerSqft
+    : operations.facilityMonthly * 12
+  const supplies = operations.suppliesPerPupil * enrollment
+  const contracted = operations.contractedPerPupil * enrollment
+  const technology = operations.technologyPerPupil * enrollment
+  const authorizerFee = calcAuthorizerFee(enrollment)
+  const insurance = operations.insurance
+
+  // --- Calculate personnel total from positions ---
+  let totalPersonnel = 0
+  for (const p of positions) {
+    const sal = p.fte * p.salary
+    totalPersonnel += sal + calcBenefits(sal)
+  }
+
+  const subtotalExpenses = totalPersonnel + facilityCost + supplies + contracted + technology + authorizerFee + insurance
+  const misc = Math.round(subtotalExpenses * (operations.miscPct / 100))
+
+  // --- Save staffing positions (fixes G4: uses service role) ---
+  const { error: delStaffError } = await admin
+    .from('staffing_positions')
+    .delete()
+    .eq('school_id', schoolId)
+    .eq('year', 1)
+
+  if (delStaffError) {
+    return NextResponse.json({ error: 'Failed to clear staffing positions', detail: delStaffError }, { status: 500 })
+  }
+
+  const staffRows = positions.map((p: { title: string; category: string; fte: number; salary: number }) => ({
+    school_id: schoolId,
+    year: 1,
+    title: p.title,
+    category: p.category,
+    fte: p.fte,
+    annual_salary: p.salary,
+    benefits_rate: 0.30,
+    total_cost: Math.round(p.fte * p.salary * 1.3),
+  }))
+
+  if (staffRows.length > 0) {
+    const { error: staffError } = await admin.from('staffing_positions').insert(staffRows)
+    if (staffError) {
+      return NextResponse.json({ error: 'Failed to save staffing positions', detail: staffError }, { status: 500 })
+    }
+  }
+
+  // --- Delete existing projections and scenario ---
+  const { error: delProjError } = await admin
+    .from('budget_projections')
+    .delete()
+    .eq('school_id', schoolId)
+    .eq('year', 1)
+
+  if (delProjError) {
+    return NextResponse.json({ error: 'Failed to clear projections', detail: delProjError }, { status: 500 })
+  }
+
+  const { error: delScenError } = await admin
+    .from('scenarios')
+    .delete()
+    .eq('school_id', schoolId)
+    .eq('is_base_case', true)
+
+  if (delScenError) {
+    return NextResponse.json({ error: 'Failed to clear scenarios', detail: delScenError }, { status: 500 })
+  }
+
+  // --- Create base scenario ---
+  const { error: scenError } = await admin.from('scenarios').insert({
+    school_id: schoolId,
+    name: 'Base Case',
+    is_base_case: true,
+    assumptions: {
+      enrollment,
+      maxClassSize: profile.max_class_size,
+      pctFrl: profile.pct_frl,
+      pctIep: profile.pct_iep,
+      pctEll: profile.pct_ell,
+      pctHicap: profile.pct_hicap,
+      operations,
+      enrollmentY2: profile.target_enrollment_y2,
+      enrollmentY3: profile.target_enrollment_y3,
+      enrollmentY4: profile.target_enrollment_y4,
+    },
+  })
+
+  if (scenError) {
+    return NextResponse.json({ error: 'Failed to create scenario', detail: scenError }, { status: 500 })
+  }
+
+  // --- Insert budget projections (fixes G1: uses service role) ---
+  const projections = [
+    { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'State Apportionment', amount: apportionment, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'Levy Equity', amount: levyEquity, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'Title I', amount: grants.titleI, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'IDEA', amount: grants.idea, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'LAP', amount: grants.lap, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'TBIP', amount: grants.tbip, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'HiCap', amount: grants.hicap, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Facilities', amount: facilityCost, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Personnel', line_item: 'Total Personnel', amount: totalPersonnel, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Supplies & Materials', amount: supplies, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Contracted Services', amount: contracted, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Technology', amount: technology, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Authorizer Fee', amount: authorizerFee, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Insurance', amount: insurance, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Misc/Contingency', amount: misc, is_revenue: false },
+  ]
+
+  const { error: projError } = await admin.from('budget_projections').insert(projections)
+  if (projError) {
+    return NextResponse.json({ error: 'Failed to save projections', detail: projError }, { status: 500 })
+  }
+
+  // --- Mark onboarding complete only after all inserts succeeded (fixes G3) ---
+  const { error: completeError } = await admin.from('school_profiles').upsert({
+    school_id: schoolId,
+    onboarding_complete: true,
+  }, { onConflict: 'school_id' })
+
+  if (completeError) {
+    return NextResponse.json({ error: 'Failed to mark onboarding complete', detail: completeError }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true })
+}
