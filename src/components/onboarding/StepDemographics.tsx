@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { calcAllGrants, calcTotalBaseRevenue } from '@/lib/calculations'
+import { calcCommissionRevenue } from '@/lib/calculations'
+import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 
 const REGIONAL_DEFAULTS: Record<string, { frl: number; iep: number; ell: number; hicap: number }> = {
   'King County': { frl: 35, iep: 14, ell: 15, hicap: 7 },
@@ -38,14 +39,15 @@ export default function StepDemographics({ enrollment, region, initialData, onNe
 
   const regionDefaults = REGIONAL_DEFAULTS[region] || REGIONAL_DEFAULTS['Other']
 
-  const grants = useMemo(
-    () => calcAllGrants(enrollment, pctFrl, pctIep, pctEll, pctHicap),
+  const rev = useMemo(
+    () => calcCommissionRevenue(enrollment, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS),
     [enrollment, pctFrl, pctIep, pctEll, pctHicap]
   )
 
+  const grants = { titleI: rev.titleI, idea: rev.idea, lap: rev.lap, tbip: rev.tbip, hicap: rev.hicap }
   const totalGrants = grants.titleI + grants.idea + grants.lap + grants.tbip + grants.hicap
-  const baseRevenue = calcTotalBaseRevenue(enrollment)
-  const totalRevenue = baseRevenue + totalGrants
+  const baseRevenue = rev.regularEd + rev.sped + rev.facilitiesRev + rev.levyEquity
+  const totalRevenue = rev.total
   const grantPct = totalRevenue > 0 ? ((totalGrants / totalRevenue) * 100).toFixed(1) : '0'
 
   function applyRegionalDefaults() {

@@ -4,6 +4,8 @@ import {
   calcAllGrants,
   calcBenefits,
   calcAuthorizerFee,
+  calcCommissionRevenue,
+  calcAuthorizerFeeCommission,
   PER_PUPIL_RATE,
   LEVY_EQUITY_RATE,
 } from './calculations'
@@ -44,7 +46,9 @@ export function computeSummaryFromProjections(
   const reserveDays = dailyExpense > 0 ? Math.round(netPosition / dailyExpense) : 0
   const personnelPctRevenue = totalRevenue > 0 ? (totalPersonnel / totalRevenue) * 100 : 0
 
-  const perPupilRevenue = a.per_pupil_rate + a.levy_equity_per_student
+  // Break-even uses Commission revenue per pupil (AAFTE-adjusted)
+  const aaftePct = a.aafte_pct / 100
+  const perPupilRevenue = (a.regular_ed_per_pupil + a.levy_equity_per_student) * aaftePct
   const breakEvenEnrollment = perPupilRevenue > 0
     ? Math.ceil(totalExpenses / perPupilRevenue)
     : 0
@@ -87,11 +91,9 @@ export function computeScenario(
   const benefitsRate = a.benefits_load_pct / 100
   const feeRate = a.authorizer_fee_pct / 100
 
-  // Revenue
-  const apportionment = calcRevenue(enrollment, a.per_pupil_rate)
-  const levyEquity = calcLevyEquity(enrollment, a.levy_equity_per_student)
-  const grants = calcAllGrants(enrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap)
-  const totalRevenue = apportionment + levyEquity + grants.titleI + grants.idea + grants.lap + grants.tbip + grants.hicap
+  // Revenue — use Commission revenue structure
+  const rev = calcCommissionRevenue(enrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, a)
+  const totalRevenue = rev.total
 
   // Personnel — scale certificated salaries proportionally
   const baseCertSalary = basePositions.find((p) => p.category === 'certificated')?.annual_salary || 58000
@@ -123,7 +125,9 @@ export function computeScenario(
       const perPupilRate = baseEnrollment > 0 ? op.amount / baseEnrollment : 0
       totalOperations += Math.round(perPupilRate * enrollment)
     } else if (op.subcategory === 'Authorizer Fee') {
-      totalOperations += calcAuthorizerFee(enrollment, feeRate, a.per_pupil_rate)
+      // Fee on state apportionment (regularEd + sped + facilities)
+      const stateApport = rev.regularEd + rev.sped + rev.facilitiesRev
+      totalOperations += calcAuthorizerFeeCommission(stateApport, feeRate)
     } else {
       totalOperations += op.amount
     }
@@ -134,7 +138,8 @@ export function computeScenario(
   const dailyExpense = totalExpenses / 365
   const reserveDays = dailyExpense > 0 ? Math.round(netPosition / dailyExpense) : 0
   const personnelPctRevenue = totalRevenue > 0 ? (totalPersonnel / totalRevenue) * 100 : 0
-  const perPupilRevenue = a.per_pupil_rate + a.levy_equity_per_student
+  const aaftePct = a.aafte_pct / 100
+  const perPupilRevenue = (a.regular_ed_per_pupil + a.levy_equity_per_student) * aaftePct
   const breakEvenEnrollment = perPupilRevenue > 0 ? Math.ceil(totalExpenses / perPupilRevenue) : 0
   const facilityPct = totalRevenue > 0 ? ((monthlyLease * 12) / totalRevenue) * 100 : 0
 
@@ -160,6 +165,8 @@ export interface MultiYearStaffing {
   otherStaff: number
   totalPositions: number
   totalPersonnelCost: number
+  totalSalaries: number
+  totalBenefits: number
 }
 
 export function computeMultiYearPersonnel(
@@ -189,30 +196,35 @@ export function computeMultiYearPersonnel(
   const additionalParas = (enrollment >= 150 && y1ParaFte < 3) ? Math.min(1, 3 - y1ParaFte) : 0
   const additionalOffice = (enrollment >= 200 && y1OfficeFte < 2) ? Math.min(1, 2 - y1OfficeFte) : 0
 
-  let totalCost = 0
+  let totalSalaries = 0
+  let totalBenefits = 0
   for (const pos of basePositions) {
     const salary = Math.round(pos.annual_salary * escalator)
     const cost = pos.fte * salary
-    totalCost += cost + calcBenefits(cost, benefitsRate)
+    totalSalaries += cost
+    totalBenefits += calcBenefits(cost, benefitsRate)
   }
 
   const leadTeacherSalary = teacherPositions[0]?.annual_salary || 58000
   if (additionalTeachers > 0) {
     const newSalary = Math.round(leadTeacherSalary * escalator)
     const cost = additionalTeachers * newSalary
-    totalCost += cost + calcBenefits(cost, benefitsRate)
+    totalSalaries += cost
+    totalBenefits += calcBenefits(cost, benefitsRate)
   }
 
   if (additionalParas > 0) {
     const paraSalary = paraPositions[0]?.annual_salary || 35000
     const cost = additionalParas * Math.round(paraSalary * escalator)
-    totalCost += cost + calcBenefits(cost, benefitsRate)
+    totalSalaries += cost
+    totalBenefits += calcBenefits(cost, benefitsRate)
   }
 
   if (additionalOffice > 0) {
     const officeSalary = officePositions[0]?.annual_salary || 42000
     const cost = additionalOffice * Math.round(officeSalary * escalator)
-    totalCost += cost + calcBenefits(cost, benefitsRate)
+    totalSalaries += cost
+    totalBenefits += calcBenefits(cost, benefitsRate)
   }
 
   const otherCount = basePositions.length - teacherPositions.length - paraPositions.length - officePositions.length
@@ -223,7 +235,9 @@ export function computeMultiYearPersonnel(
     officeStaff: y1OfficeFte + additionalOffice,
     otherStaff: otherCount,
     totalPositions: basePositions.length + additionalTeachers + additionalParas + additionalOffice,
-    totalPersonnelCost: totalCost,
+    totalPersonnelCost: totalSalaries + totalBenefits,
+    totalSalaries,
+    totalBenefits,
   }
 }
 
@@ -232,8 +246,11 @@ export function computeMultiYearPersonnel(
 export interface MultiYearDetailedRow {
   year: number
   enrollment: number
+  aafte: number
   revenue: {
-    apportionment: number
+    regularEd: number
+    sped: number
+    facilitiesRev: number
     levyEquity: number
     titleI: number
     idea: number
@@ -241,6 +258,8 @@ export interface MultiYearDetailedRow {
     tbip: number
     hicap: number
     total: number
+    // Legacy aliases
+    apportionment: number
   }
   personnel: {
     certificated: number
@@ -248,6 +267,7 @@ export interface MultiYearDetailedRow {
     admin: number
     benefits: number
     total: number
+    totalSalaries: number
   }
   operations: {
     facilities: number
@@ -307,7 +327,6 @@ export function computeMultiYearDetailed(
   const y1Contracted = projections.find((p) => !p.is_revenue && p.subcategory === 'Contracted Services')?.amount || 0
   const y1Technology = projections.find((p) => !p.is_revenue && p.subcategory === 'Technology')?.amount || 0
   const y1Insurance = projections.find((p) => !p.is_revenue && p.subcategory === 'Insurance')?.amount || 0
-  const y1Contingency = projections.find((p) => !p.is_revenue && p.subcategory === 'Misc/Contingency')?.amount || 0
 
   let cumulativeNet = preOpeningNet
   const rows: MultiYearDetailedRow[] = []
@@ -315,18 +334,18 @@ export function computeMultiYearDetailed(
   for (let y = 1; y <= 4; y++) {
     const enr = enrollments[y - 1] || enrollments[0]
 
-    // Revenue
-    const apportionment = calcRevenue(enr, assumptions.per_pupil_rate)
-    const levyEquity = calcLevyEquity(enr, assumptions.levy_equity_per_student)
-    const grants = calcAllGrants(enr, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap)
-    const totalRevenue = apportionment + levyEquity + grants.titleI + grants.idea + grants.lap + grants.tbip + grants.hicap
+    // Revenue — Commission-aligned with COLA
+    const rev = calcCommissionRevenue(enr, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions, y)
+    const totalRevenue = rev.total
+    // State apportionment = regularEd + sped + facilitiesRev (for authorizer fee)
+    const stateApport = rev.regularEd + rev.sped + rev.facilitiesRev
 
     // Personnel
     const staffing = y === 1
-      ? computeYear1Staffing(positions)
+      ? computeYear1Staffing(positions, benefitsRate)
       : computeMultiYearPersonnel(enr, y, positions, enrollments[0], salaryEscalator, benefitsRate)
 
-    let certCost = 0, classCost = 0, adminCost = 0, benefitsCost = 0
+    let certCost = 0, classCost = 0, adminCost = 0, benefitsCost = 0, totalSalaries = 0
     if (y === 1) {
       // Use actual position data
       for (const pos of positions) {
@@ -337,6 +356,7 @@ export function computeMultiYearDetailed(
         else if (pos.category === 'admin') adminCost += cost
         benefitsCost += ben
       }
+      totalSalaries = certCost + classCost + adminCost
     } else {
       // Scaled positions
       const escalator = Math.pow(salaryEscalator, y - 1)
@@ -356,7 +376,6 @@ export function computeMultiYearDetailed(
       if (hasExpansion && expansionDetails) {
         const yearDetail = expansionDetails.find((d) => d.year === y)
         if (yearDetail && yearDetail.newGrades.length > 0) {
-          // Add teachers based on new grade levels
           const gradeBasedTeachers = yearDetail.newGrades.reduce((sum, grade) => {
             const gradeEntry = gradeExpansionPlan!.find((e) => e.year === y && e.grade_level === grade)
             return sum + teachersPerNewGrade(grade, gradeEntry?.sections || 2)
@@ -388,6 +407,7 @@ export function computeMultiYearDetailed(
         classCost += cost
         benefitsCost += calcBenefits(cost, benefitsRate)
       }
+      totalSalaries = certCost + classCost + adminCost
     }
     const totalPersonnel = certCost + classCost + adminCost + benefitsCost
 
@@ -398,7 +418,7 @@ export function computeMultiYearDetailed(
     const supplies = Math.round(y1Supplies * enrRatio * opsScale)
     const contracted = Math.round(y1Contracted * enrRatio * opsScale)
     const technology = Math.round(y1Technology * enrRatio * opsScale)
-    const authorizerFee = calcAuthorizerFee(enr, feeRate, assumptions.per_pupil_rate)
+    const authorizerFee = calcAuthorizerFeeCommission(stateApport, feeRate)
     const insurance = Math.round(y1Insurance * opsScale)
     const contingencyBase = totalPersonnel + facilities + supplies + contracted + technology + authorizerFee + insurance
     const contingency = Math.round(contingencyBase * (assumptions.contingency_pct / 100))
@@ -417,8 +437,28 @@ export function computeMultiYearDetailed(
     rows.push({
       year: y,
       enrollment: enr,
-      revenue: { apportionment, levyEquity, titleI: grants.titleI, idea: grants.idea, lap: grants.lap, tbip: grants.tbip, hicap: grants.hicap, total: totalRevenue },
-      personnel: { certificated: certCost, classified: classCost, admin: adminCost, benefits: benefitsCost, total: totalPersonnel },
+      aafte: rev.aafte,
+      revenue: {
+        regularEd: rev.regularEd,
+        sped: rev.sped,
+        facilitiesRev: rev.facilitiesRev,
+        levyEquity: rev.levyEquity,
+        titleI: rev.titleI,
+        idea: rev.idea,
+        lap: rev.lap,
+        tbip: rev.tbip,
+        hicap: rev.hicap,
+        total: totalRevenue,
+        apportionment: rev.regularEd + rev.sped + rev.facilitiesRev,
+      },
+      personnel: {
+        certificated: certCost,
+        classified: classCost,
+        admin: adminCost,
+        benefits: benefitsCost,
+        total: totalPersonnel,
+        totalSalaries,
+      },
       operations: { facilities, supplies, contracted, technology, authorizerFee, insurance, contingency, total: totalOperations },
       totalExpenses,
       net,
@@ -437,22 +477,27 @@ export function computeMultiYearDetailed(
   return rows
 }
 
-function computeYear1Staffing(positions: StaffingPosition[]): MultiYearStaffing {
+function computeYear1Staffing(positions: StaffingPosition[], benefitsRate: number = 0.30): MultiYearStaffing {
   const teacherPositions = positions.filter(p => p.category === 'certificated' && /teacher/i.test(p.title))
   const paraPositions = positions.filter(p => /para/i.test(p.title))
   const officePositions = positions.filter(p => /office/i.test(p.title))
   const otherCount = positions.length - teacherPositions.length - paraPositions.length - officePositions.length
-  const totalCost = positions.reduce((s, p) => {
+  let totalSalaries = 0
+  let totalBenefits = 0
+  for (const p of positions) {
     const cost = p.fte * p.annual_salary
-    return s + cost + calcBenefits(cost)
-  }, 0)
+    totalSalaries += cost
+    totalBenefits += calcBenefits(cost, benefitsRate)
+  }
   return {
     teachers: teacherPositions.reduce((s, p) => s + p.fte, 0),
     paras: paraPositions.reduce((s, p) => s + p.fte, 0),
     officeStaff: officePositions.reduce((s, p) => s + p.fte, 0),
     otherStaff: otherCount,
     totalPositions: positions.length,
-    totalPersonnelCost: totalCost,
+    totalPersonnelCost: totalSalaries + totalBenefits,
+    totalSalaries,
+    totalBenefits,
   }
 }
 

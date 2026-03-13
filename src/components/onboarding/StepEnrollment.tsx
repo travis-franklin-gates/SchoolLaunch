@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import { calcSections, calcEnrollmentGrowth, calcTotalBaseRevenue, calcAllGrants } from '@/lib/calculations'
+import { calcSections, calcEnrollmentGrowth, calcCommissionRevenue } from '@/lib/calculations'
+import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import type { GrowthPreset, GradeExpansionEntry, EnrollmentMode } from '@/lib/types'
 import { expansionToEnrollmentArray } from '@/lib/gradeExpansion'
 import GradeExpansionEditor from '@/components/GradeExpansionEditor'
@@ -119,10 +120,10 @@ export default function StepEnrollment({
   const sectionsY1 = calcSections(effectiveY1, maxClassSize)
 
   const revenuePreview = useMemo(() => {
-    const baseRevenue = calcTotalBaseRevenue(effectiveY1)
-    const grants = calcAllGrants(effectiveY1, pctFrl, pctIep, pctEll, pctHicap)
-    const totalGrants = grants.titleI + grants.idea + grants.lap + grants.tbip + grants.hicap
-    return { baseRevenue, totalGrants, total: baseRevenue + totalGrants }
+    const rev = calcCommissionRevenue(effectiveY1, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS)
+    const baseRevenue = rev.regularEd + rev.sped + rev.facilitiesRev + rev.levyEquity
+    const totalGrants = rev.titleI + rev.idea + rev.lap + rev.tbip + rev.hicap
+    return { baseRevenue, totalGrants, total: rev.total }
   }, [effectiveY1, pctFrl, pctIep, pctEll, pctHicap])
 
   const enrollmentWarning = effectiveY1 < 80

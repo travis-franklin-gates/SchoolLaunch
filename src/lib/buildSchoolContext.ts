@@ -1,14 +1,6 @@
 import type { FinancialAssumptions, SchoolProfile, StaffingPosition, BudgetProjection, GradeExpansionEntry } from './types'
 import { getAssumptions } from './types'
-import {
-  calcRevenue,
-  calcLevyEquity,
-  calcTitleI,
-  calcIDEA,
-  calcLAP,
-  calcTBIP,
-  calcHiCap,
-} from './calculations'
+import { calcCommissionRevenue, calcAAFTE } from './calculations'
 import { computeExpansionEnrollments, expansionToEnrollmentArray } from './gradeExpansion'
 
 export function buildSchoolContextString(
@@ -22,14 +14,9 @@ export function buildSchoolContextString(
   const enroll = profile.target_enrollment_y1
   const benefitsMultiplier = 1 + assumptions.benefits_load_pct / 100
 
-  const stateApportionment = calcRevenue(enroll, assumptions.per_pupil_rate)
-  const levyEquity = calcLevyEquity(enroll, assumptions.levy_equity_per_student)
-  const titleI = calcTitleI(enroll, profile.pct_frl)
-  const idea = calcIDEA(enroll, profile.pct_iep)
-  const lap = calcLAP(enroll, profile.pct_frl)
-  const tbip = calcTBIP(enroll, profile.pct_ell)
-  const hicap = calcHiCap(enroll, profile.pct_hicap)
-  const totalRevenue = stateApportionment + levyEquity + titleI + idea + lap + tbip + hicap
+  const rev = calcCommissionRevenue(enroll, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
+  const aafte = calcAAFTE(enroll, assumptions.aafte_pct)
+  const totalRevenue = rev.total
 
   const totalFte = positions.reduce((s, p) => s + p.fte, 0)
   const totalPersonnel = positions.reduce(
@@ -104,14 +91,16 @@ DEMOGRAPHICS:
 - ELL: ${profile.pct_ell}%
 - Highly Capable: ${profile.pct_hicap}%
 
-REVENUE (Year 1):
-- State Apportionment: $${stateApportionment.toLocaleString()} (${enroll} × $${assumptions.per_pupil_rate.toLocaleString()})
-- Levy Equity: $${levyEquity.toLocaleString()} (${enroll} × $${assumptions.levy_equity_per_student.toLocaleString()})
-- Title I: $${titleI.toLocaleString()}${profile.pct_frl >= 40 ? ' (Schoolwide eligible)' : ' (Not eligible, FRL < 40%)'}
-- IDEA: $${idea.toLocaleString()}
-- LAP: $${lap.toLocaleString()}
-- TBIP: $${tbip.toLocaleString()}
-- HiCap: $${hicap.toLocaleString()}
+REVENUE (Year 1, AAFTE: ${aafte} of ${enroll} headcount):
+- Regular Ed Apportionment: $${rev.regularEd.toLocaleString()} (${aafte} AAFTE × $${assumptions.regular_ed_per_pupil.toLocaleString()})
+- SPED Apportionment: $${rev.sped.toLocaleString()} (${aafte} × ${profile.pct_iep}% IEP × $${assumptions.sped_per_pupil.toLocaleString()})
+- Facilities Revenue: $${rev.facilitiesRev.toLocaleString()}
+- Levy Equity: $${rev.levyEquity.toLocaleString()} (${aafte} AAFTE × $${assumptions.levy_equity_per_student.toLocaleString()})
+- Title I: $${rev.titleI.toLocaleString()}${profile.pct_frl >= 40 ? ' (Schoolwide eligible)' : ' (Not eligible, FRL < 40%)'}
+- IDEA: $${rev.idea.toLocaleString()}
+- LAP: $${rev.lap.toLocaleString()}
+- TBIP: $${rev.tbip.toLocaleString()}
+- HiCap: $${rev.hicap.toLocaleString()}
 - Total Revenue: $${totalRevenue.toLocaleString()}
 
 STAFFING (Year 1):

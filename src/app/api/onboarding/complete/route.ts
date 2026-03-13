@@ -2,12 +2,11 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import {
-  calcRevenue,
-  calcLevyEquity,
-  calcAllGrants,
+  calcCommissionRevenue,
   calcBenefits,
-  calcAuthorizerFee,
+  calcAuthorizerFeeCommission,
 } from '@/lib/calculations'
+import { getAssumptions } from '@/lib/types'
 
 export async function POST(request: Request) {
   // Authenticate the user via their session cookie
@@ -56,11 +55,11 @@ export async function POST(request: Request) {
   }
 
   const enrollment = profile.target_enrollment_y1
+  const assumptions = getAssumptions(profile.financial_assumptions)
 
-  // --- Calculate revenue ---
-  const apportionment = calcRevenue(enrollment)
-  const levyEquity = calcLevyEquity(enrollment)
-  const grants = calcAllGrants(enrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap)
+  // --- Calculate revenue (Commission-aligned) ---
+  const rev = calcCommissionRevenue(enrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
+  const stateApport = rev.regularEd + rev.sped + rev.facilitiesRev
 
   // --- Calculate operations costs ---
   const facilityCost = operations.facilityMode === 'sqft'
@@ -69,7 +68,7 @@ export async function POST(request: Request) {
   const supplies = operations.suppliesPerPupil * enrollment
   const contracted = operations.contractedPerPupil * enrollment
   const technology = operations.technologyPerPupil * enrollment
-  const authorizerFee = calcAuthorizerFee(enrollment)
+  const authorizerFee = calcAuthorizerFeeCommission(stateApport, assumptions.authorizer_fee_pct / 100)
   const insurance = operations.insurance
 
   // --- Calculate personnel total from positions ---
@@ -171,13 +170,15 @@ export async function POST(request: Request) {
 
   // --- Insert budget projections (fixes G1: uses service role) ---
   const projections = [
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'State Apportionment', amount: apportionment, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Levy Equity', amount: levyEquity, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Title I', amount: grants.titleI, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'IDEA', amount: grants.idea, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'LAP', amount: grants.lap, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'TBIP', amount: grants.tbip, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'HiCap', amount: grants.hicap, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Regular Ed Apportionment', amount: rev.regularEd, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'SPED Apportionment', amount: rev.sped, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Facilities Revenue', amount: rev.facilitiesRev, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Levy Equity', amount: rev.levyEquity, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Title I', amount: rev.titleI, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'IDEA', amount: rev.idea, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'LAP', amount: rev.lap, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'TBIP', amount: rev.tbip, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'HiCap', amount: rev.hicap, is_revenue: true },
     { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Facilities', amount: facilityCost, is_revenue: false },
     { school_id: schoolId, year: 1, category: 'Personnel', subcategory: 'Total Personnel', amount: totalPersonnel, is_revenue: false },
     { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Supplies & Materials', amount: supplies, is_revenue: false },

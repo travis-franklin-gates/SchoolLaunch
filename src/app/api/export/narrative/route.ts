@@ -69,6 +69,12 @@ interface NarrativePayload {
     levy_equity_per_student: number
     benefits_load_pct: number
     authorizer_fee_pct: number
+    regular_ed_per_pupil: number
+    sped_per_pupil: number
+    facilities_per_pupil: number
+    revenue_cola_pct: number
+    aafte_pct: number
+    interest_rate_on_cash: number
   }
   positions: Position[]
   projections: Projection[]
@@ -211,7 +217,12 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
   ])
 
   // Revenue composition bar chart SVG
-  const stateApport = revenueProjections.find((p) => p.subcategory === 'State Apportionment')?.amount || 0
+  const regularEd = revenueProjections.find((p) => p.subcategory === 'Regular Ed Apportionment')?.amount || 0
+  const spedApport = revenueProjections.find((p) => p.subcategory === 'SPED Apportionment')?.amount || 0
+  const facilitiesRev = revenueProjections.find((p) => p.subcategory === 'Facilities Revenue')?.amount || 0
+  // Fallback: old "State Apportionment" subcategory for schools onboarded before migration
+  const legacyApport = revenueProjections.find((p) => p.subcategory === 'State Apportionment')?.amount || 0
+  const effectiveRegularEd = regularEd || legacyApport
   const levyEquity = revenueProjections.find((p) => p.subcategory === 'Levy Equity')?.amount || 0
   const titleI = revenueProjections.find((p) => p.subcategory === 'Title I')?.amount || 0
   const idea = revenueProjections.find((p) => p.subcategory === 'IDEA')?.amount || 0
@@ -221,7 +232,9 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
   const totalRev = baseSummary.totalRevenue || 1
 
   const barSegments = [
-    { label: 'State Apportionment', amount: stateApport, color: '#1B2A4A' },
+    { label: 'Regular Ed', amount: effectiveRegularEd, color: '#1B2A4A' },
+    { label: 'SPED', amount: spedApport, color: '#3D5A80' },
+    { label: 'Facilities', amount: facilitiesRev, color: '#5A7FA0' },
     { label: 'Levy Equity', amount: levyEquity, color: '#2D4A7A' },
     { label: 'Title I', amount: titleI, color: '#0F6E56' },
     { label: 'IDEA', amount: idea, color: '#16A085' },
@@ -262,8 +275,11 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
   // Revenue formula strings
   function revenueFormula(sub: string): string {
     switch (sub) {
+      case 'Regular Ed Apportionment': return `${Math.floor(enrollment * assumptions.aafte_pct / 100)} AAFTE × ${fmtDollars(assumptions.regular_ed_per_pupil)}`
+      case 'SPED Apportionment': return `${Math.floor(enrollment * assumptions.aafte_pct / 100)} AAFTE × ${profile.pct_iep}% IEP × ${fmtDollars(assumptions.sped_per_pupil)}`
+      case 'Facilities Revenue': return `${Math.floor(enrollment * assumptions.aafte_pct / 100)} AAFTE × ${fmtDollars(assumptions.facilities_per_pupil)}`
       case 'State Apportionment': return `${enrollment} students × ${fmtDollars(assumptions.per_pupil_rate)}/student`
-      case 'Levy Equity': return `${enrollment} students × ${fmtDollars(assumptions.levy_equity_per_student)}/student`
+      case 'Levy Equity': return `${Math.floor(enrollment * assumptions.aafte_pct / 100)} AAFTE × ${fmtDollars(assumptions.levy_equity_per_student)}`
       case 'Title I': return profile.pct_frl > 40 ? `${enrollment} × ${profile.pct_frl}% FRL × $880` : 'Not eligible (FRL < 40%)'
       case 'IDEA': return `${enrollment} × ${profile.pct_iep}% IEP × $2,200`
       case 'LAP': return `${enrollment} × ${profile.pct_frl}% FRL × $400`
@@ -741,7 +757,7 @@ ${securedFunding < totalFunding * 0.5 ? `<div class="callout warning"><strong>Fu
        <p><strong>2. Cash Flow Timing:</strong> OSPI apportionment follows an uneven monthly schedule, with November and May at just 5%. Schools with thin reserves risk cash shortfalls during these months. Mitigation: Maintain at minimum 30 days of operating reserves and consider establishing a line of credit.</p>
        <p><strong>3. Facility Cost Escalation:</strong> Facility costs at ${baseSummary.facilityPct.toFixed(1)}% of revenue ${baseSummary.facilityPct > 12 ? 'are already elevated' : 'are within healthy range but could increase'}. Lease renegotiations or unexpected maintenance could push this ratio higher. Mitigation: Negotiate multi-year lease terms with fixed escalation clauses.</p>
        <p><strong>4. Personnel Cost Growth:</strong> Personnel comprises ${baseSummary.personnelPctRevenue.toFixed(1)}% of revenue. As staff receive annual raises, this ratio increases unless offset by enrollment growth. Mitigation: Tie salary increases to enrollment milestones.</p>
-       <p><strong>5. Categorical Grant Uncertainty:</strong> Federal categorical grants (Title I, IDEA, etc.) are subject to annual appropriations and may fluctuate. These represent ${fmtDollars(baseSummary.totalRevenue - (stateApport + levyEquity))} or ${pct(baseSummary.totalRevenue - stateApport - levyEquity, baseSummary.totalRevenue)} of total revenue. Mitigation: Do not rely on categorical grants for core staffing costs.</p>`
+       <p><strong>5. Categorical Grant Uncertainty:</strong> Federal categorical grants (Title I, IDEA, etc.) are subject to annual appropriations and may fluctuate. These represent ${fmtDollars(baseSummary.totalRevenue - (effectiveRegularEd + spedApport + facilitiesRev + levyEquity))} or ${pct(baseSummary.totalRevenue - effectiveRegularEd - spedApport - facilitiesRev - levyEquity, baseSummary.totalRevenue)} of total revenue. Mitigation: Do not rely on categorical grants for core staffing costs.</p>`
   }
 </div>
 

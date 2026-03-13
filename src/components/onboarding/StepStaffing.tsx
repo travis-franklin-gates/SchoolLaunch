@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { calcBenefits, calcTotalBaseRevenue, calcAllGrants } from '@/lib/calculations'
+import { calcBenefits, calcCommissionRevenue } from '@/lib/calculations'
+import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 
 interface LocalPosition {
   key: string
@@ -131,9 +132,8 @@ export default function StepStaffing({ enrollment, maxClassSize, gradeConfig, pc
     initialPositions.length > 0 ? initialPositions : buildDefaultPositions(enrollment, maxClassSize, gradeConfig, pctIep, pctEll)
   )
 
-  const baseRevenue = calcTotalBaseRevenue(enrollment)
-  const grants = calcAllGrants(enrollment, pctFrl, pctIep, pctEll, pctHicap)
-  const totalRevenue = baseRevenue + grants.titleI + grants.idea + grants.lap + grants.tbip + grants.hicap
+  const rev = calcCommissionRevenue(enrollment, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS)
+  const totalRevenue = rev.total
 
   const totals = useMemo(() => {
     let totalPersonnel = 0

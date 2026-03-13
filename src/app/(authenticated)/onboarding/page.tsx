@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { calcBenefits, calcTotalBaseRevenue, calcAllGrants } from '@/lib/calculations'
+import { calcBenefits, calcCommissionRevenue } from '@/lib/calculations'
+import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import StepIdentity from '@/components/onboarding/StepIdentity'
 import StepEnrollment from '@/components/onboarding/StepEnrollment'
 import StepDemographics from '@/components/onboarding/StepDemographics'
@@ -339,10 +340,8 @@ export default function OnboardingPage() {
 
   // Completion summary metrics
   const completionMetrics = useMemo(() => {
-    const baseRevenue = calcTotalBaseRevenue(data.enrollmentY1)
-    const grants = calcAllGrants(data.enrollmentY1, data.pctFrl, data.pctIep, data.pctEll, data.pctHicap)
-    const totalGrants = grants.titleI + grants.idea + grants.lap + grants.tbip + grants.hicap
-    const totalRevenue = baseRevenue + totalGrants
+    const rev = calcCommissionRevenue(data.enrollmentY1, data.pctFrl, data.pctIep, data.pctEll, data.pctHicap, DEFAULT_ASSUMPTIONS)
+    const totalRevenue = rev.total
     const totalFte = data.positions.reduce((s, p) => s + p.fte, 0)
     const personnelPct = totalRevenue > 0 ? ((totalPersonnelCost / totalRevenue) * 100).toFixed(1) : '0'
     return { totalRevenue, totalPersonnelCost, totalFte, personnelPct }

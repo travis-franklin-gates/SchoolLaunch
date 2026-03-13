@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { calcAuthorizerFee, calcRevenue, calcTotalBaseRevenue, calcAllGrants } from '@/lib/calculations'
+import { calcCommissionRevenue, calcAuthorizerFeeCommission } from '@/lib/calculations'
+import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import type { StartupFundingSource } from '@/lib/types'
 
 interface OperationsData {
@@ -83,12 +84,10 @@ export default function StepOperations({
     }))
   )
 
-  const apportionment = calcRevenue(enrollment)
-  const authorizerFee = calcAuthorizerFee(enrollment)
-
-  const baseRevenue = calcTotalBaseRevenue(enrollment)
-  const grants = calcAllGrants(enrollment, pctFrl, pctIep, pctEll, pctHicap)
-  const totalRevenue = baseRevenue + grants.titleI + grants.idea + grants.lap + grants.tbip + grants.hicap
+  const rev = calcCommissionRevenue(enrollment, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS)
+  const stateApport = rev.regularEd + rev.sped + rev.facilitiesRev
+  const authorizerFee = calcAuthorizerFeeCommission(stateApport)
+  const totalRevenue = rev.total
 
   const costs = useMemo(() => {
     const facility = data.facilityMode === 'sqft'
@@ -254,7 +253,7 @@ export default function StepOperations({
         <div className="flex justify-between items-center">
           <div>
             <p className="text-sm font-medium text-slate-700">Authorizer Fee (3%)</p>
-            <p className="text-xs text-slate-400">3% of state apportionment ({fmt(apportionment)})</p>
+            <p className="text-xs text-slate-400">3% of state apportionment ({fmt(stateApport)})</p>
           </div>
           <p className="text-sm font-semibold text-slate-800">{fmt(costs.authorizerFee)}</p>
         </div>

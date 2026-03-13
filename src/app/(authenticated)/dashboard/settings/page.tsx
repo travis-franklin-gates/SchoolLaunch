@@ -339,15 +339,29 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Section 4: Financial Assumptions */}
+      {/* Section 4: Revenue Assumptions */}
       <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
-        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Financial Assumptions</h2>
+        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Revenue Assumptions</h2>
+        <p className="text-xs text-slate-500 mb-4">Commission-aligned per-pupil rates. State apportionment uses AAFTE (Annual Average FTE).</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Per-Pupil Funding Rate ($)</label>
-            <input type="number" step={100} value={fa.per_pupil_rate}
-              onChange={(e) => updateFa('per_pupil_rate', Number(e.target.value))}
+            <label className="block text-xs font-medium text-slate-500 mb-1">Regular Ed per Pupil ($)</label>
+            <input type="number" step={100} value={fa.regular_ed_per_pupil}
+              onChange={(e) => { updateFa('regular_ed_per_pupil', Number(e.target.value)); updateFa('per_pupil_rate', Number(e.target.value)) }}
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">SPED per Pupil ($)</label>
+            <input type="number" step={100} value={fa.sped_per_pupil}
+              onChange={(e) => updateFa('sped_per_pupil', Number(e.target.value))}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Facilities per Pupil ($)</label>
+            <input type="number" step={100} value={fa.facilities_per_pupil}
+              onChange={(e) => updateFa('facilities_per_pupil', Number(e.target.value))}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+            <p className="text-[10px] text-slate-400 mt-0.5">Usually $0 for WA charters</p>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Levy Equity per Student ($)</label>
@@ -355,6 +369,27 @@ export default function SettingsPage() {
               onChange={(e) => updateFa('levy_equity_per_student', Number(e.target.value))}
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
           </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Revenue COLA (%)</label>
+            <input type="number" step={0.5} value={fa.revenue_cola_pct}
+              onChange={(e) => updateFa('revenue_cola_pct', Number(e.target.value))}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+            <p className="text-[10px] text-slate-400 mt-0.5">Annual per-pupil rate escalation</p>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">AAFTE % of Headcount</label>
+            <input type="number" step={1} min={80} max={100} value={fa.aafte_pct}
+              onChange={(e) => updateFa('aafte_pct', Number(e.target.value))}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+            <p className="text-[10px] text-slate-400 mt-0.5">Typical: 95%. State revenue uses AAFTE, not headcount.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Section 4b: Expense Assumptions */}
+      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
+        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Expense Assumptions</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Benefits Load (%)</label>
             <input type="number" step={1} value={fa.benefits_load_pct}
@@ -366,6 +401,7 @@ export default function SettingsPage() {
             <input type="number" step={0.5} value={fa.authorizer_fee_pct}
               onChange={(e) => updateFa('authorizer_fee_pct', Number(e.target.value))}
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+            <p className="text-[10px] text-slate-400 mt-0.5">Applied to state apportionment</p>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Annual Salary Escalator (%)</label>
@@ -377,6 +413,12 @@ export default function SettingsPage() {
             <label className="block text-xs font-medium text-slate-500 mb-1">Annual Operations Escalator (%)</label>
             <input type="number" step={0.1} value={fa.ops_escalator_pct}
               onChange={(e) => updateFa('ops_escalator_pct', Number(e.target.value))}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Interest Rate on Cash (%)</label>
+            <input type="number" step={0.5} value={fa.interest_rate_on_cash}
+              onChange={(e) => updateFa('interest_rate_on_cash', Number(e.target.value))}
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
           </div>
         </div>

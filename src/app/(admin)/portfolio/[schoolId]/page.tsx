@@ -13,7 +13,7 @@ import {
   type MultiYearDetailedRow,
   type CashFlowMonth,
 } from '@/lib/budgetEngine'
-import { calcRevenue } from '@/lib/calculations'
+import { calcCommissionRevenue } from '@/lib/calculations'
 import type { SchoolProfile, StaffingPosition, BudgetProjection, FinancialAssumptions } from '@/lib/types'
 import { getAssumptions } from '@/lib/types'
 
@@ -99,7 +99,8 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
 
   const assumptions = getAssumptions(profile.financial_assumptions as Partial<FinancialAssumptions> | null)
   const summary = computeSummaryFromProjections(projections, positions, assumptions)
-  const apportionment = calcRevenue(profile.target_enrollment_y1, assumptions.per_pupil_rate)
+  const rev = calcCommissionRevenue(profile.target_enrollment_y1, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
+  const apportionment = rev.regularEd + rev.sped + rev.facilitiesRev
   const cashFlow = computeCashFlow(summary, apportionment)
   const multiYear = computeMultiYearDetailed(profile, positions, projections, assumptions, 0)
 

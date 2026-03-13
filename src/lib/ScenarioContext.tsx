@@ -8,7 +8,7 @@ import {
   type ScenarioInputs,
   type BudgetSummary,
 } from '@/lib/budgetEngine'
-import { calcRevenue } from '@/lib/calculations'
+import { calcCommissionRevenue } from '@/lib/calculations'
 import type { FinancialAssumptions } from '@/lib/types'
 import { getAssumptions } from '@/lib/types'
 
@@ -101,8 +101,10 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
 
   const isModified = scenario !== null
 
-  const baseApportionment = calcRevenue(profile.target_enrollment_y1, assumptions.per_pupil_rate)
-  const scenarioApportionment = calcRevenue(scenarioInputs.enrollment, assumptions.per_pupil_rate)
+  const baseRev = calcCommissionRevenue(profile.target_enrollment_y1, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
+  const baseApportionment = baseRev.regularEd + baseRev.sped + baseRev.facilitiesRev
+  const scenarioRev = calcCommissionRevenue(scenarioInputs.enrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
+  const scenarioApportionment = scenarioRev.regularEd + scenarioRev.sped + scenarioRev.facilitiesRev
 
   function updateScenario(partial: Partial<ScenarioInputs>) {
     setScenario((prev) => ({

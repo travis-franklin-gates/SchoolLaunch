@@ -4,15 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import type { FinancialAssumptions } from '@/lib/types'
 import { getAssumptions } from '@/lib/types'
-import {
-  calcRevenue,
-  calcLevyEquity,
-  calcTitleI,
-  calcIDEA,
-  calcLAP,
-  calcTBIP,
-  calcHiCap,
-} from '@/lib/calculations'
+import { calcCommissionRevenue, calcAAFTE } from '@/lib/calculations'
 
 interface Message {
   role: 'user' | 'assistant' | 'system'
@@ -51,27 +43,24 @@ function buildSchoolContext(
   const enroll = profile.target_enrollment_y1
   const benefitsMultiplier = 1 + assumptions.benefits_load_pct / 100
 
-  // --- Revenue breakdown (calculated from formulas, matching Revenue tab) ---
-  const stateApportionment = calcRevenue(enroll, assumptions.per_pupil_rate)
-  const levyEquity = calcLevyEquity(enroll, assumptions.levy_equity_per_student)
-  const titleI = calcTitleI(enroll, profile.pct_frl)
-  const idea = calcIDEA(enroll, profile.pct_iep)
-  const lap = calcLAP(enroll, profile.pct_frl)
-  const tbip = calcTBIP(enroll, profile.pct_ell)
-  const hicap = calcHiCap(enroll, profile.pct_hicap)
-  const totalRevenue = stateApportionment + levyEquity + titleI + idea + lap + tbip + hicap
+  // --- Revenue breakdown (Commission-aligned with AAFTE) ---
+  const rev = calcCommissionRevenue(enroll, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
+  const aafte = calcAAFTE(enroll, assumptions.aafte_pct)
+  const totalRevenue = rev.total
 
   const titleIEligibility = profile.pct_frl >= 40 ? 'SCHOOLWIDE PROGRAM ELIGIBLE (FRL ≥ 40%)' : 'TARGETED ASSISTANCE ONLY (FRL < 40%)'
 
   const revenueLines = [
-    `- State Apportionment: $${stateApportionment.toLocaleString()} (${enroll} students × $${assumptions.per_pupil_rate.toLocaleString()})`,
-    `- Levy Equity: $${levyEquity.toLocaleString()} (${enroll} students × $${assumptions.levy_equity_per_student.toLocaleString()})`,
+    `- Regular Ed Apportionment: $${rev.regularEd.toLocaleString()} (${aafte} AAFTE × $${assumptions.regular_ed_per_pupil.toLocaleString()})`,
+    `- SPED Apportionment: $${rev.sped.toLocaleString()} (${aafte} × ${profile.pct_iep}% IEP × $${assumptions.sped_per_pupil.toLocaleString()})`,
+    `- Facilities Revenue: $${rev.facilitiesRev.toLocaleString()}`,
+    `- Levy Equity: $${rev.levyEquity.toLocaleString()} (${aafte} AAFTE × $${assumptions.levy_equity_per_student.toLocaleString()})`,
   ]
-  if (titleI > 0) revenueLines.push(`- Title I: $${titleI.toLocaleString()} (${enroll} × ${profile.pct_frl}% FRL × $880) — ${titleIEligibility}`)
-  if (idea > 0) revenueLines.push(`- IDEA: $${idea.toLocaleString()} (${enroll} × ${profile.pct_iep}% IEP × $2,200)`)
-  if (lap > 0) revenueLines.push(`- LAP: $${lap.toLocaleString()} (${enroll} × ${profile.pct_frl}% FRL × $400)`)
-  if (tbip > 0) revenueLines.push(`- TBIP: $${tbip.toLocaleString()} (${enroll} × ${profile.pct_ell}% ELL × $1,800)`)
-  if (hicap > 0) revenueLines.push(`- HiCap: $${hicap.toLocaleString()} (${enroll} × ${profile.pct_hicap}% HiCap × $500)`)
+  if (rev.titleI > 0) revenueLines.push(`- Title I: $${rev.titleI.toLocaleString()} (${enroll} × ${profile.pct_frl}% FRL × $880) — ${titleIEligibility}`)
+  if (rev.idea > 0) revenueLines.push(`- IDEA: $${rev.idea.toLocaleString()} (${enroll} × ${profile.pct_iep}% IEP × $2,200)`)
+  if (rev.lap > 0) revenueLines.push(`- LAP: $${rev.lap.toLocaleString()} (${enroll} × ${profile.pct_frl}% FRL × $400)`)
+  if (rev.tbip > 0) revenueLines.push(`- TBIP: $${rev.tbip.toLocaleString()} (${enroll} × ${profile.pct_ell}% ELL × $1,800)`)
+  if (rev.hicap > 0) revenueLines.push(`- HiCap: $${rev.hicap.toLocaleString()} (${enroll} × ${profile.pct_hicap}% HiCap × $500)`)
   revenueLines.push(`- Total Revenue: $${totalRevenue.toLocaleString()}`)
 
   const revenueBreakdown = revenueLines.join('\n')
