@@ -1,9 +1,26 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { computeMultiYearDetailed, computeCashFlow } from '@/lib/budgetEngine'
-import { calcRevenue } from '@/lib/calculations'
+import { buildSchoolContextString } from '@/lib/buildSchoolContext'
+import Link from 'next/link'
+
+interface AgentResult {
+  id: string
+  name: string
+  icon: string
+  subtitle: string
+  status: 'strong' | 'needs_attention' | 'risk'
+  summary: string
+  actions: string[]
+}
+
+interface AdvisoryData {
+  briefing: string
+  agents: AgentResult[]
+  generatedAt: string
+}
 
 function fmt(n: number) {
   if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
@@ -21,6 +38,18 @@ function facilityColor(pct: number) {
   if (pct <= 12) return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' }
   if (pct <= 15) return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' }
   return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' }
+}
+
+const STATUS_COLORS: Record<string, { dot: string; text: string }> = {
+  strong: { dot: 'bg-emerald-500', text: 'text-emerald-700' },
+  needs_attention: { dot: 'bg-amber-500', text: 'text-amber-700' },
+  risk: { dot: 'bg-red-500', text: 'text-red-700' },
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  strong: 'Strong',
+  needs_attention: 'Attention',
+  risk: 'Risk',
 }
 
 function HealthTile({ label, value, subtitle, colorClass }: {
@@ -60,6 +89,8 @@ export default function DashboardPage() {
   } = useScenario()
 
   const [exporting, setExporting] = useState(false)
+  const [advisory, setAdvisory] = useState<AdvisoryData | null>(null)
+  const [advisoryLoading, setAdvisoryLoading] = useState(false)
 
   const multiYear = useMemo(
     () => computeMultiYearDetailed(profile, positions, projections, assumptions, 0),
@@ -69,6 +100,32 @@ export default function DashboardPage() {
     () => computeCashFlow(baseSummary, baseApportionment, 0),
     [baseSummary, baseApportionment]
   )
+
+  const fetchAdvisory = useCallback(async () => {
+    if (!schoolName || loading) return
+    setAdvisoryLoading(true)
+    try {
+      const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections)
+      const res = await fetch('/api/advisory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schoolContext }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setAdvisory(data)
+      }
+    } catch (err) {
+      console.error('Advisory fetch failed:', err)
+    }
+    setAdvisoryLoading(false)
+  }, [schoolName, profile, positions, projections, loading])
+
+  useEffect(() => {
+    if (!advisory && !advisoryLoading && schoolName && !loading) {
+      fetchAdvisory()
+    }
+  }, [advisory, advisoryLoading, schoolName, loading, fetchAdvisory])
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
@@ -102,6 +159,21 @@ export default function DashboardPage() {
   async function handleExport() {
     setExporting(true)
     try {
+      // Ensure advisory data is available for PDF
+      let advisoryForPdf = advisory
+      if (!advisoryForPdf) {
+        const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections)
+        const advRes = await fetch('/api/advisory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ schoolContext }),
+        })
+        if (advRes.ok) {
+          advisoryForPdf = await advRes.json()
+          setAdvisory(advisoryForPdf)
+        }
+      }
+
       const payload = {
         schoolName,
         profile,
@@ -112,6 +184,7 @@ export default function DashboardPage() {
         conservativeSummary,
         cashFlow: cashFlowData,
         multiYear,
+        advisory: advisoryForPdf || undefined,
       }
 
       const res = await fetch('/api/export/narrative', {
@@ -141,6 +214,71 @@ export default function DashboardPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-slate-800 mb-6">Overview</h1>
+
+      {/* AI Briefing */}
+      {advisoryLoading && !advisory ? (
+        <div className="bg-white border-l-4 border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-6 animate-pulse">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-5 h-5 bg-slate-200 rounded" />
+            <div className="h-4 bg-slate-200 rounded w-44" />
+          </div>
+          <div className="space-y-2.5">
+            <div className="h-3 bg-slate-100 rounded w-full" />
+            <div className="h-3 bg-slate-100 rounded w-full" />
+            <div className="h-3 bg-slate-100 rounded w-5/6" />
+            <div className="h-3 bg-slate-100 rounded w-full mt-3" />
+            <div className="h-3 bg-slate-100 rounded w-4/6" />
+          </div>
+        </div>
+      ) : advisory ? (
+        <div className="bg-white border-l-4 border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+              <span className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Financial Advisor Briefing</span>
+            </div>
+            <button
+              onClick={fetchAdvisory}
+              disabled={advisoryLoading}
+              className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1"
+            >
+              <svg className={`w-3.5 h-3.5 ${advisoryLoading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </button>
+          </div>
+          <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line mb-4">
+            {advisory.briefing}
+          </div>
+
+          {/* Agent status pills */}
+          <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
+            {advisory.agents.map((agent) => {
+              const sc = STATUS_COLORS[agent.status] || STATUS_COLORS.needs_attention
+              return (
+                <span key={agent.id} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-50 ${sc.text}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
+                  {agent.name.split(' ')[0]}
+                </span>
+              )
+            })}
+            <Link
+              href="/dashboard/advisory"
+              className="ml-auto text-xs font-medium text-teal-600 hover:text-teal-800"
+            >
+              View Full Advisory Panel &rarr;
+            </Link>
+          </div>
+          {advisory.generatedAt && (
+            <div className="text-xs text-slate-400 mt-2">
+              Last updated: {new Date(advisory.generatedAt).toLocaleTimeString()}
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {/* Conservative mode banner */}
       {conservativeMode && (

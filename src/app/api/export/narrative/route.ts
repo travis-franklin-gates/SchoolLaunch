@@ -96,6 +96,19 @@ interface NarrativePayload {
   }
   cashFlow: CashFlowMonth[]
   multiYear: MultiYearRow[]
+  advisory?: {
+    briefing: string
+    agents: {
+      id: string
+      name: string
+      icon: string
+      subtitle: string
+      status: 'strong' | 'needs_attention' | 'risk'
+      summary: string
+      actions: string[]
+    }[]
+    generatedAt: string
+  }
 }
 
 function fmtDollars(n: number): string {
@@ -145,7 +158,7 @@ export async function POST(request: NextRequest) {
   const data: NarrativePayload = await request.json()
   const {
     schoolName, profile, assumptions, positions, projections,
-    baseSummary, conservativeSummary, cashFlow, multiYear,
+    baseSummary, conservativeSummary, cashFlow, multiYear, advisory,
   } = data
 
   const enrollment = profile.target_enrollment_y1
@@ -721,6 +734,37 @@ ${securedFunding < totalFunding * 0.5 ? `<div class="callout warning"><strong>Fu
 </div>
 
 <div class="page-footer">SchoolLaunch Financial Plan &bull; ${schoolName} &bull; Generated ${dateStr}</div>
+
+${advisory ? `
+<!-- PAGE 11: Advisory Panel -->
+<div class="page-break"></div>
+<h2>Multi-Expert Financial Review</h2>
+<p style="font-size:12px;color:#64748B;margin-bottom:20px;">SchoolLaunch's advisory system evaluates your financial plan from seven expert perspectives critical to charter school success in Washington State.</p>
+
+${advisory.agents.map((agent) => {
+  const statusColors: Record<string, { bg: string; text: string; border: string }> = {
+    strong: { bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0' },
+    needs_attention: { bg: '#FFFBEB', text: '#92400E', border: '#FDE68A' },
+    risk: { bg: '#FEF2F2', text: '#991B1B', border: '#FECACA' },
+  }
+  const statusLabels: Record<string, string> = { strong: 'Strong', needs_attention: 'Needs Attention', risk: 'Risk' }
+  const sc = statusColors[agent.status] || statusColors.needs_attention
+  return `
+  <div style="border:1px solid ${sc.border};border-left:4px solid ${sc.border};border-radius:8px;padding:16px;margin-bottom:12px;background:${sc.bg};">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div>
+        <strong style="font-size:13px;color:#1E293B;">${agent.name}</strong>
+        <span style="font-size:11px;color:#64748B;margin-left:8px;">${agent.subtitle}</span>
+      </div>
+      <span style="font-size:11px;font-weight:600;color:${sc.text};background:white;padding:3px 10px;border-radius:12px;border:1px solid ${sc.border};">${statusLabels[agent.status] || 'Needs Attention'}</span>
+    </div>
+    <p style="font-size:12px;color:#334155;margin:0 0 8px 0;line-height:1.6;">${agent.summary}</p>
+    ${agent.actions.length > 0 ? `<div style="font-size:11px;color:#475569;">${agent.actions.map((a) => `<div style="margin-top:4px;">&rarr; ${a}</div>`).join('')}</div>` : ''}
+  </div>`
+}).join('')}
+
+<div class="page-footer">SchoolLaunch Financial Plan &bull; ${schoolName} &bull; Generated ${dateStr}</div>
+` : ''}
 
 </div><!-- end container -->
 </body>
