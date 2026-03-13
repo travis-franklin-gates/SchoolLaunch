@@ -1,3 +1,4 @@
+// Onboarding completion: saves staffing, projections, and scenario via service role
 import { NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import {
