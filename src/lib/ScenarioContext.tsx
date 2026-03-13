@@ -40,7 +40,7 @@ export function useScenario(): ScenarioContextType {
 
 export function ScenarioProvider({ children }: { children: ReactNode }) {
   const schoolData = useSchoolData()
-  const { profile, positions, projections } = schoolData
+  const { profile, positions, projections, gradeExpansionPlan } = schoolData
 
   const assumptions = useMemo(() => getAssumptions(profile.financial_assumptions), [profile.financial_assumptions])
 

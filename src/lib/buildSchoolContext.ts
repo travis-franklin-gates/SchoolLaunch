@@ -1,4 +1,4 @@
-import type { FinancialAssumptions, SchoolProfile, StaffingPosition, BudgetProjection } from './types'
+import type { FinancialAssumptions, SchoolProfile, StaffingPosition, BudgetProjection, GradeExpansionEntry } from './types'
 import { getAssumptions } from './types'
 import {
   calcRevenue,
@@ -9,12 +9,14 @@ import {
   calcTBIP,
   calcHiCap,
 } from './calculations'
+import { computeExpansionEnrollments, expansionToEnrollmentArray } from './gradeExpansion'
 
 export function buildSchoolContextString(
   schoolName: string,
   profile: SchoolProfile,
   positions: StaffingPosition[],
   projections: BudgetProjection[],
+  gradeExpansionPlan?: GradeExpansionEntry[],
 ): string {
   const assumptions = getAssumptions(profile.financial_assumptions)
   const enroll = profile.target_enrollment_y1
@@ -61,19 +63,40 @@ export function buildSchoolContextString(
     ? opsProjections.map((p) => `- ${p.subcategory}: $${p.amount.toLocaleString()}`).join('\n')
     : 'No operations expenses entered'
 
+  const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
+  const retRate = profile.retention_rate ?? 90
+
+  let enrollmentSection: string
+  if (hasExpansion) {
+    const expansionEnrollments = computeExpansionEnrollments(gradeExpansionPlan!, retRate)
+    const arr = expansionToEnrollmentArray(gradeExpansionPlan!, retRate)
+    const expansionLines = expansionEnrollments.map((e) => {
+      const newGradeStr = e.newGrades.length > 0 ? ` (adding grades: ${e.newGrades.join(', ')})` : ''
+      return `- Year ${e.year}: ${e.total} students [grades: ${e.grades.join(', ')}] (returning: ${e.returning}, new grade: ${e.newGrade})${newGradeStr}`
+    }).join('\n')
+    enrollmentSection = `ENROLLMENT (Grade Expansion Model, ${retRate}% retention):
+${expansionLines}
+- Growth model: Cohort-based grade expansion (adding new grade levels each year)
+- Opening grades: ${profile.opening_grades?.join(', ') || 'not set'}
+- Buildout grades: ${profile.buildout_grades?.join(', ') || 'not set'}
+- Retention rate: ${retRate}%`
+  } else {
+    enrollmentSection = `ENROLLMENT:
+- Year 1: ${enroll} students
+- Year 2: ${profile.target_enrollment_y2} students
+- Year 3: ${profile.target_enrollment_y3} students
+- Year 4: ${profile.target_enrollment_y4} students
+- Growth Y1→Y2: ${enroll > 0 ? (((profile.target_enrollment_y2 - enroll) / enroll) * 100).toFixed(0) : 0}%
+- Growth Y2→Y3: ${profile.target_enrollment_y2 > 0 ? (((profile.target_enrollment_y3 - profile.target_enrollment_y2) / profile.target_enrollment_y2) * 100).toFixed(0) : 0}%`
+  }
+
   return `School: ${schoolName}
 Grade configuration: ${profile.grade_config}
 Region: ${profile.region}
 Planned opening year: ${profile.planned_open_year}
 Max class size: ${profile.max_class_size}
 
-ENROLLMENT:
-- Year 1: ${enroll} students
-- Year 2: ${profile.target_enrollment_y2} students
-- Year 3: ${profile.target_enrollment_y3} students
-- Year 4: ${profile.target_enrollment_y4} students
-- Growth Y1→Y2: ${enroll > 0 ? (((profile.target_enrollment_y2 - enroll) / enroll) * 100).toFixed(0) : 0}%
-- Growth Y2→Y3: ${profile.target_enrollment_y2 > 0 ? (((profile.target_enrollment_y3 - profile.target_enrollment_y2) / profile.target_enrollment_y2) * 100).toFixed(0) : 0}%
+${enrollmentSection}
 
 DEMOGRAPHICS:
 - Free/Reduced Lunch: ${profile.pct_frl}%

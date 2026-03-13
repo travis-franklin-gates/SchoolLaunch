@@ -41,6 +41,15 @@ Evaluate whether this financial plan would pass Commission review. Focus on what
 - Enrollment growth projections above 15% per year are aggressive and require strong justification
 - The October enrollment count drives all apportionment calculations — miss it and revenue drops for the full year
 
+When evaluating enrollment projections, distinguish between two growth models:
+1. GRADE EXPANSION: The school adds new grade levels each year. Growth comes from opening new sections, not recruiting more students per grade. This is the more credible model. Evaluate based on:
+   - Is the grade addition pace realistic (1-2 new grades per year is standard)?
+   - What retention rate is assumed for returning cohorts? (85-90% is realistic, above 95% is optimistic)
+   - Does the school have facility capacity for the added grades?
+2. ENROLLMENT GROWTH: The school keeps the same grades but projects more students per grade. This is harder to achieve and less credible for new schools.
+
+If the school has a grade expansion plan, assess the growth as "planned grade expansion with X% retention" rather than "Y% enrollment growth." This is a fundamentally different risk profile.
+
 Evaluate the realism of this school's enrollment projections across all years. Flag if the model depends on hitting 100% enrollment to be viable. Assess whether the growth trajectory from Year 1 to Year 4 is credible.`,
   },
   {
@@ -59,6 +68,13 @@ Evaluate the realism of this school's enrollment projections across all years. F
 - Schools with 50%+ FRL should have intervention staff (reading specialist or interventionist)
 - Paraeducators are essential for K-2 classrooms and SPED support
 - Missing a counselor in a school serving high-need populations is a red flag for authorizers
+
+When new grade levels are added, evaluate whether the staffing plan adds grade-appropriate teaching positions. A K-8 school adding grade 6 needs subject-specialized teachers, not just more generalist elementary teachers. Middle grades (6-8) often require:
+- Math/science specialist
+- ELA/social studies specialist
+- These may serve multiple sections across grades
+
+Flag if the school is adding grades without corresponding teacher additions.
 
 Evaluate whether the staffing plan is adequate to deliver a quality educational program for the projected enrollment and demographics. Flag missing critical positions.`,
   },
@@ -130,6 +146,8 @@ Evaluate the financial plan from a governance perspective. Flag whether the plan
 - Schools that end Year 1 with less than 30 days of reserves rarely recover to a healthy position
 - A budget that looks balanced in Year 1 but shows declining reserves in Years 2-4 is a school heading toward financial distress
 - The relationship between the school's financial model and its educational model must be sustainable — you can't budget for a Montessori program and fund a traditional staffing model
+
+Grade expansion models are inherently front-loaded on costs — you hire teachers before the revenue from new grade enrollment stabilizes. Evaluate whether the school's cash reserves can absorb the cost of hiring ahead of revenue. A school adding 2 teachers in August for a September grade launch won't see the corresponding apportionment increase until the October enrollment count.
 
 Evaluate the multi-year financial trajectory. Flag decisions in the current model that create problems in future years. Assess whether the growth plan is financially sustainable.`,
   },

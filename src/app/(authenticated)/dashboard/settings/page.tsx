@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { createClient } from '@/lib/supabase/client'
 import { calcTitleI, calcIDEA, calcLAP, calcTBIP, calcHiCap } from '@/lib/calculations'
-import type { FinancialAssumptions } from '@/lib/types'
+import type { FinancialAssumptions, GradeExpansionEntry } from '@/lib/types'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
+import GradeExpansionEditor from '@/components/GradeExpansionEditor'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -16,7 +17,7 @@ const GRADE_CONFIGS = ['K-5', 'K-8', '6-8', '6-12', '9-12', 'K-12']
 
 export default function SettingsPage() {
   const {
-    schoolData: { schoolId, schoolName, profile, loading, reload },
+    schoolData: { schoolId, schoolName, profile, gradeExpansionPlan, loading, reload },
     assumptions,
   } = useScenario()
   const supabase = createClient()
@@ -38,6 +39,23 @@ export default function SettingsPage() {
 
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+
+  // Grade expansion state
+  const [expansionData, setExpansionData] = useState<{
+    openingGrades: string[]
+    buildoutGrades: string[]
+    retentionRate: number
+    plan: GradeExpansionEntry[]
+  } | null>(null)
+
+  const handleExpansionChange = useCallback((data: {
+    openingGrades: string[]
+    buildoutGrades: string[]
+    retentionRate: number
+    plan: GradeExpansionEntry[]
+  }) => {
+    setExpansionData(data)
+  }, [])
 
   // Initialize from loaded data (runs once when loading finishes)
   const [initialized, setInitialized] = useState(false)
@@ -77,23 +95,45 @@ export default function SettingsPage() {
     setSaving(true)
     setToast(null)
 
+    const profileUpdate: Record<string, unknown> = {
+      region,
+      planned_open_year: openYear,
+      grade_config: gradeConfig,
+      target_enrollment_y1: enrollY1,
+      target_enrollment_y2: enrollY2,
+      target_enrollment_y3: enrollY3,
+      target_enrollment_y4: enrollY4,
+      pct_frl: pctFrl,
+      pct_iep: pctIep,
+      pct_ell: pctEll,
+      pct_hicap: pctHicap,
+      financial_assumptions: fa,
+    }
+
+    if (expansionData) {
+      profileUpdate.opening_grades = expansionData.openingGrades
+      profileUpdate.buildout_grades = expansionData.buildoutGrades
+      profileUpdate.retention_rate = expansionData.retentionRate
+    }
+
     const [schoolRes, profileRes] = await Promise.all([
       supabase.from('schools').update({ name }).eq('id', schoolId),
-      supabase.from('school_profiles').update({
-        region,
-        planned_open_year: openYear,
-        grade_config: gradeConfig,
-        target_enrollment_y1: enrollY1,
-        target_enrollment_y2: enrollY2,
-        target_enrollment_y3: enrollY3,
-        target_enrollment_y4: enrollY4,
-        pct_frl: pctFrl,
-        pct_iep: pctIep,
-        pct_ell: pctEll,
-        pct_hicap: pctHicap,
-        financial_assumptions: fa,
-      }).eq('school_id', schoolId),
+      supabase.from('school_profiles').update(profileUpdate).eq('school_id', schoolId),
     ])
+
+    // Save grade expansion plan rows
+    if (expansionData && expansionData.plan.length > 0) {
+      await supabase.from('grade_expansion_plan').delete().eq('school_id', schoolId)
+      const rows = expansionData.plan.map((e) => ({
+        school_id: schoolId,
+        year: e.year,
+        grade_level: e.grade_level,
+        sections: e.sections,
+        students_per_section: e.students_per_section,
+        is_new_grade: e.is_new_grade,
+      }))
+      await supabase.from('grade_expansion_plan').insert(rows)
+    }
 
     setSaving(false)
     if (schoolRes.error || profileRes.error) {
@@ -231,6 +271,23 @@ export default function SettingsPage() {
             <div className="flex justify-between"><span className="text-slate-600 font-semibold">Total</span><span className="font-bold text-slate-800">{fmt(totalGrants)}</span></div>
           </div>
         </div>
+      </div>
+
+      {/* Section: Grade Expansion Plan */}
+      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
+        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-1">Grade Expansion Plan</h2>
+        <p className="text-xs text-slate-500 mb-4">
+          Define which grade levels you open with and how you expand year over year. This produces cohort-based enrollment projections that authorizers find more credible than flat growth rates.
+        </p>
+        <GradeExpansionEditor
+          gradeConfig={gradeConfig}
+          maxClassSize={profile.max_class_size}
+          initialOpeningGrades={profile.opening_grades || undefined}
+          initialBuildoutGrades={profile.buildout_grades || undefined}
+          initialRetentionRate={profile.retention_rate ?? undefined}
+          initialPlan={gradeExpansionPlan}
+          onChange={handleExpansionChange}
+        />
       </div>
 
       {/* Section 3: Programs */}

@@ -72,7 +72,7 @@ function HealthTile({ label, value, subtitle, colorClass }: {
 
 export default function DashboardPage() {
   const {
-    schoolData: { schoolName, profile, positions, projections, loading },
+    schoolData: { schoolName, profile, positions, projections, gradeExpansionPlan, loading },
     assumptions,
     baseSummary,
     scenario,
@@ -88,13 +88,15 @@ export default function DashboardPage() {
     resetScenario,
   } = useScenario()
 
+  const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
+
   const [exporting, setExporting] = useState(false)
   const [advisory, setAdvisory] = useState<AdvisoryData | null>(null)
   const [advisoryLoading, setAdvisoryLoading] = useState(false)
 
   const multiYear = useMemo(
-    () => computeMultiYearDetailed(profile, positions, projections, assumptions, 0),
-    [profile, positions, projections, assumptions]
+    () => computeMultiYearDetailed(profile, positions, projections, assumptions, 0, gradeExpansionPlan),
+    [profile, positions, projections, assumptions, gradeExpansionPlan]
   )
   const cashFlowData = useMemo(
     () => computeCashFlow(baseSummary, baseApportionment, 0),
@@ -105,7 +107,7 @@ export default function DashboardPage() {
     if (!schoolName || loading) return
     setAdvisoryLoading(true)
     try {
-      const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections)
+      const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan)
       const res = await fetch('/api/advisory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -119,7 +121,7 @@ export default function DashboardPage() {
       console.error('Advisory fetch failed:', err)
     }
     setAdvisoryLoading(false)
-  }, [schoolName, profile, positions, projections, loading])
+  }, [schoolName, profile, positions, projections, gradeExpansionPlan, loading])
 
   useEffect(() => {
     if (!advisory && !advisoryLoading && schoolName && !loading) {
@@ -162,7 +164,7 @@ export default function DashboardPage() {
       // Ensure advisory data is available for PDF
       let advisoryForPdf = advisory
       if (!advisoryForPdf) {
-        const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections)
+        const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan)
         const advRes = await fetch('/api/advisory', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

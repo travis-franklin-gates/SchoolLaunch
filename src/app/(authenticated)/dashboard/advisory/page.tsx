@@ -67,7 +67,7 @@ function SkeletonCard() {
 
 export default function AdvisoryPage() {
   const {
-    schoolData: { schoolName, profile, positions, projections, loading },
+    schoolData: { schoolName, profile, positions, projections, gradeExpansionPlan, loading },
   } = useScenario()
 
   const [data, setData] = useState<AdvisoryData | null>(null)
@@ -79,7 +79,7 @@ export default function AdvisoryPage() {
     setFetching(true)
     setError(null)
     try {
-      const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections)
+      const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan)
       const res = await fetch('/api/advisory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -93,7 +93,7 @@ export default function AdvisoryPage() {
       setError('Failed to generate advisory analysis. Please try again.')
     }
     setFetching(false)
-  }, [schoolName, profile, positions, projections, loading])
+  }, [schoolName, profile, positions, projections, gradeExpansionPlan, loading])
 
   useEffect(() => {
     if (!data && !fetching && schoolName && !loading) {

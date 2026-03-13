@@ -20,7 +20,7 @@ const DEFAULT_SOURCES: StartupFundingSource[] = [
 
 export default function MultiYearPage() {
   const {
-    schoolData: { schoolId, profile, positions, projections, loading, reload },
+    schoolData: { schoolId, profile, positions, projections, gradeExpansionPlan, loading, reload },
     assumptions,
   } = useScenario()
   const supabase = createClient()
@@ -38,16 +38,18 @@ export default function MultiYearPage() {
     .reduce((s, f) => s + f.amount, 0)
 
   const years = useMemo(
-    () => computeMultiYearDetailed(profile, positions, projections, assumptions, -totalFunding + totalFunding),
-    [profile, positions, projections, assumptions, totalFunding]
+    () => computeMultiYearDetailed(profile, positions, projections, assumptions, -totalFunding + totalFunding, gradeExpansionPlan),
+    [profile, positions, projections, assumptions, totalFunding, gradeExpansionPlan]
   )
 
   // Recalculate with actual pre-opening net (funding minus a rough pre-opening cost estimate)
   const preOpenTotal = Math.round(totalFunding * 0.4) // rough estimate: 40% goes to pre-opening
   const yearsWithStartup = useMemo(
-    () => computeMultiYearDetailed(profile, positions, projections, assumptions, totalFunding - preOpenTotal),
-    [profile, positions, projections, assumptions, totalFunding, preOpenTotal]
+    () => computeMultiYearDetailed(profile, positions, projections, assumptions, totalFunding - preOpenTotal, gradeExpansionPlan),
+    [profile, positions, projections, assumptions, totalFunding, preOpenTotal, gradeExpansionPlan]
   )
+
+  const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
 
   function addSource() {
     setFundingSources((prev) => [...prev, { source: '', amount: 0, type: 'grant', status: 'projected' }])
@@ -217,6 +219,46 @@ export default function MultiYearPage() {
             </tr>
           </thead>
           <tbody>
+            {/* Enrollment Breakdown (grade expansion) */}
+            {hasExpansion && (
+              <>
+                <SectionHeader label="Enrollment (Grade Expansion)" cols={4} />
+                <tr className="border-b border-slate-100 bg-blue-50/30">
+                  <td className="px-5 py-2.5 text-slate-600">Grades Served</td>
+                  {yearsWithStartup.map((y) => (
+                    <td key={y.year} className="px-5 py-2.5 text-right text-xs text-slate-600">
+                      {y.expansionDetail?.grades.join(', ') || '—'}
+                    </td>
+                  ))}
+                </tr>
+                <tr className="border-b border-slate-100">
+                  <td className="px-5 py-2.5 text-slate-600">New Grades Added</td>
+                  {yearsWithStartup.map((y) => (
+                    <td key={y.year} className="px-5 py-2.5 text-right text-blue-600 font-medium text-xs">
+                      {y.expansionDetail?.newGrades.length ? `+${y.expansionDetail.newGrades.join(', ')}` : '—'}
+                    </td>
+                  ))}
+                </tr>
+                <tr className="border-b border-slate-100">
+                  <td className="px-5 py-2.5 text-slate-600">Returning Students</td>
+                  {yearsWithStartup.map((y) => (
+                    <td key={y.year} className="px-5 py-2.5 text-right text-slate-600">
+                      {y.expansionDetail ? (y.year === 1 ? '—' : y.expansionDetail.returning) : '—'}
+                    </td>
+                  ))}
+                </tr>
+                <tr className="border-b border-slate-100">
+                  <td className="px-5 py-2.5 text-slate-600">New Grade Students</td>
+                  {yearsWithStartup.map((y) => (
+                    <td key={y.year} className="px-5 py-2.5 text-right text-blue-600">
+                      {y.expansionDetail ? (y.year === 1 ? y.enrollment : (y.expansionDetail.newGrade > 0 ? `+${y.expansionDetail.newGrade}` : '—')) : '—'}
+                    </td>
+                  ))}
+                </tr>
+                <TotalRow label="Total Enrollment" values={yearsWithStartup.map((y) => y.enrollment)} />
+              </>
+            )}
+
             {/* Revenue Section */}
             <SectionHeader label="Revenue" cols={4} />
             <Row label="State Apportionment" values={yearsWithStartup.map((y) => y.revenue.apportionment)} />

@@ -9,7 +9,7 @@ import StepEnrollment from '@/components/onboarding/StepEnrollment'
 import StepDemographics from '@/components/onboarding/StepDemographics'
 import StepStaffing, { buildDefaultPositions } from '@/components/onboarding/StepStaffing'
 import StepOperations, { defaultOperationsData } from '@/components/onboarding/StepOperations'
-import type { GrowthPreset, StartupFundingSource } from '@/lib/types'
+import type { GrowthPreset, StartupFundingSource, GradeExpansionEntry, EnrollmentMode } from '@/lib/types'
 
 const STEPS = [
   { label: 'School Identity', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
@@ -48,6 +48,11 @@ interface WizardData {
     miscPct: number
   }
   startupFunding: StartupFundingSource[]
+  enrollmentMode: EnrollmentMode
+  openingGrades: string[]
+  buildoutGrades: string[]
+  retentionRate: number
+  expansionPlan: GradeExpansionEntry[]
 }
 
 const initialWizardData: WizardData = {
@@ -68,6 +73,11 @@ const initialWizardData: WizardData = {
   positions: [],
   operations: defaultOperationsData,
   startupFunding: [],
+  enrollmentMode: 'simple' as EnrollmentMode,
+  openingGrades: [],
+  buildoutGrades: [],
+  retentionRate: 90,
+  expansionPlan: [],
 }
 
 function fmt(n: number) {
@@ -120,12 +130,11 @@ export default function OnboardingPage() {
         return
       }
 
-      // Load existing staffing positions
-      const { data: existingPositions } = await supabase
-        .from('staffing_positions')
-        .select('*')
-        .eq('school_id', roleData.school_id)
-        .eq('year', 1)
+      // Load existing staffing positions and grade expansion plan
+      const [{ data: existingPositions }, { data: existingExpansion }] = await Promise.all([
+        supabase.from('staffing_positions').select('*').eq('school_id', roleData.school_id).eq('year', 1),
+        supabase.from('grade_expansion_plan').select('*').eq('school_id', roleData.school_id).order('year').order('grade_level'),
+      ])
 
       if (school || profile) {
         setData((prev) => ({
@@ -144,6 +153,19 @@ export default function OnboardingPage() {
           pctEll: profile?.pct_ell ?? prev.pctEll,
           pctHicap: profile?.pct_hicap ?? prev.pctHicap,
           startupFunding: profile?.startup_funding || prev.startupFunding,
+          openingGrades: profile?.opening_grades || prev.openingGrades,
+          buildoutGrades: profile?.buildout_grades || prev.buildoutGrades,
+          retentionRate: profile?.retention_rate ?? prev.retentionRate,
+          enrollmentMode: (existingExpansion && existingExpansion.length > 0 ? 'grade_expansion' : prev.enrollmentMode) as EnrollmentMode,
+          expansionPlan: existingExpansion && existingExpansion.length > 0
+            ? existingExpansion.map((e: Record<string, unknown>) => ({
+                year: e.year as number,
+                grade_level: e.grade_level as string,
+                sections: e.sections as number,
+                students_per_section: e.students_per_section as number,
+                is_new_grade: e.is_new_grade as boolean,
+              }))
+            : prev.expansionPlan,
           positions: existingPositions && existingPositions.length > 0
             ? existingPositions.map((p, i) => ({
                 key: `db-${i}`,
@@ -181,18 +203,53 @@ export default function OnboardingPage() {
     enrollmentY1: number; maxClassSize: number;
     enrollmentY2: number; enrollmentY3: number; enrollmentY4: number;
     growthPreset: GrowthPreset
+    enrollmentMode: EnrollmentMode
+    openingGrades?: string[]
+    buildoutGrades?: string[]
+    retentionRate?: number
+    expansionPlan?: GradeExpansionEntry[]
   }) => {
     if (!schoolId) return
-    setData((prev) => ({ ...prev, ...stepData }))
+    setData((prev) => ({
+      ...prev,
+      ...stepData,
+      openingGrades: stepData.openingGrades || prev.openingGrades,
+      buildoutGrades: stepData.buildoutGrades || prev.buildoutGrades,
+      retentionRate: stepData.retentionRate ?? prev.retentionRate,
+      expansionPlan: stepData.expansionPlan || prev.expansionPlan,
+      enrollmentMode: stepData.enrollmentMode,
+    }))
 
-    await supabase.from('school_profiles').upsert({
+    const profileUpdate: Record<string, unknown> = {
       school_id: schoolId,
       target_enrollment_y1: stepData.enrollmentY1,
       target_enrollment_y2: stepData.enrollmentY2,
       target_enrollment_y3: stepData.enrollmentY3,
       target_enrollment_y4: stepData.enrollmentY4,
       max_class_size: stepData.maxClassSize,
-    }, { onConflict: 'school_id' })
+    }
+
+    if (stepData.enrollmentMode === 'grade_expansion' && stepData.openingGrades) {
+      profileUpdate.opening_grades = stepData.openingGrades
+      profileUpdate.buildout_grades = stepData.buildoutGrades
+      profileUpdate.retention_rate = stepData.retentionRate
+    }
+
+    await supabase.from('school_profiles').upsert(profileUpdate, { onConflict: 'school_id' })
+
+    // Save grade expansion plan if in expansion mode
+    if (stepData.enrollmentMode === 'grade_expansion' && stepData.expansionPlan && stepData.expansionPlan.length > 0) {
+      await supabase.from('grade_expansion_plan').delete().eq('school_id', schoolId)
+      const rows = stepData.expansionPlan.map((e) => ({
+        school_id: schoolId,
+        year: e.year,
+        grade_level: e.grade_level,
+        sections: e.sections,
+        students_per_section: e.students_per_section,
+        is_new_grade: e.is_new_grade,
+      }))
+      await supabase.from('grade_expansion_plan').insert(rows)
+    }
 
     setStep(2)
   }, [schoolId, supabase])
@@ -452,6 +509,10 @@ export default function OnboardingPage() {
           pctIep={data.pctIep}
           pctEll={data.pctEll}
           pctHicap={data.pctHicap}
+          initialOpeningGrades={data.openingGrades.length > 0 ? data.openingGrades : undefined}
+          initialBuildoutGrades={data.buildoutGrades.length > 0 ? data.buildoutGrades : undefined}
+          initialRetentionRate={data.retentionRate}
+          initialExpansionPlan={data.expansionPlan.length > 0 ? data.expansionPlan : undefined}
           onNext={saveStep2}
           onBack={() => setStep(0)}
         />

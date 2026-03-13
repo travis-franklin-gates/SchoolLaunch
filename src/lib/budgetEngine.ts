@@ -7,8 +7,9 @@ import {
   PER_PUPIL_RATE,
   LEVY_EQUITY_RATE,
 } from './calculations'
-import type { SchoolProfile, StaffingPosition, BudgetProjection, FinancialAssumptions } from './types'
+import type { SchoolProfile, StaffingPosition, BudgetProjection, FinancialAssumptions, GradeExpansionEntry } from './types'
 import { DEFAULT_ASSUMPTIONS } from './types'
+import { expansionToEnrollmentArray, computeExpansionEnrollments, teachersPerNewGrade } from './gradeExpansion'
 
 export interface BudgetSummary {
   totalRevenue: number
@@ -263,6 +264,12 @@ export interface MultiYearDetailedRow {
   cumulativeNet: number
   reserveDays: number
   staffing: MultiYearStaffing
+  expansionDetail?: {
+    returning: number
+    newGrade: number
+    grades: string[]
+    newGrades: string[]
+  }
 }
 
 export function computeMultiYearDetailed(
@@ -271,8 +278,19 @@ export function computeMultiYearDetailed(
   projections: BudgetProjection[],
   assumptions: FinancialAssumptions,
   preOpeningNet: number,
+  gradeExpansionPlan?: GradeExpansionEntry[],
 ): MultiYearDetailedRow[] {
-  const enrollments = [
+  // Use grade expansion enrollments if available, else fall back to flat profile targets
+  const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
+  const retentionRate = profile.retention_rate ?? 90
+  const expansionEnrollments = hasExpansion
+    ? expansionToEnrollmentArray(gradeExpansionPlan!, retentionRate)
+    : null
+  const expansionDetails = hasExpansion
+    ? computeExpansionEnrollments(gradeExpansionPlan!, retentionRate)
+    : null
+
+  const enrollments = expansionEnrollments || [
     profile.target_enrollment_y1,
     profile.target_enrollment_y2,
     profile.target_enrollment_y3,
@@ -333,10 +351,22 @@ export function computeMultiYearDetailed(
         else if (pos.category === 'admin') adminCost += cost
         benefitsCost += calcBenefits(cost, benefitsRate)
       }
-      // Additional teachers
-      if (additionalTeachers > 0) {
+      // Additional teachers — use grade expansion data if available
+      let effectiveAdditionalTeachers = additionalTeachers
+      if (hasExpansion && expansionDetails) {
+        const yearDetail = expansionDetails.find((d) => d.year === y)
+        if (yearDetail && yearDetail.newGrades.length > 0) {
+          // Add teachers based on new grade levels
+          const gradeBasedTeachers = yearDetail.newGrades.reduce((sum, grade) => {
+            const gradeEntry = gradeExpansionPlan!.find((e) => e.year === y && e.grade_level === grade)
+            return sum + teachersPerNewGrade(grade, gradeEntry?.sections || 2)
+          }, 0)
+          effectiveAdditionalTeachers = Math.max(additionalTeachers, gradeBasedTeachers)
+        }
+      }
+      if (effectiveAdditionalTeachers > 0) {
         const leadSalary = teacherPositions[0]?.annual_salary || 58000
-        const cost = additionalTeachers * Math.round(leadSalary * escalator)
+        const cost = effectiveAdditionalTeachers * Math.round(leadSalary * escalator)
         certCost += cost
         benefitsCost += calcBenefits(cost, benefitsRate)
       }
@@ -380,6 +410,10 @@ export function computeMultiYearDetailed(
     const dailyExpense = totalExpenses / 365
     const reserveDays = dailyExpense > 0 ? Math.round(net / dailyExpense) : 0
 
+    const expansionDetail = expansionDetails
+      ? expansionDetails.find((d) => d.year === y)
+      : undefined
+
     rows.push({
       year: y,
       enrollment: enr,
@@ -391,6 +425,12 @@ export function computeMultiYearDetailed(
       cumulativeNet,
       reserveDays,
       staffing,
+      expansionDetail: expansionDetail ? {
+        returning: expansionDetail.returning,
+        newGrade: expansionDetail.newGrade,
+        grades: expansionDetail.grades,
+        newGrades: expansionDetail.newGrades,
+      } : undefined,
     })
   }
 

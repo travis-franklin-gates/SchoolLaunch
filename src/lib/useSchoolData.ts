@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { SchoolProfile, StaffingPosition, BudgetProjection } from '@/lib/types'
+import type { SchoolProfile, StaffingPosition, BudgetProjection, GradeExpansionEntry } from '@/lib/types'
 
 export interface SchoolData {
   schoolId: string
@@ -10,6 +10,7 @@ export interface SchoolData {
   profile: SchoolProfile
   positions: StaffingPosition[]
   projections: BudgetProjection[]
+  gradeExpansionPlan: GradeExpansionEntry[]
   scenarioId: string | null
   loading: boolean
   reload: () => Promise<void>
@@ -36,6 +37,7 @@ export function useSchoolData(): SchoolData {
   })
   const [positions, setPositions] = useState<StaffingPosition[]>([])
   const [projections, setProjections] = useState<BudgetProjection[]>([])
+  const [gradeExpansionPlan, setGradeExpansionPlan] = useState<GradeExpansionEntry[]>([])
   const [scenarioId, setScenarioId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -57,12 +59,13 @@ export function useSchoolData(): SchoolData {
     const sid = roleData.school_id
     setSchoolId(sid)
 
-    const [schoolRes, profileRes, posRes, projRes, scenRes] = await Promise.all([
+    const [schoolRes, profileRes, posRes, projRes, scenRes, gepRes] = await Promise.all([
       supabase.from('schools').select('name').eq('id', sid).single(),
       supabase.from('school_profiles').select('*').eq('school_id', sid).single(),
       supabase.from('staffing_positions').select('*').eq('school_id', sid).eq('year', 1),
       supabase.from('budget_projections').select('*').eq('school_id', sid).eq('year', 1),
       supabase.from('scenarios').select('id').eq('school_id', sid).eq('is_base_case', true).single(),
+      supabase.from('grade_expansion_plan').select('*').eq('school_id', sid).order('year').order('grade_level'),
     ])
 
     if (schoolRes.data) setSchoolName(schoolRes.data.name)
@@ -70,11 +73,12 @@ export function useSchoolData(): SchoolData {
     if (posRes.data) setPositions(posRes.data as StaffingPosition[])
     if (projRes.data) setProjections(projRes.data as BudgetProjection[])
     if (scenRes.data) setScenarioId(scenRes.data.id)
+    if (gepRes.data) setGradeExpansionPlan(gepRes.data as GradeExpansionEntry[])
 
     setLoading(false)
   }
 
   useEffect(() => { load() }, [])
 
-  return { schoolId, schoolName, profile, positions, projections, scenarioId, loading, reload: load }
+  return { schoolId, schoolName, profile, positions, projections, gradeExpansionPlan, scenarioId, loading, reload: load }
 }

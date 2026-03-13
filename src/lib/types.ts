@@ -72,6 +72,9 @@ export interface SchoolProfile {
   onboarding_complete: boolean
   financial_assumptions?: Partial<FinancialAssumptions> | null
   startup_funding?: StartupFundingSource[] | null
+  opening_grades?: string[] | null
+  buildout_grades?: string[] | null
+  retention_rate?: number | null
 }
 
 export interface StaffingPosition {
@@ -99,3 +102,13 @@ export interface BudgetProjection {
 }
 
 export type GrowthPreset = 'conservative' | 'moderate' | 'aggressive' | 'manual'
+
+export interface GradeExpansionEntry {
+  year: number
+  grade_level: string
+  sections: number
+  students_per_section: number
+  is_new_grade: boolean
+}
+
+export type EnrollmentMode = 'simple' | 'grade_expansion'
