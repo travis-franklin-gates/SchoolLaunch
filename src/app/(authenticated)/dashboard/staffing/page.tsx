@@ -22,11 +22,12 @@ function tempId() { return `new-${++nextId}` }
 
 export default function StaffingPage() {
   const {
-    schoolData: { schoolId, positions: dbPositions, projections, loading },
+    schoolData: { schoolId, positions: dbPositions, projections, loading, reload },
     isModified,
   } = useScenario()
   const [positions, setPositions] = useState<Position[]>([])
   const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -70,7 +71,21 @@ export default function StaffingPage() {
   async function save() {
     if (!schoolId) return
     setSaving(true)
-    await supabase.from('staffing_positions').delete().eq('school_id', schoolId).eq('year', 1)
+    setToast(null)
+
+    const { error: delError } = await supabase
+      .from('staffing_positions')
+      .delete()
+      .eq('school_id', schoolId)
+      .eq('year', 1)
+
+    if (delError) {
+      console.error('Delete staffing failed:', delError)
+      setSaving(false)
+      setToast({ type: 'error', message: `Failed to save: ${delError.message}` })
+      return
+    }
+
     const rows = positions.map((p) => ({
       school_id: schoolId,
       year: 1,
@@ -79,16 +94,32 @@ export default function StaffingPage() {
       fte: p.fte,
       annual_salary: p.salary,
     }))
-    if (rows.length > 0) await supabase.from('staffing_positions').insert(rows)
+
+    if (rows.length > 0) {
+      const { error: insertError } = await supabase.from('staffing_positions').insert(rows)
+      if (insertError) {
+        console.error('Insert staffing failed:', insertError)
+        setSaving(false)
+        setToast({ type: 'error', message: `Failed to save positions: ${insertError.message}` })
+        return
+      }
+    }
 
     // Update personnel projection
-    await supabase.from('budget_projections')
+    const { error: projError } = await supabase.from('budget_projections')
       .update({ amount: totalPersonnel })
       .eq('school_id', schoolId)
       .eq('year', 1)
       .eq('subcategory', 'Total Personnel')
 
+    if (projError) {
+      console.error('Update personnel projection failed:', projError)
+    }
+
     setSaving(false)
+    setToast({ type: 'success', message: 'Staffing changes saved successfully.' })
+    await reload()
+    setTimeout(() => setToast(null), 3000)
   }
 
   if (loading) {
@@ -97,6 +128,14 @@ export default function StaffingPage() {
 
   return (
     <div>
+      {toast && (
+        <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium ${
+          toast.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+        }`}>
+          {toast.message}
+        </div>
+      )}
+
       {isModified && (
         <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
           Scenario active — showing base case staffing. Adjust positions here to update the base case budget.

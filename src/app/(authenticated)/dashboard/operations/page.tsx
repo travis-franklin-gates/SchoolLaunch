@@ -59,13 +59,14 @@ function getGroup(lineItem: string): string {
 
 export default function OperationsPage() {
   const {
-    schoolData: { schoolId, profile, projections, positions, loading },
+    schoolData: { schoolId, profile, projections, positions, loading, reload },
     assumptions,
     currentSummary,
     isModified,
   } = useScenario()
   const [rows, setRows] = useState<OpsRow[]>([])
   const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const supabase = createClient()
 
   const enrollment = profile.target_enrollment_y1
@@ -149,6 +150,9 @@ export default function OperationsPage() {
   async function save() {
     if (!schoolId) return
     setSaving(true)
+    setToast(null)
+
+    let hadError = false
     for (const row of rows) {
       // Check if this projection already exists
       const { data: existing } = await supabase
@@ -160,14 +164,18 @@ export default function OperationsPage() {
         .eq('is_revenue', false)
 
       if (existing && existing.length > 0) {
-        await supabase.from('budget_projections')
+        const { error } = await supabase.from('budget_projections')
           .update({ amount: row.amount })
           .eq('school_id', schoolId)
           .eq('year', 1)
           .eq('subcategory', row.lineItem)
           .eq('is_revenue', false)
+        if (error) {
+          console.error(`Update ${row.lineItem} failed:`, error)
+          hadError = true
+        }
       } else {
-        await supabase.from('budget_projections').insert({
+        const { error } = await supabase.from('budget_projections').insert({
           school_id: schoolId,
           year: 1,
           category: 'Operations',
@@ -175,9 +183,21 @@ export default function OperationsPage() {
           amount: row.amount,
           is_revenue: false,
         })
+        if (error) {
+          console.error(`Insert ${row.lineItem} failed:`, error)
+          hadError = true
+        }
       }
     }
+
     setSaving(false)
+    if (hadError) {
+      setToast({ type: 'error', message: 'Some operations failed to save. Check console for details.' })
+    } else {
+      setToast({ type: 'success', message: 'Operations saved successfully.' })
+      await reload()
+      setTimeout(() => setToast(null), 3000)
+    }
   }
 
   if (loading) {
@@ -199,6 +219,14 @@ export default function OperationsPage() {
           <p className="text-sm text-slate-500 mt-1">Non-personnel expenses for Year 1, organized by category. Per-pupil benchmarks shown for reference.</p>
         </div>
       </div>
+
+      {toast && (
+        <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium ${
+          toast.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+        }`}>
+          {toast.message}
+        </div>
+      )}
 
       {isModified && (
         <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
