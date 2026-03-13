@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { computeCashFlow } from '@/lib/budgetEngine'
+import type { StartupFundingSource } from '@/lib/types'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -44,7 +45,7 @@ function computeYear0CashFlow(
 
 export default function CashFlowPage() {
   const {
-    schoolData: { loading },
+    schoolData: { profile, loading },
     baseSummary,
     currentSummary,
     baseApportionment,
@@ -53,7 +54,6 @@ export default function CashFlowPage() {
   } = useScenario()
 
   const [view, setView] = useState<'year0' | 'year1'>('year1')
-  const [preOpenFunding, setPreOpenFunding] = useState(250000)
   const [preOpening, setPreOpening] = useState({
     leaseDeposit: 15000,
     furniture: 25000,
@@ -61,9 +61,19 @@ export default function CashFlowPage() {
     preOpenStaff: 30000,
   })
 
+  // Use startup funding from profile if available
+  const fundingSources: StartupFundingSource[] = profile.startup_funding && profile.startup_funding.length > 0
+    ? profile.startup_funding
+    : [{ source: 'Pre-Opening Funding', amount: 250000, type: 'grant' as const, status: 'projected' as const }]
+
+  const totalFunding = fundingSources.reduce((s, f) => s + f.amount, 0)
+  const securedFunding = fundingSources
+    .filter((f) => f.status === 'received' || f.status === 'pledged')
+    .reduce((s, f) => s + f.amount, 0)
+
   const year0Flow = useMemo(
-    () => computeYear0CashFlow(preOpening.leaseDeposit, preOpening.furniture, preOpening.techSetup, preOpening.preOpenStaff, preOpenFunding),
-    [preOpening, preOpenFunding]
+    () => computeYear0CashFlow(preOpening.leaseDeposit, preOpening.furniture, preOpening.techSetup, preOpening.preOpenStaff, totalFunding),
+    [preOpening, totalFunding]
   )
 
   const year0EndingBalance = year0Flow.length > 0 ? year0Flow[year0Flow.length - 1].balance : 0
@@ -119,18 +129,75 @@ export default function CashFlowPage() {
 
       {view === 'year0' ? (
         <>
-          {/* Pre-opening inputs */}
+          {/* Startup Funding Sources summary */}
           <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
-            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Pre-Opening Inputs</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Pre-Opening Funding</label>
-                <input
-                  type="number" step={10000} value={preOpenFunding}
-                  onChange={(e) => setPreOpenFunding(Number(e.target.value))}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
-                />
+            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Startup Funding Inflows</h2>
+            <table className="w-full text-sm mb-4">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="text-left px-3 py-2 font-semibold text-slate-600">Source</th>
+                  <th className="text-right px-3 py-2 font-semibold text-slate-600 w-28">Amount</th>
+                  <th className="text-left px-3 py-2 font-semibold text-slate-600 w-24">Type</th>
+                  <th className="text-left px-3 py-2 font-semibold text-slate-600 w-24">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fundingSources.map((src, idx) => (
+                  <tr key={idx} className="border-b border-slate-100">
+                    <td className="px-3 py-2 text-slate-700">{src.source || 'Unnamed'}</td>
+                    <td className="px-3 py-2 text-right font-medium text-slate-800">{fmt(src.amount)}</td>
+                    <td className="px-3 py-2">
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                        src.type === 'grant' ? 'bg-blue-100 text-blue-700' :
+                        src.type === 'donation' ? 'bg-purple-100 text-purple-700' :
+                        src.type === 'debt' ? 'bg-red-100 text-red-700' :
+                        'bg-slate-100 text-slate-700'
+                      }`}>
+                        {src.type}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                        src.status === 'received' ? 'bg-emerald-100 text-emerald-700' :
+                        src.status === 'pledged' ? 'bg-blue-100 text-blue-700' :
+                        src.status === 'applied' ? 'bg-amber-100 text-amber-700' :
+                        'bg-slate-100 text-slate-700'
+                      }`}>
+                        {src.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-slate-50 border-t border-slate-200">
+                  <td className="px-3 py-2 font-bold text-slate-800">Total Available</td>
+                  <td className="px-3 py-2 text-right font-bold text-slate-800">{fmt(totalFunding)}</td>
+                  <td colSpan={2}></td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <div className="flex flex-wrap gap-3">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 text-xs">
+                <span className="text-emerald-600 font-semibold">Secured:</span>
+                <span className="text-emerald-700 font-bold ml-1">{fmt(securedFunding)}</span>
               </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 text-xs">
+                <span className="text-amber-600 font-semibold">At Risk:</span>
+                <span className="text-amber-700 font-bold ml-1">{fmt(totalFunding - securedFunding)}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-500 mt-3">
+              Manage funding sources on the Multi-Year tab. Only &quot;received&quot; and &quot;pledged&quot; funds count as secured.
+            </p>
+          </div>
+
+          {/* Pre-opening cost inputs */}
+          <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
+            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Pre-Opening Spending</h2>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
                 { key: 'leaseDeposit' as const, label: 'Lease Deposits' },
                 { key: 'furniture' as const, label: 'Furniture & Equipment' },
@@ -158,7 +225,6 @@ export default function CashFlowPage() {
                   <th className="text-right px-4 py-3 font-semibold text-slate-600">Startup Spending</th>
                   <th className="text-right px-4 py-3 font-semibold text-slate-600">Cumulative Spent</th>
                   <th className="text-right px-4 py-3 font-semibold text-slate-600">Remaining Balance</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Funding Source</th>
                 </tr>
               </thead>
               <tbody>
@@ -170,7 +236,6 @@ export default function CashFlowPage() {
                     <td className={`px-4 py-3 text-right font-bold ${m.balance >= 0 ? 'text-slate-800' : 'text-red-600'}`}>
                       {fmt(m.balance)}
                     </td>
-                    <td className="px-4 py-3 text-slate-500 text-xs">CSP Grant / Savings</td>
                   </tr>
                 ))}
               </tbody>
@@ -184,6 +249,13 @@ export default function CashFlowPage() {
           {year0Flow.some((m) => m.balance < 0) && (
             <div className="mt-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
               <strong>Warning:</strong> Pre-opening funding is insufficient. You need additional startup capital to cover shortfalls.
+            </div>
+          )}
+
+          {securedFunding < totalFunding * 0.5 && (
+            <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-700">
+              <strong>Funding Risk:</strong> Less than 50% of startup funding is secured.
+              Cash flow projections may be optimistic if pending funding does not materialize.
             </div>
           )}
         </>

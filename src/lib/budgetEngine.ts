@@ -19,6 +19,7 @@ export interface BudgetSummary {
   reserveDays: number
   personnelPctRevenue: number
   breakEvenEnrollment: number
+  facilityPct: number
 }
 
 export function computeSummaryFromProjections(
@@ -47,6 +48,11 @@ export function computeSummaryFromProjections(
     ? Math.ceil(totalExpenses / perPupilRevenue)
     : 0
 
+  const facilityCost = projections
+    .filter((p) => !p.is_revenue && p.subcategory === 'Facilities')
+    .reduce((s, p) => s + p.amount, 0)
+  const facilityPct = totalRevenue > 0 ? (facilityCost / totalRevenue) * 100 : 0
+
   return {
     totalRevenue,
     totalPersonnel,
@@ -56,6 +62,7 @@ export function computeSummaryFromProjections(
     reserveDays,
     personnelPctRevenue,
     breakEvenEnrollment,
+    facilityPct,
   }
 }
 
@@ -128,6 +135,7 @@ export function computeScenario(
   const personnelPctRevenue = totalRevenue > 0 ? (totalPersonnel / totalRevenue) * 100 : 0
   const perPupilRevenue = a.per_pupil_rate + a.levy_equity_per_student
   const breakEvenEnrollment = perPupilRevenue > 0 ? Math.ceil(totalExpenses / perPupilRevenue) : 0
+  const facilityPct = totalRevenue > 0 ? ((monthlyLease * 12) / totalRevenue) * 100 : 0
 
   return {
     totalRevenue,
@@ -138,6 +146,7 @@ export function computeScenario(
     reserveDays,
     personnelPctRevenue,
     breakEvenEnrollment,
+    facilityPct,
   }
 }
 

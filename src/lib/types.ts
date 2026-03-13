@@ -10,6 +10,15 @@ export interface FinancialAssumptions {
   technology_per_student: number
   insurance_annual: number
   contingency_pct: number
+  // Expanded operations (Gap 5)
+  curriculum_per_student: number
+  professional_development_per_fte: number
+  food_service_per_student: number
+  transportation_per_student: number
+  marketing_per_student: number
+  fundraising_annual: number
+  food_service_offered: boolean
+  transportation_offered: boolean
 }
 
 export const DEFAULT_ASSUMPTIONS: FinancialAssumptions = {
@@ -24,11 +33,26 @@ export const DEFAULT_ASSUMPTIONS: FinancialAssumptions = {
   technology_per_student: 180,
   insurance_annual: 18000,
   contingency_pct: 2,
+  curriculum_per_student: 500,
+  professional_development_per_fte: 1000,
+  food_service_per_student: 1200,
+  transportation_per_student: 800,
+  marketing_per_student: 200,
+  fundraising_annual: 15000,
+  food_service_offered: false,
+  transportation_offered: false,
 }
 
 export function getAssumptions(raw: Partial<FinancialAssumptions> | null | undefined): FinancialAssumptions {
   if (!raw) return { ...DEFAULT_ASSUMPTIONS }
   return { ...DEFAULT_ASSUMPTIONS, ...raw }
+}
+
+export interface StartupFundingSource {
+  source: string
+  amount: number
+  type: 'grant' | 'donation' | 'debt' | 'other'
+  status: 'received' | 'pledged' | 'applied' | 'projected' | 'n/a'
 }
 
 export interface SchoolProfile {
@@ -47,6 +71,7 @@ export interface SchoolProfile {
   pct_hicap: number
   onboarding_complete: boolean
   financial_assumptions?: Partial<FinancialAssumptions> | null
+  startup_funding?: StartupFundingSource[] | null
 }
 
 export interface StaffingPosition {

@@ -68,7 +68,7 @@ export default function SettingsPage() {
 
   const totalGrants = grantPreview.titleI + grantPreview.idea + grantPreview.lap + grantPreview.tbip + grantPreview.hicap
 
-  function updateFa(field: keyof FinancialAssumptions, value: number) {
+  function updateFa(field: keyof FinancialAssumptions, value: number | boolean) {
     setFa((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -233,7 +233,56 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Section 3: Financial Assumptions */}
+      {/* Section 3: Programs */}
+      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
+        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Programs</h2>
+        <p className="text-xs text-slate-500 mb-4">
+          Toggle programs your school plans to offer. Enabling a program adds its line item to the Operations budget.
+        </p>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200">
+            <div>
+              <div className="text-sm font-medium text-slate-800">Food Service</div>
+              <div className="text-xs text-slate-500">
+                Adds {fmt(fa.food_service_per_student)}/student to operations.
+                Schools with high FRL% may qualify for USDA NSLP reimbursement (CEP).
+              </div>
+            </div>
+            <button
+              onClick={() => updateFa('food_service_offered', !fa.food_service_offered)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                fa.food_service_offered ? 'bg-blue-600' : 'bg-slate-300'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                fa.food_service_offered ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200">
+            <div>
+              <div className="text-sm font-medium text-slate-800">Transportation</div>
+              <div className="text-xs text-slate-500">
+                Adds {fmt(fa.transportation_per_student)}/student to operations.
+                Required under RCW 28A.710.040 for WA charter schools.
+              </div>
+            </div>
+            <button
+              onClick={() => updateFa('transportation_offered', !fa.transportation_offered)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                fa.transportation_offered ? 'bg-blue-600' : 'bg-slate-300'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                fa.transportation_offered ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Section 4: Financial Assumptions */}
       <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
         <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Financial Assumptions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -276,7 +325,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Section 4: Operations Benchmarks */}
+      {/* Section 5: Operations Benchmarks */}
       <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
         <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Operations Benchmarks</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -308,6 +357,42 @@ export default function SettingsPage() {
             <label className="block text-xs font-medium text-slate-500 mb-1">Contingency % of Total Expenses</label>
             <input type="number" step={0.5} value={fa.contingency_pct}
               onChange={(e) => updateFa('contingency_pct', Number(e.target.value))}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Curriculum per Student ($)</label>
+            <input type="number" step={50} value={fa.curriculum_per_student}
+              onChange={(e) => updateFa('curriculum_per_student', Number(e.target.value))}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Professional Development per FTE ($)</label>
+            <input type="number" step={100} value={fa.professional_development_per_fte}
+              onChange={(e) => updateFa('professional_development_per_fte', Number(e.target.value))}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Food Service per Student ($)</label>
+            <input type="number" step={50} value={fa.food_service_per_student}
+              onChange={(e) => updateFa('food_service_per_student', Number(e.target.value))}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Transportation per Student ($)</label>
+            <input type="number" step={50} value={fa.transportation_per_student}
+              onChange={(e) => updateFa('transportation_per_student', Number(e.target.value))}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Marketing per Student ($)</label>
+            <input type="number" step={10} value={fa.marketing_per_student}
+              onChange={(e) => updateFa('marketing_per_student', Number(e.target.value))}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Fundraising Annual ($)</label>
+            <input type="number" step={1000} value={fa.fundraising_annual}
+              onChange={(e) => updateFa('fundraising_annual', Number(e.target.value))}
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
           </div>
         </div>

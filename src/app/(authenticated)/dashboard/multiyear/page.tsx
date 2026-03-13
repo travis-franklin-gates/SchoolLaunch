@@ -3,30 +3,76 @@
 import { useState, useMemo } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { computeMultiYearDetailed } from '@/lib/budgetEngine'
+import { createClient } from '@/lib/supabase/client'
+import type { StartupFundingSource } from '@/lib/types'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 }
 
+const FUNDING_TYPES: StartupFundingSource['type'][] = ['grant', 'donation', 'debt', 'other']
+const FUNDING_STATUSES: StartupFundingSource['status'][] = ['received', 'pledged', 'applied', 'projected', 'n/a']
+
+const DEFAULT_SOURCES: StartupFundingSource[] = [
+  { source: 'WA Charter School Program (CSP) Grant', amount: 150000, type: 'grant', status: 'applied' },
+  { source: 'Founder Savings / Personal Investment', amount: 50000, type: 'other', status: 'received' },
+]
+
 export default function MultiYearPage() {
   const {
-    schoolData: { profile, positions, projections, loading },
+    schoolData: { schoolId, profile, positions, projections, loading, reload },
     assumptions,
   } = useScenario()
+  const supabase = createClient()
 
-  const [preOpening, setPreOpening] = useState({
-    leaseDeposit: 15000,
-    furniture: 25000,
-    techSetup: 20000,
-    preOpenStaff: 30000,
-  })
+  const [fundingSources, setFundingSources] = useState<StartupFundingSource[]>(
+    profile.startup_funding && profile.startup_funding.length > 0
+      ? profile.startup_funding
+      : DEFAULT_SOURCES
+  )
+  const [savingFunding, setSavingFunding] = useState(false)
 
-  const preOpenTotal = preOpening.leaseDeposit + preOpening.furniture + preOpening.techSetup + preOpening.preOpenStaff
+  const totalFunding = fundingSources.reduce((s, f) => s + f.amount, 0)
+  const securedFunding = fundingSources
+    .filter((f) => f.status === 'received' || f.status === 'pledged')
+    .reduce((s, f) => s + f.amount, 0)
 
   const years = useMemo(
-    () => computeMultiYearDetailed(profile, positions, projections, assumptions, -preOpenTotal),
-    [profile, positions, projections, assumptions, preOpenTotal]
+    () => computeMultiYearDetailed(profile, positions, projections, assumptions, -totalFunding + totalFunding),
+    [profile, positions, projections, assumptions, totalFunding]
   )
+
+  // Recalculate with actual pre-opening net (funding minus a rough pre-opening cost estimate)
+  const preOpenTotal = Math.round(totalFunding * 0.4) // rough estimate: 40% goes to pre-opening
+  const yearsWithStartup = useMemo(
+    () => computeMultiYearDetailed(profile, positions, projections, assumptions, totalFunding - preOpenTotal),
+    [profile, positions, projections, assumptions, totalFunding, preOpenTotal]
+  )
+
+  function addSource() {
+    setFundingSources((prev) => [...prev, { source: '', amount: 0, type: 'grant', status: 'projected' }])
+  }
+
+  function removeSource(idx: number) {
+    setFundingSources((prev) => prev.filter((_, i) => i !== idx))
+  }
+
+  function updateSource(idx: number, field: keyof StartupFundingSource, value: string | number) {
+    setFundingSources((prev) =>
+      prev.map((s, i) => (i === idx ? { ...s, [field]: value } : s))
+    )
+  }
+
+  async function saveFunding() {
+    if (!schoolId) return
+    setSavingFunding(true)
+    await supabase
+      .from('school_profiles')
+      .update({ startup_funding: fundingSources })
+      .eq('school_id', schoolId)
+    setSavingFunding(false)
+    await reload()
+  }
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
@@ -41,31 +87,117 @@ export default function MultiYearPage() {
         Years 2-4 add teaching positions as enrollment grows, {assumptions.salary_escalator_pct}% annual salary escalator, and {assumptions.ops_escalator_pct}% operations escalator.
       </p>
 
-      {/* Pre-opening cost inputs */}
+      {/* Startup Funding Sources */}
       <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
-        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Year 0 Pre-Opening Costs</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { key: 'leaseDeposit' as const, label: 'Lease Deposits' },
-            { key: 'furniture' as const, label: 'Furniture & Equipment' },
-            { key: 'techSetup' as const, label: 'Technology Setup' },
-            { key: 'preOpenStaff' as const, label: 'Pre-Opening Staff' },
-          ].map(({ key, label }) => (
-            <div key={key}>
-              <label className="block text-xs font-medium text-slate-500 mb-1">{label}</label>
-              <input
-                type="number"
-                step={1000}
-                value={preOpening[key]}
-                onChange={(e) => setPreOpening((prev) => ({ ...prev, [key]: Number(e.target.value) }))}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
-              />
-            </div>
-          ))}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Startup Funding Sources</h2>
+          <div className="flex gap-2">
+            <button
+              onClick={addSource}
+              className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+            >
+              + Add Source
+            </button>
+            <button
+              onClick={saveFunding}
+              disabled={savingFunding}
+              className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {savingFunding ? 'Saving...' : 'Save'}
+            </button>
+          </div>
         </div>
-        <div className="mt-3 text-sm text-slate-600">
-          Total Pre-Opening: <span className="font-semibold text-red-600">{fmt(-preOpenTotal)}</span>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="text-left px-3 py-2 font-semibold text-slate-600">Source</th>
+                <th className="text-right px-3 py-2 font-semibold text-slate-600 w-32">Amount</th>
+                <th className="text-left px-3 py-2 font-semibold text-slate-600 w-28">Type</th>
+                <th className="text-left px-3 py-2 font-semibold text-slate-600 w-28">Status</th>
+                <th className="px-3 py-2 w-10"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {fundingSources.map((src, idx) => (
+                <tr key={idx} className="border-b border-slate-100">
+                  <td className="px-3 py-2">
+                    <input
+                      type="text"
+                      value={src.source}
+                      onChange={(e) => updateSource(idx, 'source', e.target.value)}
+                      placeholder="Funding source name..."
+                      className="w-full border border-slate-200 rounded px-2 py-1 text-sm"
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <input
+                      type="number"
+                      step={1000}
+                      value={src.amount}
+                      onChange={(e) => updateSource(idx, 'amount', Number(e.target.value))}
+                      className="w-full text-right border border-slate-200 rounded px-2 py-1 text-sm"
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <select
+                      value={src.type}
+                      onChange={(e) => updateSource(idx, 'type', e.target.value)}
+                      className="w-full border border-slate-200 rounded px-2 py-1 text-sm"
+                    >
+                      {FUNDING_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-3 py-2">
+                    <select
+                      value={src.status}
+                      onChange={(e) => updateSource(idx, 'status', e.target.value)}
+                      className="w-full border border-slate-200 rounded px-2 py-1 text-sm"
+                    >
+                      {FUNDING_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-3 py-2 text-center">
+                    <button
+                      onClick={() => removeSource(idx)}
+                      className="text-slate-400 hover:text-red-500 text-lg leading-none"
+                      title="Remove"
+                    >
+                      &times;
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="bg-slate-50 border-t border-slate-200">
+                <td className="px-3 py-2 font-bold text-slate-800">Total</td>
+                <td className="px-3 py-2 text-right font-bold text-slate-800">{fmt(totalFunding)}</td>
+                <td colSpan={3}></td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
+
+        {/* Funding summary badges */}
+        <div className="flex flex-wrap gap-3 mt-4">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 text-xs">
+            <span className="text-emerald-600 font-semibold">Secured:</span>
+            <span className="text-emerald-700 font-bold ml-1">{fmt(securedFunding)}</span>
+          </div>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 text-xs">
+            <span className="text-amber-600 font-semibold">Pending:</span>
+            <span className="text-amber-700 font-bold ml-1">{fmt(totalFunding - securedFunding)}</span>
+          </div>
+        </div>
+
+        {securedFunding < totalFunding * 0.5 && (
+          <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-700">
+            <strong>Warning:</strong> Less than 50% of startup funding is secured (received or pledged).
+            Authorizers typically want to see committed funding before approving a charter.
+          </div>
+        )}
       </div>
 
       {/* Main multi-year table */}
@@ -78,7 +210,7 @@ export default function MultiYearPage() {
                 <th key={y} className="text-right px-5 py-3 font-semibold text-slate-600 min-w-[130px]">
                   Year {y}
                   <div className="text-[10px] font-normal text-slate-400">
-                    {years[y - 1]?.enrollment || 0} students
+                    {yearsWithStartup[y - 1]?.enrollment || 0} students
                   </div>
                 </th>
               ))}
@@ -87,27 +219,27 @@ export default function MultiYearPage() {
           <tbody>
             {/* Revenue Section */}
             <SectionHeader label="Revenue" cols={4} />
-            <Row label="State Apportionment" values={years.map((y) => y.revenue.apportionment)} />
-            <Row label="Levy Equity" values={years.map((y) => y.revenue.levyEquity)} />
-            <Row label="Title I" values={years.map((y) => y.revenue.titleI)} />
-            <Row label="IDEA" values={years.map((y) => y.revenue.idea)} />
-            <Row label="LAP" values={years.map((y) => y.revenue.lap)} />
-            <Row label="TBIP" values={years.map((y) => y.revenue.tbip)} />
-            <Row label="HiCap" values={years.map((y) => y.revenue.hicap)} />
-            <TotalRow label="Total Revenue" values={years.map((y) => y.revenue.total)} />
+            <Row label="State Apportionment" values={yearsWithStartup.map((y) => y.revenue.apportionment)} />
+            <Row label="Levy Equity" values={yearsWithStartup.map((y) => y.revenue.levyEquity)} />
+            <Row label="Title I" values={yearsWithStartup.map((y) => y.revenue.titleI)} />
+            <Row label="IDEA" values={yearsWithStartup.map((y) => y.revenue.idea)} />
+            <Row label="LAP" values={yearsWithStartup.map((y) => y.revenue.lap)} />
+            <Row label="TBIP" values={yearsWithStartup.map((y) => y.revenue.tbip)} />
+            <Row label="HiCap" values={yearsWithStartup.map((y) => y.revenue.hicap)} />
+            <TotalRow label="Total Revenue" values={yearsWithStartup.map((y) => y.revenue.total)} />
 
             {/* Personnel Section */}
             <SectionHeader label="Personnel" cols={4} />
-            <Row label="Certificated Staff" values={years.map((y) => y.personnel.certificated)} />
-            <Row label="Classified Staff" values={years.map((y) => y.personnel.classified)} />
-            <Row label="Admin Staff" values={years.map((y) => y.personnel.admin)} />
-            <Row label={`Benefits (${assumptions.benefits_load_pct}%)`} values={years.map((y) => y.personnel.benefits)} />
-            <TotalRow label="Total Personnel" values={years.map((y) => y.personnel.total)} />
+            <Row label="Certificated Staff" values={yearsWithStartup.map((y) => y.personnel.certificated)} />
+            <Row label="Classified Staff" values={yearsWithStartup.map((y) => y.personnel.classified)} />
+            <Row label="Admin Staff" values={yearsWithStartup.map((y) => y.personnel.admin)} />
+            <Row label={`Benefits (${assumptions.benefits_load_pct}%)`} values={yearsWithStartup.map((y) => y.personnel.benefits)} />
+            <TotalRow label="Total Personnel" values={yearsWithStartup.map((y) => y.personnel.total)} />
 
             {/* Staffing summary */}
             <tr className="border-b border-slate-100 bg-slate-50/50">
               <td className="px-5 py-2 text-xs text-slate-500 italic">Staff Count</td>
-              {years.map((y) => (
+              {yearsWithStartup.map((y) => (
                 <td key={y.year} className="px-5 py-2 text-right text-xs text-slate-500 italic">
                   {y.staffing.totalPositions} ({y.staffing.teachers}T, {y.staffing.paras}P, {y.staffing.officeStaff}O)
                 </td>
@@ -116,22 +248,22 @@ export default function MultiYearPage() {
 
             {/* Operations Section */}
             <SectionHeader label="Operations" cols={4} />
-            <Row label="Facilities" values={years.map((y) => y.operations.facilities)} />
-            <Row label="Supplies & Materials" values={years.map((y) => y.operations.supplies)} />
-            <Row label="Contracted Services" values={years.map((y) => y.operations.contracted)} />
-            <Row label="Technology" values={years.map((y) => y.operations.technology)} />
-            <Row label="Authorizer Fee" values={years.map((y) => y.operations.authorizerFee)} />
-            <Row label="Insurance" values={years.map((y) => y.operations.insurance)} />
-            <Row label="Misc/Contingency" values={years.map((y) => y.operations.contingency)} />
-            <TotalRow label="Total Operations" values={years.map((y) => y.operations.total)} />
+            <Row label="Facilities" values={yearsWithStartup.map((y) => y.operations.facilities)} />
+            <Row label="Supplies & Materials" values={yearsWithStartup.map((y) => y.operations.supplies)} />
+            <Row label="Contracted Services" values={yearsWithStartup.map((y) => y.operations.contracted)} />
+            <Row label="Technology" values={yearsWithStartup.map((y) => y.operations.technology)} />
+            <Row label="Authorizer Fee" values={yearsWithStartup.map((y) => y.operations.authorizerFee)} />
+            <Row label="Insurance" values={yearsWithStartup.map((y) => y.operations.insurance)} />
+            <Row label="Misc/Contingency" values={yearsWithStartup.map((y) => y.operations.contingency)} />
+            <TotalRow label="Total Operations" values={yearsWithStartup.map((y) => y.operations.total)} />
 
             {/* Summary Section */}
             <SectionHeader label="Summary" cols={4} />
-            <TotalRow label="Total Revenue" values={years.map((y) => y.revenue.total)} />
-            <TotalRow label="Total Expenses" values={years.map((y) => y.totalExpenses)} />
+            <TotalRow label="Total Revenue" values={yearsWithStartup.map((y) => y.revenue.total)} />
+            <TotalRow label="Total Expenses" values={yearsWithStartup.map((y) => y.totalExpenses)} />
             <tr className="border-b border-slate-200">
               <td className="px-5 py-3 font-bold text-slate-800">Net Position</td>
-              {years.map((y) => (
+              {yearsWithStartup.map((y) => (
                 <td key={y.year} className={`px-5 py-3 text-right font-bold ${y.net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                   {fmt(y.net)}
                 </td>
@@ -139,7 +271,7 @@ export default function MultiYearPage() {
             </tr>
             <tr className="border-b border-slate-200">
               <td className="px-5 py-3 font-medium text-slate-700">Cumulative Net</td>
-              {years.map((y) => (
+              {yearsWithStartup.map((y) => (
                 <td key={y.year} className={`px-5 py-3 text-right font-medium ${y.cumulativeNet >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                   {fmt(y.cumulativeNet)}
                 </td>
@@ -147,7 +279,7 @@ export default function MultiYearPage() {
             </tr>
             <tr>
               <td className="px-5 py-3 font-bold text-slate-800">Reserve Days</td>
-              {years.map((y) => (
+              {yearsWithStartup.map((y) => (
                 <td key={y.year} className={`px-5 py-3 text-right font-bold ${
                   y.reserveDays >= 60 ? 'text-emerald-600' :
                   y.reserveDays >= 30 ? 'text-amber-600' :
