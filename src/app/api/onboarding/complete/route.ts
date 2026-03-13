@@ -171,21 +171,21 @@ export async function POST(request: Request) {
 
   // --- Insert budget projections (fixes G1: uses service role) ---
   const projections = [
-    { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'State Apportionment', amount: apportionment, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'Levy Equity', amount: levyEquity, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'Title I', amount: grants.titleI, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'IDEA', amount: grants.idea, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'LAP', amount: grants.lap, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'TBIP', amount: grants.tbip, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', line_item: 'HiCap', amount: grants.hicap, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Facilities', amount: facilityCost, is_revenue: false },
-    { school_id: schoolId, year: 1, category: 'Personnel', line_item: 'Total Personnel', amount: totalPersonnel, is_revenue: false },
-    { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Supplies & Materials', amount: supplies, is_revenue: false },
-    { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Contracted Services', amount: contracted, is_revenue: false },
-    { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Technology', amount: technology, is_revenue: false },
-    { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Authorizer Fee', amount: authorizerFee, is_revenue: false },
-    { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Insurance', amount: insurance, is_revenue: false },
-    { school_id: schoolId, year: 1, category: 'Operations', line_item: 'Misc/Contingency', amount: misc, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'State Apportionment', amount: apportionment, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Levy Equity', amount: levyEquity, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Title I', amount: grants.titleI, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'IDEA', amount: grants.idea, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'LAP', amount: grants.lap, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'TBIP', amount: grants.tbip, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'HiCap', amount: grants.hicap, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Facilities', amount: facilityCost, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Personnel', subcategory: 'Total Personnel', amount: totalPersonnel, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Supplies & Materials', amount: supplies, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Contracted Services', amount: contracted, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Technology', amount: technology, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Authorizer Fee', amount: authorizerFee, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Insurance', amount: insurance, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Misc/Contingency', amount: misc, is_revenue: false },
   ]
 
   console.log('[onboarding/complete] inserting budget_projections, count:', projections.length)

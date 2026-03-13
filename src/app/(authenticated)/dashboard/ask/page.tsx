@@ -42,8 +42,8 @@ export default function AskPage() {
       totalExpenses,
       netPosition: totalRevenue - totalExpenses,
       positionCount: positions.length,
-      revenueLines: projections.filter((p) => p.is_revenue).map((p) => ({ item: p.line_item, amount: p.amount })),
-      expenseLines: projections.filter((p) => !p.is_revenue).map((p) => ({ item: p.line_item, amount: p.amount })),
+      revenueLines: projections.filter((p) => p.is_revenue).map((p) => ({ item: p.subcategory, amount: p.amount })),
+      expenseLines: projections.filter((p) => !p.is_revenue).map((p) => ({ item: p.subcategory, amount: p.amount })),
     }
 
     try {

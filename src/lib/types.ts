@@ -30,13 +30,13 @@ export interface StaffingPosition {
 export interface BudgetProjection {
   id?: string
   school_id: string
-  scenario_id?: string
   year: number
   category: string
-  line_item: string
+  subcategory: string
   amount: number
   is_revenue: boolean
   notes?: string
+  updated_at?: string
 }
 
 export type GrowthPreset = 'conservative' | 'moderate' | 'aggressive' | 'manual'

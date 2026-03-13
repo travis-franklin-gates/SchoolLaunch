@@ -17,7 +17,7 @@ export default function CashFlowPage() {
   )
 
   const apportionmentTotal = projections.find(
-    (p) => p.is_revenue && p.line_item === 'State Apportionment'
+    (p) => p.is_revenue && p.subcategory === 'State Apportionment'
   )?.amount || 0
 
   const cashFlow = useMemo(

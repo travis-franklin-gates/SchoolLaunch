@@ -83,7 +83,7 @@ export default function StaffingPage() {
       .update({ amount: totalPersonnel })
       .eq('school_id', schoolId)
       .eq('year', 1)
-      .eq('line_item', 'Total Personnel')
+      .eq('subcategory', 'Total Personnel')
 
     setSaving(false)
   }

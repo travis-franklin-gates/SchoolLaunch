@@ -48,7 +48,7 @@ export default function DashboardPage() {
   )
 
   // Base scenario inputs from profile
-  const baseFacilities = projections.find((p) => p.line_item === 'Facilities' && !p.is_revenue)?.amount || 0
+  const baseFacilities = projections.find((p) => p.subcategory === 'Facilities' && !p.is_revenue)?.amount || 0
   const baseMonthlyLease = Math.round(baseFacilities / 12)
   const baseCertSalary = positions.find((p) => p.category === 'certificated')?.annual_salary || 58000
 

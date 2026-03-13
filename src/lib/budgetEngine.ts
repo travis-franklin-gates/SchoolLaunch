@@ -105,14 +105,14 @@ export function computeScenario(
   const baseOps = baseProjections.filter((p) => !p.is_revenue && p.category === 'Operations')
   let totalOperations = 0
   for (const op of baseOps) {
-    if (op.line_item === 'Facilities') {
+    if (op.subcategory === 'Facilities') {
       totalOperations += monthlyLease * 12
-    } else if (['Supplies & Materials', 'Contracted Services', 'Technology'].includes(op.line_item)) {
+    } else if (['Supplies & Materials', 'Contracted Services', 'Technology'].includes(op.subcategory)) {
       // These are per-pupil — find the base enrollment to get rate
       const baseEnrollment = profile.target_enrollment_y1
       const perPupilRate = baseEnrollment > 0 ? op.amount / baseEnrollment : 0
       totalOperations += Math.round(perPupilRate * enrollment)
-    } else if (op.line_item === 'Authorizer Fee') {
+    } else if (op.subcategory === 'Authorizer Fee') {
       totalOperations += calcAuthorizerFee(enrollment)
     } else {
       totalOperations += op.amount

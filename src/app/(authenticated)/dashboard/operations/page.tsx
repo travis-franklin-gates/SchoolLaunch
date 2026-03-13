@@ -28,9 +28,9 @@ export default function OperationsPage() {
     if (opsProjections.length > 0) {
       setRows(
         opsProjections.map((p) => ({
-          lineItem: p.line_item,
+          lineItem: p.subcategory,
           amount: p.amount,
-          perPupilBenchmark: getPerPupilBenchmark(p.line_item, enrollment),
+          perPupilBenchmark: getPerPupilBenchmark(p.subcategory, enrollment),
         }))
       )
     }
@@ -63,7 +63,7 @@ export default function OperationsPage() {
         .update({ amount: row.amount })
         .eq('school_id', schoolId)
         .eq('year', 1)
-        .eq('line_item', row.lineItem)
+        .eq('subcategory', row.lineItem)
         .eq('is_revenue', false)
     }
     setSaving(false)
