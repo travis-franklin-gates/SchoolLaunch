@@ -49,8 +49,18 @@ export const defaultOperationsData: OperationsData = {
   miscPct: 2,
 }
 
+const ALL_YEARS = [0, 1, 2, 3, 4]
+const YEAR_LABELS: Record<number, string> = { 0: 'Year 0', 1: 'Year 1', 2: 'Year 2', 3: 'Year 3', 4: 'Year 4' }
+
 const DEFAULT_STARTUP_SOURCES: StartupFundingSource[] = [
-  { source: 'Federal CSP Grant', amount: 0, type: 'grant', status: 'projected', yearAllocations: { year0: 0, year1: 0, year2: 0 } },
+  {
+    source: 'Federal CSP Grant',
+    amount: 0,
+    type: 'grant',
+    status: 'projected',
+    selectedYears: [0, 1, 2, 3, 4],
+    yearAllocations: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 },
+  },
 ]
 
 let fundingKeyCounter = 0
@@ -58,16 +68,49 @@ function nextFundingKey() {
   return `fund-${++fundingKeyCounter}`
 }
 
-interface FundingRow extends StartupFundingSource {
+interface FundingRow {
   key: string
+  source: string
+  amount: number
+  type: 'grant' | 'donation' | 'debt' | 'other'
+  status: 'received' | 'pledged' | 'applied' | 'projected' | 'n/a'
   expanded: boolean
-  yearAllocations: { year0: number; year1: number; year2: number }
+  selectedYears: number[]
+  yearAllocations: Record<number, number>
 }
 
-function ensureAllocations(f: StartupFundingSource): { year0: number; year1: number; year2: number } {
-  if (f.yearAllocations) return { ...f.yearAllocations }
-  // Legacy: treat entire amount as year0
-  return { year0: f.amount, year1: 0, year2: 0 }
+function migrateToRow(f: StartupFundingSource): Omit<FundingRow, 'key' | 'expanded'> {
+  // Handle new format
+  if (f.selectedYears && f.yearAllocations) {
+    return {
+      source: f.source,
+      amount: f.amount,
+      type: f.type,
+      status: f.status,
+      selectedYears: [...f.selectedYears],
+      yearAllocations: { ...f.yearAllocations },
+    }
+  }
+  // Legacy: old {year0, year1, year2} format
+  const legacy = f.yearAllocations as unknown as { year0?: number; year1?: number; year2?: number } | undefined
+  if (legacy && ('year0' in legacy || 'year1' in legacy || 'year2' in legacy)) {
+    const allocs: Record<number, number> = {}
+    const selected: number[] = []
+    if (legacy.year0 != null) { allocs[0] = legacy.year0; selected.push(0) }
+    if (legacy.year1 != null) { allocs[1] = legacy.year1; selected.push(1) }
+    if (legacy.year2 != null) { allocs[2] = legacy.year2; selected.push(2) }
+    if (selected.length === 0) selected.push(0)
+    return { source: f.source, amount: f.amount, type: f.type, status: f.status, selectedYears: selected, yearAllocations: allocs }
+  }
+  // No allocations at all: default to year 0
+  return {
+    source: f.source,
+    amount: f.amount,
+    type: f.type,
+    status: f.status,
+    selectedYears: [0],
+    yearAllocations: { 0: f.amount },
+  }
 }
 
 export default function StepOperations({
@@ -91,10 +134,9 @@ export default function StepOperations({
 
   const [funding, setFunding] = useState<FundingRow[]>(
     (startupFunding.length > 0 ? startupFunding : DEFAULT_STARTUP_SOURCES).map((f) => ({
-      ...f,
+      ...migrateToRow(f),
       key: nextFundingKey(),
       expanded: false,
-      yearAllocations: ensureAllocations(f),
     }))
   )
 
@@ -121,16 +163,18 @@ export default function StepOperations({
   const netPosition = totalRevenue - totalExpenses
   const facilityPct = totalRevenue > 0 ? ((costs.facility / totalRevenue) * 100).toFixed(1) : '0'
 
-  // Funding summaries
+  // Dynamic funding summary — only include years that have allocations
   const fundingSummary = useMemo(() => {
-    let total = 0, y0 = 0, y1 = 0, y2 = 0
+    let total = 0
+    const byYear: Record<number, number> = {}
     for (const f of funding) {
       total += f.amount
-      y0 += f.yearAllocations.year0
-      y1 += f.yearAllocations.year1
-      y2 += f.yearAllocations.year2
+      for (const yr of f.selectedYears) {
+        byYear[yr] = (byYear[yr] || 0) + (f.yearAllocations[yr] || 0)
+      }
     }
-    return { total, y0, y1, y2 }
+    const activeYears = ALL_YEARS.filter((yr) => byYear[yr] != null && byYear[yr] !== undefined)
+    return { total, byYear, activeYears }
   }, [funding])
 
   function updateFundingField(key: string, field: string, value: string | number) {
@@ -139,11 +183,30 @@ export default function StepOperations({
     )
   }
 
-  function updateAllocation(key: string, yearField: 'year0' | 'year1' | 'year2', value: number) {
+  function toggleYear(key: string, year: number) {
     setFunding((prev) =>
       prev.map((f) => {
         if (f.key !== key) return f
-        return { ...f, yearAllocations: { ...f.yearAllocations, [yearField]: value } }
+        const has = f.selectedYears.includes(year)
+        const selectedYears = has
+          ? f.selectedYears.filter((y) => y !== year)
+          : [...f.selectedYears, year].sort((a, b) => a - b)
+        const yearAllocations = { ...f.yearAllocations }
+        if (has) {
+          delete yearAllocations[year]
+        } else if (yearAllocations[year] == null) {
+          yearAllocations[year] = 0
+        }
+        return { ...f, selectedYears, yearAllocations }
+      })
+    )
+  }
+
+  function updateAllocation(key: string, year: number, value: number) {
+    setFunding((prev) =>
+      prev.map((f) => {
+        if (f.key !== key) return f
+        return { ...f, yearAllocations: { ...f.yearAllocations, [year]: value } }
       })
     )
   }
@@ -168,7 +231,8 @@ export default function StepOperations({
         type: 'grant',
         status: 'projected',
         expanded: true,
-        yearAllocations: { year0: 0, year1: 0, year2: 0 },
+        selectedYears: [0],
+        yearAllocations: { 0: 0 },
       },
     ])
   }
@@ -189,11 +253,12 @@ export default function StepOperations({
     }
     const cleanFunding: StartupFundingSource[] = funding
       .filter((f) => f.source.trim() || f.amount > 0)
-      .map(({ source, amount, type, status, yearAllocations }) => ({
+      .map(({ source, amount, type, status, selectedYears, yearAllocations }) => ({
         source,
         amount,
         type,
         status,
+        selectedYears,
         yearAllocations,
       }))
     onComplete(fullData, cleanFunding)
@@ -288,11 +353,11 @@ export default function StepOperations({
       {/* Startup Funding */}
       <div className="bg-white border border-slate-200 rounded-xl p-5">
         <h3 className="text-sm font-semibold text-slate-800 mb-1">Startup Funding</h3>
-        <p className="text-xs text-slate-400 mb-4">Grants, donations, and loans that fund pre-opening and early operations. Allocate each source across years.</p>
+        <p className="text-xs text-slate-400 mb-4">Grants, donations, and loans that fund pre-opening and early operations. Select which years each source covers, then allocate.</p>
 
         <div className="space-y-3">
           {funding.map((f) => {
-            const allocated = f.yearAllocations.year0 + f.yearAllocations.year1 + f.yearAllocations.year2
+            const allocated = f.selectedYears.reduce((s, yr) => s + (f.yearAllocations[yr] || 0), 0)
             const remaining = f.amount - allocated
             const overAllocated = remaining < 0
 
@@ -355,62 +420,77 @@ export default function StepOperations({
                   </button>
                 </div>
 
-                {/* Year allocation panel */}
+                {/* Expanded: year selection + allocation */}
                 {f.expanded && (
                   <div className="px-3 pb-3 pt-0">
-                    <div className="bg-slate-50 rounded-lg p-3">
-                      <p className="text-xs font-medium text-slate-600 mb-2">Year Allocation</p>
-                      <div className="grid grid-cols-4 gap-3">
-                        <div>
-                          <label className="block text-[11px] text-slate-500 mb-1">Year 0 (Pre-Opening)</label>
-                          <div className="flex items-center gap-1">
-                            <span className="text-slate-400 text-xs">$</span>
-                            <input
-                              type="number"
-                              value={f.yearAllocations.year0}
-                              onChange={(e) => updateAllocation(f.key, 'year0', Number(e.target.value))}
-                              step={1000}
-                              className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm text-right text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-[11px] text-slate-500 mb-1">Year 1</label>
-                          <div className="flex items-center gap-1">
-                            <span className="text-slate-400 text-xs">$</span>
-                            <input
-                              type="number"
-                              value={f.yearAllocations.year1}
-                              onChange={(e) => updateAllocation(f.key, 'year1', Number(e.target.value))}
-                              step={1000}
-                              className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm text-right text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-[11px] text-slate-500 mb-1">Year 2</label>
-                          <div className="flex items-center gap-1">
-                            <span className="text-slate-400 text-xs">$</span>
-                            <input
-                              type="number"
-                              value={f.yearAllocations.year2}
-                              onChange={(e) => updateAllocation(f.key, 'year2', Number(e.target.value))}
-                              step={1000}
-                              className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm text-right text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-[11px] text-slate-500 mb-1">Unallocated</label>
-                          <div className={`px-2 py-1.5 rounded text-sm text-right font-medium ${
-                            overAllocated ? 'bg-red-50 text-red-600' : remaining > 0 ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'
-                          }`}>
-                            {fmt(remaining)}
-                          </div>
+                    <div className="bg-slate-50 rounded-lg p-3 space-y-3">
+                      {/* Year selector chips */}
+                      <div>
+                        <p className="text-xs font-medium text-slate-600 mb-1.5">Applicable Years</p>
+                        <div className="flex gap-1.5">
+                          {ALL_YEARS.map((yr) => {
+                            const active = f.selectedYears.includes(yr)
+                            return (
+                              <button
+                                key={yr}
+                                type="button"
+                                onClick={() => toggleYear(f.key, yr)}
+                                className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all ${
+                                  active
+                                    ? 'border-teal-600 bg-teal-50 text-teal-700'
+                                    : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-500'
+                                }`}
+                              >
+                                {yr === 0 ? 'Yr 0' : `Yr ${yr}`}
+                              </button>
+                            )
+                          })}
                         </div>
                       </div>
-                      {overAllocated && (
-                        <p className="text-xs text-red-600 mt-2">Year allocations exceed the total award amount by {fmt(Math.abs(remaining))}.</p>
+
+                      {/* Allocation inputs for selected years */}
+                      {f.selectedYears.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-slate-600 mb-1.5">Allocation</p>
+                          <div className="flex flex-wrap gap-3">
+                            {f.selectedYears.map((yr) => (
+                              <div key={yr} className="flex-1 min-w-[100px]">
+                                <label className="block text-[11px] text-slate-500 mb-1">
+                                  {yr === 0 ? 'Year 0 (Pre-Open)' : `Year ${yr}`}
+                                </label>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-slate-400 text-xs">$</span>
+                                  <input
+                                    type="number"
+                                    value={f.yearAllocations[yr] || 0}
+                                    onChange={(e) => updateAllocation(f.key, yr, Number(e.target.value))}
+                                    step={1000}
+                                    className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm text-right text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Unallocated indicator */}
+                          {f.amount > 0 && (
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className="text-[11px] text-slate-500">Unallocated:</span>
+                              <span className={`text-xs font-medium ${
+                                overAllocated ? 'text-red-600' : remaining > 0 ? 'text-amber-600' : 'text-slate-500'
+                              }`}>
+                                {fmt(remaining)}
+                              </span>
+                              {overAllocated && (
+                                <span className="text-[11px] text-red-500">— exceeds total award</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {f.selectedYears.length === 0 && (
+                        <p className="text-xs text-slate-400 italic">Select at least one year to allocate funding.</p>
                       )}
                     </div>
                   </div>
@@ -428,26 +508,20 @@ export default function StepOperations({
           + Add Funding Source
         </button>
 
-        {/* Funding summary */}
-        {(fundingSummary.total > 0 || funding.length > 0) && (
+        {/* Dynamic funding summary */}
+        {funding.length > 0 && (
           <div className="mt-4 pt-3 border-t border-slate-100">
-            <div className="grid grid-cols-4 gap-3 text-center">
+            <div className={`grid gap-3 text-center`} style={{ gridTemplateColumns: `repeat(${1 + fundingSummary.activeYears.length}, minmax(0, 1fr))` }}>
               <div>
                 <p className="text-[11px] text-slate-500">Total Awards</p>
                 <p className="text-sm font-semibold text-slate-800">{fmt(fundingSummary.total)}</p>
               </div>
-              <div>
-                <p className="text-[11px] text-slate-500">Year 0</p>
-                <p className="text-sm font-semibold text-slate-800">{fmt(fundingSummary.y0)}</p>
-              </div>
-              <div>
-                <p className="text-[11px] text-slate-500">Year 1</p>
-                <p className="text-sm font-semibold text-slate-800">{fmt(fundingSummary.y1)}</p>
-              </div>
-              <div>
-                <p className="text-[11px] text-slate-500">Year 2</p>
-                <p className="text-sm font-semibold text-slate-800">{fmt(fundingSummary.y2)}</p>
-              </div>
+              {fundingSummary.activeYears.map((yr) => (
+                <div key={yr}>
+                  <p className="text-[11px] text-slate-500">{YEAR_LABELS[yr]}</p>
+                  <p className="text-sm font-semibold text-slate-800">{fmt(fundingSummary.byYear[yr] || 0)}</p>
+                </div>
+              ))}
             </div>
           </div>
         )}
