@@ -76,7 +76,14 @@ export default function StepOperations({
   onBack,
   saving,
 }: Props) {
-  const [data, setData] = useState<OperationsData>(initialData)
+  // Only expose facility mode, facility inputs, and food program to the user.
+  // All other fields keep their defaults silently.
+  const [facilityMode, setFacilityMode] = useState(initialData.facilityMode)
+  const [facilitySqft, setFacilitySqft] = useState(initialData.facilitySqft)
+  const [facilityCostPerSqft, setFacilityCostPerSqft] = useState(initialData.facilityCostPerSqft)
+  const [facilityMonthly, setFacilityMonthly] = useState(initialData.facilityMonthly)
+  const [foodProgram, setFoodProgram] = useState(initialData.foodProgram)
+
   const [funding, setFunding] = useState<FundingRow[]>(
     (startupFunding.length > 0 ? startupFunding : DEFAULT_STARTUP_SOURCES).map((f) => ({
       ...f,
@@ -90,26 +97,23 @@ export default function StepOperations({
   const totalRevenue = rev.total
 
   const costs = useMemo(() => {
-    const facility = data.facilityMode === 'sqft'
-      ? data.facilitySqft * data.facilityCostPerSqft
-      : data.facilityMonthly * 12
-    const supplies = data.suppliesPerPupil * enrollment
-    const contracted = data.contractedPerPupil * enrollment
-    const technology = data.technologyPerPupil * enrollment
-    const subtotal = facility + supplies + contracted + technology + authorizerFee + data.insurance + totalPersonnelCost
-    const misc = Math.round(subtotal * (data.miscPct / 100))
-    return { facility, supplies, contracted, technology, authorizerFee, insurance: data.insurance, misc }
-  }, [data, enrollment, authorizerFee, totalPersonnelCost])
+    const facility = facilityMode === 'sqft'
+      ? facilitySqft * facilityCostPerSqft
+      : facilityMonthly * 12
+    const supplies = defaultOperationsData.suppliesPerPupil * enrollment
+    const contracted = defaultOperationsData.contractedPerPupil * enrollment
+    const technology = defaultOperationsData.technologyPerPupil * enrollment
+    const insurance = defaultOperationsData.insurance
+    const subtotal = facility + supplies + contracted + technology + authorizerFee + insurance + totalPersonnelCost
+    const misc = Math.round(subtotal * (defaultOperationsData.miscPct / 100))
+    return { facility, supplies, contracted, technology, authorizerFee, insurance, misc }
+  }, [facilityMode, facilitySqft, facilityCostPerSqft, facilityMonthly, enrollment, authorizerFee, totalPersonnelCost])
 
   const totalOps = costs.facility + costs.supplies + costs.contracted + costs.technology + costs.authorizerFee + costs.insurance + costs.misc
   const totalExpenses = totalPersonnelCost + totalOps
   const netPosition = totalRevenue - totalExpenses
   const totalStartup = funding.reduce((s, f) => s + f.amount, 0)
   const facilityPct = totalRevenue > 0 ? ((costs.facility / totalRevenue) * 100).toFixed(1) : '0'
-
-  function update<K extends keyof OperationsData>(key: K, value: OperationsData[K]) {
-    setData((prev) => ({ ...prev, [key]: value }))
-  }
 
   function updateFunding(key: string, field: keyof StartupFundingSource, value: string | number) {
     setFunding((prev) =>
@@ -130,16 +134,29 @@ export default function StepOperations({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    // Build full OperationsData including silent defaults
+    const fullData: OperationsData = {
+      facilityMode,
+      facilitySqft,
+      facilityCostPerSqft,
+      facilityMonthly,
+      suppliesPerPupil: defaultOperationsData.suppliesPerPupil,
+      contractedPerPupil: defaultOperationsData.contractedPerPupil,
+      technologyPerPupil: defaultOperationsData.technologyPerPupil,
+      foodProgram,
+      insurance: defaultOperationsData.insurance,
+      miscPct: defaultOperationsData.miscPct,
+    }
     const cleanFunding: StartupFundingSource[] = funding
       .filter((f) => f.source.trim() || f.amount > 0)
       .map(({ source, amount, type, status }) => ({ source, amount, type, status }))
-    onComplete(data, cleanFunding)
+    onComplete(fullData, cleanFunding)
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
       <p className="text-sm text-slate-500">
-        Operations costs and startup funding complete your financial picture. We&apos;ll calculate everything else automatically.
+        Set your facility lease and startup funding. We&apos;ll fill in standard operations costs automatically.
       </p>
 
       {/* Facilities */}
@@ -149,29 +166,29 @@ export default function StepOperations({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => update('facilityMode', 'sqft')}
-              className={`text-xs px-3 py-1 rounded-lg ${data.facilityMode === 'sqft' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+              onClick={() => setFacilityMode('sqft')}
+              className={`text-xs px-3 py-1 rounded-lg ${facilityMode === 'sqft' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600'}`}
             >
               Sq Footage
             </button>
             <button
               type="button"
-              onClick={() => update('facilityMode', 'flat')}
-              className={`text-xs px-3 py-1 rounded-lg ${data.facilityMode === 'flat' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+              onClick={() => setFacilityMode('flat')}
+              className={`text-xs px-3 py-1 rounded-lg ${facilityMode === 'flat' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600'}`}
             >
               Flat Monthly
             </button>
           </div>
         </div>
 
-        {data.facilityMode === 'sqft' ? (
+        {facilityMode === 'sqft' ? (
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs text-slate-500 mb-1">Square Footage</label>
               <input
                 type="number"
-                value={data.facilitySqft}
-                onChange={(e) => update('facilitySqft', Number(e.target.value))}
+                value={facilitySqft}
+                onChange={(e) => setFacilitySqft(Number(e.target.value))}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
               />
             </div>
@@ -179,8 +196,8 @@ export default function StepOperations({
               <label className="block text-xs text-slate-500 mb-1">$/sqft/yr</label>
               <input
                 type="number"
-                value={data.facilityCostPerSqft}
-                onChange={(e) => update('facilityCostPerSqft', Number(e.target.value))}
+                value={facilityCostPerSqft}
+                onChange={(e) => setFacilityCostPerSqft(Number(e.target.value))}
                 step={0.5}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
               />
@@ -191,8 +208,8 @@ export default function StepOperations({
             <label className="block text-xs text-slate-500 mb-1">Monthly Lease Amount</label>
             <input
               type="number"
-              value={data.facilityMonthly}
-              onChange={(e) => update('facilityMonthly', Number(e.target.value))}
+              value={facilityMonthly}
+              onChange={(e) => setFacilityMonthly(Number(e.target.value))}
               step={500}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
             />
@@ -207,84 +224,18 @@ export default function StepOperations({
         )}
       </div>
 
-      {/* Per-pupil items */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <PerPupilField
-          label="Supplies & Materials"
-          value={data.suppliesPerPupil}
-          onChange={(v) => update('suppliesPerPupil', v)}
-          benchmark={200}
-          enrollment={enrollment}
-        />
-        <PerPupilField
-          label="Contracted Services"
-          value={data.contractedPerPupil}
-          onChange={(v) => update('contractedPerPupil', v)}
-          benchmark={150}
-          enrollment={enrollment}
-          note="SpEd may be higher"
-        />
-        <PerPupilField
-          label="Technology"
-          value={data.technologyPerPupil}
-          onChange={(v) => update('technologyPerPupil', v)}
-          benchmark={180}
-          enrollment={enrollment}
-        />
-      </div>
-
       {/* Food program */}
       <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl p-4">
         <input
           type="checkbox"
           id="foodProgram"
-          checked={data.foodProgram}
-          onChange={(e) => update('foodProgram', e.target.checked)}
+          checked={foodProgram}
+          onChange={(e) => setFoodProgram(e.target.checked)}
           className="w-4 h-4 accent-teal-600"
         />
         <div>
           <label htmlFor="foodProgram" className="text-sm font-medium text-slate-700">Food Program</label>
           <p className="text-xs text-slate-400">If enabled, assumes net neutral (federal reimbursement offsets cost)</p>
-        </div>
-      </div>
-
-      {/* Authorizer fee */}
-      <div className="bg-slate-50 rounded-xl p-4">
-        <div className="flex justify-between items-center">
-          <div>
-            <p className="text-sm font-medium text-slate-700">Authorizer Fee (3%)</p>
-            <p className="text-xs text-slate-400">3% of state apportionment ({fmt(stateApport)})</p>
-          </div>
-          <p className="text-sm font-semibold text-slate-800">{fmt(costs.authorizerFee)}</p>
-        </div>
-      </div>
-
-      {/* Insurance & Misc */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Insurance (Annual)</label>
-          <input
-            type="number"
-            value={data.insurance}
-            onChange={(e) => update('insurance', Number(e.target.value))}
-            step={1000}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Misc/Contingency (%)</label>
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              value={data.miscPct}
-              onChange={(e) => update('miscPct', Number(e.target.value))}
-              min={0}
-              max={10}
-              step={0.5}
-              className="w-24 px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
-            />
-            <span className="text-sm text-slate-500">= {fmt(costs.misc)}</span>
-          </div>
         </div>
       </div>
 
@@ -358,6 +309,11 @@ export default function StepOperations({
         )}
       </div>
 
+      {/* Defaults note */}
+      <p className="text-xs text-slate-400 italic">
+        Operations costs like supplies, technology, insurance, and contingency use regional benchmarks. You can customize these on your dashboard.
+      </p>
+
       {/* Live Financial Summary */}
       <div className="bg-slate-800 rounded-xl p-5 text-white">
         <h3 className="text-sm font-semibold mb-4 uppercase tracking-wide text-slate-300">Year 1 Financial Summary</h3>
@@ -423,42 +379,5 @@ export default function StepOperations({
         </button>
       </div>
     </form>
-  )
-}
-
-function PerPupilField({
-  label,
-  value,
-  onChange,
-  benchmark,
-  enrollment,
-  note,
-}: {
-  label: string
-  value: number
-  onChange: (v: number) => void
-  benchmark: number
-  enrollment: number
-  note?: string
-}) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4">
-      <label className="block text-sm font-medium text-slate-700 mb-1">{label}</label>
-      <div className="flex items-center gap-2">
-        <span className="text-slate-400 text-sm">$</span>
-        <input
-          type="number"
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          step={10}
-          className="w-full px-2 py-1.5 border border-slate-300 rounded text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
-        />
-        <span className="text-slate-400 text-sm whitespace-nowrap">/pupil</span>
-      </div>
-      <p className="text-xs text-slate-400 mt-1">
-        Benchmark: ${benchmark}/pupil | Total: {fmt(value * enrollment)}
-      </p>
-      {note && <p className="text-xs text-slate-400 italic">{note}</p>}
-    </div>
   )
 }
