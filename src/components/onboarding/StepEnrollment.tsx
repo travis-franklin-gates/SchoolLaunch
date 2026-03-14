@@ -70,8 +70,7 @@ export default function StepEnrollment({
   onNext, onBack,
 }: Props) {
   const defaults = GRADE_ENROLLMENT_DEFAULTS[gradeConfig] || GRADE_ENROLLMENT_DEFAULTS['K-5']
-  const hasInitialExpansion = initialExpansionPlan && initialExpansionPlan.length > 0
-  const [mode, setMode] = useState<EnrollmentMode>(hasInitialExpansion ? 'grade_expansion' : 'simple')
+  const [mode, setMode] = useState<EnrollmentMode>('grade_expansion')
 
   // Simple mode state
   const [enrollmentY1, setEnrollmentY1] = useState(initialData.enrollmentY1 || defaults.enrollment)
@@ -98,6 +97,11 @@ export default function StepEnrollment({
     enrollments: { year: number; total: number; returning: number; newGrade: number; grades: string[]; newGrades: string[] }[]
   }) => {
     setExpansionResult(data)
+    // Sync Y1 enrollment from expansion plan so Simple tab stays in sync
+    const y1Total = data.enrollments.find(e => e.year === 1)?.total
+    if (y1Total != null && y1Total > 0) {
+      setEnrollmentY1(y1Total)
+    }
   }, [])
 
   const simpleEnrollments = useMemo(() => {
