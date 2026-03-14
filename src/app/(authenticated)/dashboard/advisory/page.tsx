@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { buildSchoolContextString } from '@/lib/buildSchoolContext'
 import { computeMultiYearDetailed, computeFPFScorecard } from '@/lib/budgetEngine'
+import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
 interface AgentResult {
@@ -66,12 +67,19 @@ function SkeletonCard() {
   )
 }
 
+interface AlignmentReview {
+  overall_alignment: string
+  summary: string
+  misalignments: { severity: string; title: string }[]
+}
+
 export default function AdvisoryPage() {
   const {
-    schoolData: { schoolName, profile, positions, projections, gradeExpansionPlan, loading },
+    schoolData: { schoolId, schoolName, profile, positions, projections, gradeExpansionPlan, loading },
     assumptions,
     conservativeMode,
   } = useScenario()
+  const supabase = createClient()
 
   const multiYear = useMemo(
     () => computeMultiYearDetailed(profile, positions, projections, assumptions, 0, gradeExpansionPlan),
@@ -87,13 +95,41 @@ export default function AdvisoryPage() {
   const [data, setData] = useState<AdvisoryData | null>(null)
   const [fetching, setFetching] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [alignmentReview, setAlignmentReview] = useState<AlignmentReview | null>(null)
+
+  // Fetch alignment review from Supabase
+  useEffect(() => {
+    if (!schoolId || loading) return
+    supabase
+      .from('alignment_reviews')
+      .select('overall_alignment, summary, misalignments')
+      .eq('school_id', schoolId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+      .then(({ data: review }) => {
+        if (review) setAlignmentReview(review as AlignmentReview)
+      })
+  }, [schoolId, loading, supabase])
 
   const fetchAdvisory = useCallback(async () => {
     if (!schoolName || loading) return
     setFetching(true)
     setError(null)
     try {
-      const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
+      let schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
+
+      // Append alignment review findings if available
+      if (alignmentReview) {
+        const criticalFindings = alignmentReview.misalignments
+          .filter((m) => m.severity === 'critical' || m.severity === 'important')
+          .map((m) => `- [${m.severity}] ${m.title}`)
+          .join('\n')
+        schoolContext += `\n\nAPPLICATION ALIGNMENT REVIEW (${alignmentReview.overall_alignment}):
+${alignmentReview.summary}
+${criticalFindings ? `Key misalignments:\n${criticalFindings}` : 'No critical misalignments found.'}`
+      }
+
       const res = await fetch('/api/advisory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -107,7 +143,7 @@ export default function AdvisoryPage() {
       setError('Failed to generate advisory analysis. Please try again.')
     }
     setFetching(false)
-  }, [schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard, loading])
+  }, [schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard, loading, alignmentReview])
 
   useEffect(() => {
     if (!data && !fetching && schoolName && !loading) {
@@ -119,9 +155,26 @@ export default function AdvisoryPage() {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
   }
 
-  const riskCount = data?.agents.filter((a) => a.status === 'risk').length || 0
-  const attentionCount = data?.agents.filter((a) => a.status === 'needs_attention').length || 0
-  const strongCount = data?.agents.filter((a) => a.status === 'strong').length || 0
+  // Build alignment agent card if review exists
+  const alignmentAgent: AgentResult | null = alignmentReview ? {
+    id: 'application_reviewer',
+    name: 'Application Reviewer',
+    icon: 'clipboard',
+    subtitle: 'Application narrative vs. financial model',
+    status: alignmentReview.overall_alignment === 'strong' ? 'strong'
+      : alignmentReview.overall_alignment === 'weak' ? 'risk'
+      : 'needs_attention',
+    summary: alignmentReview.summary,
+    actions: alignmentReview.misalignments
+      .filter((m) => m.severity === 'critical' || m.severity === 'important')
+      .slice(0, 3)
+      .map((m) => m.title),
+  } : null
+
+  const allAgents = data ? [...data.agents, ...(alignmentAgent ? [alignmentAgent] : [])] : []
+  const riskCount = allAgents.filter((a) => a.status === 'risk').length
+  const attentionCount = allAgents.filter((a) => a.status === 'needs_attention').length
+  const strongCount = allAgents.filter((a) => a.status === 'strong').length
 
   return (
     <div className="animate-fade-in">
@@ -194,7 +247,7 @@ export default function AdvisoryPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
         {fetching && !data
           ? Array.from({ length: 7 }).map((_, i) => <SkeletonCard key={i} />)
-          : data?.agents.map((agent, agentIdx) => {
+          : allAgents.map((agent, agentIdx) => {
               const cfg = STATUS_CONFIG[agent.status]
               return (
                 <div key={agent.id} className={`bg-white border-l-4 ${cfg.border} border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200 animate-fade-in-up stagger-${agentIdx + 1}`}>
