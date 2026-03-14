@@ -50,7 +50,6 @@ export const defaultOperationsData: OperationsData = {
 }
 
 const DEFAULT_STARTUP_SOURCES: StartupFundingSource[] = [
-  { source: 'WA Charter School Commission Grant', amount: 150000, type: 'grant', status: 'projected' },
   { source: 'Federal CSP Grant', amount: 0, type: 'grant', status: 'projected' },
 ]
 

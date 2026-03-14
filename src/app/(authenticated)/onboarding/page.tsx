@@ -443,13 +443,13 @@ export default function OnboardingPage() {
   return (
     <div>
       {/* Progress bar */}
-      <div className="mb-8">
-        <div className="flex items-center gap-1 mb-6">
+      <div className="mb-8 max-w-lg mx-auto">
+        <div className="flex items-start mb-6">
           {STEPS.map(({ label, icon }, i) => (
-            <div key={label} className="flex items-center flex-1">
-              <div className="flex flex-col items-center flex-1">
+            <div key={label} className="flex items-start flex-1 last:flex-initial">
+              <div className="flex flex-col items-center" style={{ width: 72 }}>
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
                     i < step
                       ? 'bg-teal-600 text-white'
                       : i === step
@@ -458,21 +458,21 @@ export default function OnboardingPage() {
                   }`}
                 >
                   {i < step ? (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   ) : (
-                    <svg className={`w-5 h-5 ${i === step ? 'text-teal-600' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <svg className={`w-4 h-4 ${i === step ? 'text-teal-600' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
                     </svg>
                   )}
                 </div>
-                <span className={`text-xs mt-1.5 font-medium ${
+                <span className={`text-[11px] mt-1.5 font-medium text-center leading-tight ${
                   i <= step ? 'text-teal-600' : 'text-slate-400'
                 }`} style={{ fontFamily: 'var(--font-heading-var)' }}>{label}</span>
               </div>
               {i < STEPS.length - 1 && (
-                <div className={`h-0.5 w-full -mt-5 mx-1 ${i < step ? 'bg-teal-600' : 'bg-slate-200'}`} />
+                <div className={`h-0.5 flex-1 mt-[18px] ${i < step ? 'bg-teal-600' : 'bg-slate-200'}`} />
               )}
             </div>
           ))}
