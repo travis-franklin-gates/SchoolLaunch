@@ -1,29 +1,17 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import { calcSections, calcEnrollmentGrowth, calcCommissionRevenue } from '@/lib/calculations'
+import { calcSections, calcCommissionRevenue } from '@/lib/calculations'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import type { GrowthPreset, GradeExpansionEntry, EnrollmentMode } from '@/lib/types'
 import { expansionToEnrollmentArray } from '@/lib/gradeExpansion'
 import GradeExpansionEditor from '@/components/GradeExpansionEditor'
 
-const GROWTH_RATES: Record<Exclude<GrowthPreset, 'manual'>, number> = {
-  conservative: 5,
-  moderate: 10,
-  aggressive: 15,
-}
-
-const GROWTH_CONTEXT: Record<Exclude<GrowthPreset, 'manual'>, string> = {
-  conservative: 'Safest for authorizer review. Recommended for first-time operators.',
-  moderate: 'Common assumption for established charter networks expanding to WA.',
-  aggressive: 'Requires strong waitlist evidence. Authorizers will scrutinize.',
-}
-
-const GRADE_ENROLLMENT_DEFAULTS: Record<string, { enrollment: number; classSize: number }> = {
-  'K-5': { enrollment: 120, classSize: 22 },
-  'K-8': { enrollment: 200, classSize: 24 },
-  '6-8': { enrollment: 150, classSize: 25 },
-  '9-12': { enrollment: 200, classSize: 28 },
+const GRADE_ENROLLMENT_DEFAULTS: Record<string, { classSize: number }> = {
+  'K-5': { classSize: 22 },
+  'K-8': { classSize: 24 },
+  '6-8': { classSize: 25 },
+  '9-12': { classSize: 28 },
 }
 
 function fmt(n: number) {
@@ -72,13 +60,7 @@ export default function StepEnrollment({
   const defaults = GRADE_ENROLLMENT_DEFAULTS[gradeConfig] || GRADE_ENROLLMENT_DEFAULTS['K-5']
   const [mode, setMode] = useState<EnrollmentMode>('grade_expansion')
 
-  // Simple mode state
-  const [enrollmentY1, setEnrollmentY1] = useState(initialData.enrollmentY1 || defaults.enrollment)
   const [maxClassSize, setMaxClassSize] = useState(initialData.maxClassSize || defaults.classSize)
-  const [growthPreset, setGrowthPreset] = useState<GrowthPreset>(initialData.growthPreset || 'moderate')
-  const [manualY2, setManualY2] = useState(initialData.enrollmentY2 || 0)
-  const [manualY3, setManualY3] = useState(initialData.enrollmentY3 || 0)
-  const [manualY4, setManualY4] = useState(initialData.enrollmentY4 || 0)
 
   // Grade expansion state
   const [expansionResult, setExpansionResult] = useState<{
@@ -97,29 +79,16 @@ export default function StepEnrollment({
     enrollments: { year: number; total: number; returning: number; newGrade: number; grades: string[]; newGrades: string[] }[]
   }) => {
     setExpansionResult(data)
-    // Sync Y1 enrollment from expansion plan so Simple tab stays in sync
-    const y1Total = data.enrollments.find(e => e.year === 1)?.total
-    if (y1Total != null && y1Total > 0) {
-      setEnrollmentY1(y1Total)
-    }
   }, [])
 
-  const simpleEnrollments = useMemo(() => {
-    if (growthPreset === 'manual') {
-      return { y2: manualY2 || enrollmentY1, y3: manualY3 || enrollmentY1, y4: manualY4 || enrollmentY1 }
-    }
-    const rate = GROWTH_RATES[growthPreset]
-    return {
-      y2: calcEnrollmentGrowth(enrollmentY1, rate, 2),
-      y3: calcEnrollmentGrowth(enrollmentY1, rate, 3),
-      y4: calcEnrollmentGrowth(enrollmentY1, rate, 4),
-    }
-  }, [enrollmentY1, growthPreset, manualY2, manualY3, manualY4])
+  // Derive enrollment numbers from expansion plan (source of truth)
+  const expansionEnrollments = useMemo(() => {
+    if (!expansionResult) return { y1: initialData.enrollmentY1, y2: initialData.enrollmentY2, y3: initialData.enrollmentY3, y4: initialData.enrollmentY4 }
+    const find = (yr: number) => expansionResult.enrollments.find(e => e.year === yr)?.total || 0
+    return { y1: find(1), y2: find(2), y3: find(3), y4: find(4) }
+  }, [expansionResult, initialData])
 
-  // Use expansion enrollments if in expansion mode
-  const effectiveY1 = mode === 'grade_expansion' && expansionResult
-    ? (expansionResult.enrollments.find(e => e.year === 1)?.total || enrollmentY1)
-    : enrollmentY1
+  const effectiveY1 = expansionEnrollments.y1
 
   const sectionsY1 = calcSections(effectiveY1, maxClassSize)
 
@@ -139,7 +108,7 @@ export default function StepEnrollment({
   function handleNext(e: React.FormEvent) {
     e.preventDefault()
 
-    if (mode === 'grade_expansion' && expansionResult) {
+    if (expansionResult) {
       const arr = expansionToEnrollmentArray(expansionResult.plan, expansionResult.retentionRate)
       onNext({
         enrollmentY1: arr[0],
@@ -147,8 +116,8 @@ export default function StepEnrollment({
         enrollmentY2: arr[1],
         enrollmentY3: arr[2],
         enrollmentY4: arr[3],
-        growthPreset,
-        enrollmentMode: 'grade_expansion',
+        growthPreset: 'moderate',
+        enrollmentMode: mode,
         openingGrades: expansionResult.openingGrades,
         buildoutGrades: expansionResult.buildoutGrades,
         retentionRate: expansionResult.retentionRate,
@@ -156,24 +125,14 @@ export default function StepEnrollment({
       })
     } else {
       onNext({
-        enrollmentY1,
+        enrollmentY1: expansionEnrollments.y1,
         maxClassSize,
-        enrollmentY2: simpleEnrollments.y2,
-        enrollmentY3: simpleEnrollments.y3,
-        enrollmentY4: simpleEnrollments.y4,
-        growthPreset,
-        enrollmentMode: 'simple',
+        enrollmentY2: expansionEnrollments.y2,
+        enrollmentY3: expansionEnrollments.y3,
+        enrollmentY4: expansionEnrollments.y4,
+        growthPreset: 'moderate',
+        enrollmentMode: mode,
       })
-    }
-  }
-
-  function selectPreset(preset: GrowthPreset) {
-    setGrowthPreset(preset)
-    if (preset === 'manual') {
-      const rate = GROWTH_RATES.moderate
-      setManualY2(calcEnrollmentGrowth(enrollmentY1, rate, 2))
-      setManualY3(calcEnrollmentGrowth(enrollmentY1, rate, 3))
-      setManualY4(calcEnrollmentGrowth(enrollmentY1, rate, 4))
     }
   }
 
@@ -205,7 +164,7 @@ export default function StepEnrollment({
               : 'text-slate-500 hover:text-slate-700'
           }`}
         >
-          Simple Enrollment Targets
+          Enrollment Summary
         </button>
       </div>
 
@@ -239,76 +198,42 @@ export default function StepEnrollment({
         </>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Target Enrollment Year 1</label>
-              <input
-                type="number"
-                value={enrollmentY1}
-                onChange={(e) => setEnrollmentY1(Number(e.target.value))}
-                min={1}
-                required
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
-              />
-              <p className="text-xs text-slate-400 mt-1">Default for {gradeConfig}: {defaults.enrollment}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Max Class Size</label>
-              <input
-                type="number"
-                value={maxClassSize}
-                onChange={(e) => setMaxClassSize(Number(e.target.value))}
-                min={10}
-                max={35}
-                required
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
-              />
-            </div>
+          <div className="text-xs text-slate-400 italic">
+            Enrollment targets are calculated from your Grade Expansion Plan. Switch to the Grade Expansion Plan tab to adjust which grades are added each year.
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-3">Year 2–4 Growth</label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
-              {(['conservative', 'moderate', 'aggressive', 'manual'] as GrowthPreset[]).map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => selectPreset(preset)}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all border-2 ${
-                    growthPreset === preset
-                      ? 'border-teal-600 bg-teal-50 text-teal-700'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                  }`}
-                >
-                  {preset === 'manual' ? 'Manual' : `${preset.charAt(0).toUpperCase() + preset.slice(1)} +${GROWTH_RATES[preset]}%`}
-                </button>
-              ))}
-            </div>
-            {growthPreset !== 'manual' && (
-              <p className="text-xs text-slate-500 mb-4 italic">{GROWTH_CONTEXT[growthPreset]}</p>
-            )}
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { label: 'Year 2', value: simpleEnrollments.y2, manual: manualY2, setManual: setManualY2 },
-                { label: 'Year 3', value: simpleEnrollments.y3, manual: manualY3, setManual: setManualY3 },
-                { label: 'Year 4', value: simpleEnrollments.y4, manual: manualY4, setManual: setManualY4 },
-              ].map(({ label, value, manual, setManual }) => (
-                <div key={label}>
-                  <label className="block text-xs text-slate-500 mb-1">{label}</label>
-                  {growthPreset === 'manual' ? (
-                    <input
-                      type="number"
-                      value={manual}
-                      onChange={(e) => setManual(Number(e.target.value))}
-                      min={1}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
-                    />
-                  ) : (
-                    <div className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 font-medium">{value}</div>
-                  )}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: 'Year 1', value: expansionEnrollments.y1 },
+              { label: 'Year 2', value: expansionEnrollments.y2 },
+              { label: 'Year 3', value: expansionEnrollments.y3 },
+              { label: 'Year 4', value: expansionEnrollments.y4 },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <label className="block text-xs text-slate-500 mb-1">{label}</label>
+                <div className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold">
+                  {value > 0 ? value : '—'}
                 </div>
-              ))}
+              </div>
+            ))}
+          </div>
+
+          {expansionEnrollments.y1 === 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-700">
+              No enrollment data yet. Switch to the Grade Expansion Plan tab to configure your grade rollout.
             </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Max Class Size</label>
+            <input
+              type="number"
+              value={maxClassSize}
+              onChange={(e) => setMaxClassSize(Number(e.target.value))}
+              min={10}
+              max={35}
+              className="w-32 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
+            />
           </div>
         </>
       )}
