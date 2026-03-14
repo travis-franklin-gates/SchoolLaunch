@@ -78,21 +78,19 @@ export function buildDefaultPositions(enrollment: number, maxClassSize: number, 
   // Admin
   positions.push({
     key: nextKey(),
+    title: 'CEO',
+    category: 'admin',
+    fte: 1.0,
+    salary: 120000,
+  })
+
+  positions.push({
+    key: nextKey(),
     title: 'Principal',
     category: 'admin',
     fte: 1.0,
     salary: 95000,
   })
-
-  if (isLarge || gradeConfig === 'K-8') {
-    positions.push({
-      key: nextKey(),
-      title: 'Assistant Principal',
-      category: 'admin',
-      fte: 1.0,
-      salary: 80000,
-    })
-  }
 
   // Classified
   positions.push({
