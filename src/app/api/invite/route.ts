@@ -21,20 +21,20 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { schoolName, ceoEmail, gradeConfig } = body
+  const { ceoName, ceoEmail } = body
 
-  if (!schoolName || !ceoEmail || !gradeConfig) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  if (!ceoName || !ceoEmail) {
+    return NextResponse.json({ error: 'CEO name and email are required' }, { status: 400 })
   }
 
   const admin = createServiceRoleClient()
   const orgId = roleData.organization_id
 
-  // 1. Create school
+  // 1. Create placeholder school (CEO sets name + details during onboarding)
   const { data: school, error: schoolError } = await admin
     .from('schools')
     .insert({
-      name: schoolName,
+      name: 'New School',
       organization_id: orgId,
       status: 'planning',
     })
@@ -45,12 +45,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to create school', detail: schoolError }, { status: 500 })
   }
 
-  // 2. Create school profile
+  // 2. Create minimal school profile (CEO completes during onboarding)
   const { error: profileError } = await admin
     .from('school_profiles')
     .insert({
       school_id: school.id,
-      grade_config: gradeConfig,
       onboarding_complete: false,
     })
 
@@ -65,6 +64,7 @@ export async function POST(request: Request) {
     .insert({
       token,
       email: ceoEmail,
+      ceo_name: ceoName,
       role: 'school_ceo',
       organization_id: orgId,
       school_id: school.id,

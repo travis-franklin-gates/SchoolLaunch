@@ -346,9 +346,8 @@ export default function PortfolioPage() {
 }
 
 function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-  const [schoolName, setSchoolName] = useState('')
+  const [ceoName, setCeoName] = useState('')
   const [ceoEmail, setCeoEmail] = useState('')
-  const [gradeConfig, setGradeConfig] = useState('K-5')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [inviteUrl, setInviteUrl] = useState('')
@@ -362,7 +361,7 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
       const res = await fetch('/api/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schoolName, ceoEmail, gradeConfig }),
+        body: JSON.stringify({ ceoName, ceoEmail }),
       })
 
       if (!res.ok) {
@@ -430,14 +429,14 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">School Name</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">CEO Name</label>
               <input
                 type="text"
-                value={schoolName}
-                onChange={(e) => setSchoolName(e.target.value)}
+                value={ceoName}
+                onChange={(e) => setCeoName(e.target.value)}
                 required
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
-                placeholder="e.g., Cascade Charter Elementary"
+                placeholder="e.g., Sarah Johnson"
               />
             </div>
             <div>
@@ -451,21 +450,7 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
                 placeholder="ceo@school.org"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Grade Configuration</label>
-              <select
-                value={gradeConfig}
-                onChange={(e) => setGradeConfig(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
-              >
-                <option value="K-5">K-5</option>
-                <option value="K-8">K-8</option>
-                <option value="6-8">6-8</option>
-                <option value="6-12">6-12</option>
-                <option value="9-12">9-12</option>
-                <option value="K-12">K-12</option>
-              </select>
-            </div>
+            <p className="text-xs text-slate-400">The CEO will set up their school name, grade configuration, and all other details during onboarding.</p>
 
             {error && <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg">{error}</div>}
 

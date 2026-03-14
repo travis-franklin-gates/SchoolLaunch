@@ -12,7 +12,7 @@ interface Invitation {
   organization_id: string
 }
 
-export default function InviteForm({ invitation, schoolName }: { invitation: Invitation; schoolName?: string }) {
+export default function InviteForm({ invitation, ceoName }: { invitation: Invitation; ceoName?: string }) {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
@@ -87,13 +87,13 @@ export default function InviteForm({ invitation, schoolName }: { invitation: Inv
           </div>
 
           <div className="bg-slate-50 rounded-lg p-4 mb-6">
-            {schoolName && (
+            {ceoName && (
               <p className="text-sm text-slate-700 font-medium mb-1">
-                You&apos;ve been invited to plan finances for {schoolName}
+                Welcome, {ceoName}!
               </p>
             )}
             <p className="text-sm text-slate-600">
-              Role: <span className="font-medium">{invitation.role.replace('_', ' ')}</span>
+              You&apos;ve been invited to plan finances for your school on SchoolLaunch.
             </p>
             <p className="text-sm text-slate-500 mt-1">{invitation.email}</p>
           </div>

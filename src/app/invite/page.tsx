@@ -27,7 +27,7 @@ export default async function InvitePage({
 
   const { data: invitation, error } = await supabase
     .from('invitations')
-    .select('id, email, role, school_id, organization_id')
+    .select('id, email, role, school_id, organization_id, ceo_name')
     .eq('token', token)
     .eq('accepted', false)
     .single()
@@ -47,16 +47,5 @@ export default async function InvitePage({
     )
   }
 
-  // Also load the school name for context
-  let schoolName = ''
-  if (invitation.school_id) {
-    const { data: school } = await supabase
-      .from('schools')
-      .select('name')
-      .eq('id', invitation.school_id)
-      .single()
-    schoolName = school?.name || ''
-  }
-
-  return <InviteForm invitation={invitation} schoolName={schoolName} />
+  return <InviteForm invitation={invitation} ceoName={invitation.ceo_name || undefined} />
 }
