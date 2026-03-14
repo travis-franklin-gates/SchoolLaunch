@@ -75,6 +75,12 @@ export interface StartupFundingSource {
   amount: number
   type: 'grant' | 'donation' | 'debt' | 'other'
   status: 'received' | 'pledged' | 'applied' | 'projected' | 'n/a'
+  /** Year-level allocation breakdown */
+  yearAllocations?: {
+    year0: number
+    year1: number
+    year2: number
+  }
 }
 
 export interface SchoolProfile {
