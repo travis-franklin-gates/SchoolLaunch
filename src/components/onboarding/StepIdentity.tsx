@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { ALL_GRADES, sortGrades, gradeIndex, deriveGradeConfig } from '@/lib/gradeExpansion'
 
 const REGIONS = [
   'King County',
@@ -11,31 +12,6 @@ const REGIONS = [
   'Other',
 ]
 
-const GRADE_CONFIGS = ['K-5', 'K-8', '6-8', '9-12']
-
-const GRADE_CONFIG_TIPS: Record<string, { desc: string; typical: string; note: string }> = {
-  'K-5': {
-    desc: 'Elementary school serving kindergarten through 5th grade',
-    typical: 'Typical enrollment: 100–300 students, 5–12 teachers',
-    note: 'Most common WA charter model. Strong demand in urban/suburban areas.',
-  },
-  'K-8': {
-    desc: 'Full primary school serving kindergarten through 8th grade',
-    typical: 'Typical enrollment: 200–500 students, 10–20 teachers',
-    note: 'Longer student retention but requires middle school staffing and curriculum.',
-  },
-  '6-8': {
-    desc: 'Middle school serving grades 6 through 8',
-    typical: 'Typical enrollment: 150–400 students, 8–16 teachers',
-    note: 'Less common for charters. Requires subject-specific certificated staff.',
-  },
-  '9-12': {
-    desc: 'High school serving grades 9 through 12',
-    typical: 'Typical enrollment: 200–600 students, 12–25 teachers',
-    note: 'Higher per-pupil costs. Requires counseling, electives, and lab facilities.',
-  },
-}
-
 const currentYear = new Date().getFullYear()
 const YEARS = Array.from({ length: 4 }, (_, i) => currentYear + i)
 
@@ -44,28 +20,91 @@ interface Props {
     schoolName: string
     region: string
     plannedOpenYear: number
-    gradeConfig: string
+    foundingGrades: string[]
+    buildoutGrades: string[]
   }
-  onNext: (data: { schoolName: string; region: string; plannedOpenYear: number; gradeConfig: string }) => void
+  onNext: (data: {
+    schoolName: string
+    region: string
+    plannedOpenYear: number
+    foundingGrades: string[]
+    buildoutGrades: string[]
+    gradeConfig: string
+  }) => void
 }
 
 export default function StepIdentity({ initialData, onNext }: Props) {
   const [schoolName, setSchoolName] = useState(initialData.schoolName)
   const [region, setRegion] = useState(initialData.region || REGIONS[0])
   const [plannedOpenYear, setPlannedOpenYear] = useState(initialData.plannedOpenYear || YEARS[0])
-  const [gradeConfig, setGradeConfig] = useState(initialData.gradeConfig || GRADE_CONFIGS[0])
+  const [foundingGrades, setFoundingGrades] = useState<string[]>(
+    initialData.foundingGrades.length > 0 ? initialData.foundingGrades : []
+  )
+  const [buildoutGrades, setBuildoutGrades] = useState<string[]>(
+    initialData.buildoutGrades.length > 0 ? initialData.buildoutGrades : []
+  )
   const [touched, setTouched] = useState(false)
 
   const nameError = touched && schoolName.trim().length < 3 ? 'School name must be at least 3 characters' : null
+  const gradesError = touched && foundingGrades.length === 0 ? 'Select at least one founding grade' : null
+  const buildoutError = touched && buildoutGrades.length === 0 ? 'Select at least one build-out grade' : null
+
+  function toggleFoundingGrade(grade: string) {
+    setFoundingGrades((prev) => {
+      const next = prev.includes(grade) ? prev.filter((g) => g !== grade) : [...prev, grade]
+      // Auto-add to buildout if not already there
+      if (!prev.includes(grade)) {
+        setBuildoutGrades((bo) => bo.includes(grade) ? bo : sortGrades([...bo, grade]))
+      }
+      return sortGrades(next)
+    })
+  }
+
+  function toggleBuildoutGrade(grade: string) {
+    setBuildoutGrades((prev) => {
+      if (prev.includes(grade)) {
+        // Don't allow removing a founding grade from buildout
+        if (foundingGrades.includes(grade)) return prev
+        return prev.filter((g) => g !== grade)
+      }
+      return sortGrades([...prev, grade])
+    })
+  }
+
+  const summary = useMemo(() => {
+    if (foundingGrades.length === 0 || buildoutGrades.length === 0) return null
+    const sortedFounding = sortGrades(foundingGrades)
+    const sortedBuildout = sortGrades(buildoutGrades)
+    const fFirst = sortedFounding[0]
+    const fLast = sortedFounding[sortedFounding.length - 1]
+    const bFirst = sortedBuildout[0]
+    const bLast = sortedBuildout[sortedBuildout.length - 1]
+    const foundingLabel = fFirst === fLast ? fFirst : `${fFirst}–${fLast}`
+    const buildoutLabel = bFirst === bLast ? bFirst : `${bFirst}–${bLast}`
+    const expansionGrades = buildoutGrades.length - foundingGrades.length
+    return {
+      foundingLabel,
+      buildoutLabel,
+      foundingCount: foundingGrades.length,
+      buildoutCount: buildoutGrades.length,
+      expansionGrades,
+    }
+  }, [foundingGrades, buildoutGrades])
 
   function handleNext(e: React.FormEvent) {
     e.preventDefault()
     setTouched(true)
     if (schoolName.trim().length < 3) return
-    onNext({ schoolName: schoolName.trim(), region, plannedOpenYear, gradeConfig })
+    if (foundingGrades.length === 0 || buildoutGrades.length === 0) return
+    onNext({
+      schoolName: schoolName.trim(),
+      region,
+      plannedOpenYear,
+      foundingGrades,
+      buildoutGrades,
+      gradeConfig: deriveGradeConfig(buildoutGrades),
+    })
   }
-
-  const tip = GRADE_CONFIG_TIPS[gradeConfig]
 
   return (
     <form onSubmit={handleNext} className="space-y-6 max-w-xl">
@@ -114,31 +153,88 @@ export default function StepIdentity({ initialData, onNext }: Props) {
         </select>
       </div>
 
+      {/* Founding Grades */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Grade Configuration</label>
-        <div className="grid grid-cols-2 gap-2">
-          {GRADE_CONFIGS.map((g) => (
-            <button
-              key={g}
-              type="button"
-              onClick={() => setGradeConfig(g)}
-              className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                gradeConfig === g
-                  ? 'border-teal-600 bg-teal-50 text-teal-700'
-                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-              }`}
-            >
-              {g}
-            </button>
-          ))}
+        <label className="block text-sm font-medium text-slate-700 mb-2">
+          Founding Grades *
+          <span className="font-normal text-slate-400 ml-1">— grades you will serve in Year 1</span>
+        </label>
+        <div className="flex flex-wrap gap-1.5">
+          {ALL_GRADES.map((g) => {
+            const selected = foundingGrades.includes(g)
+            return (
+              <button
+                key={g}
+                type="button"
+                onClick={() => toggleFoundingGrade(g)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all ${
+                  selected
+                    ? 'border-teal-600 bg-teal-50 text-teal-700'
+                    : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                }`}
+              >
+                {g}
+              </button>
+            )
+          })}
         </div>
+        {gradesError && <p className="text-xs text-red-600 mt-1">{gradesError}</p>}
       </div>
 
-      {tip && (
+      {/* Build-Out Grades */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-2">
+          Grades at Full Build-Out *
+          <span className="font-normal text-slate-400 ml-1">— all grades you will eventually serve</span>
+        </label>
+        <div className="flex flex-wrap gap-1.5">
+          {ALL_GRADES.map((g) => {
+            const selected = buildoutGrades.includes(g)
+            const isFounding = foundingGrades.includes(g)
+            return (
+              <button
+                key={g}
+                type="button"
+                onClick={() => toggleBuildoutGrade(g)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all ${
+                  selected
+                    ? isFounding
+                      ? 'border-teal-600 bg-teal-100 text-teal-800 cursor-default'
+                      : 'border-teal-600 bg-teal-50 text-teal-700'
+                    : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                }`}
+                title={isFounding ? 'Founding grade (included automatically)' : undefined}
+              >
+                {g}
+                {isFounding && selected && (
+                  <span className="ml-1 text-xs text-teal-500">F</span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-xs text-slate-400 mt-1">Founding grades are pre-selected. Additional grades will be added during expansion years.</p>
+        {buildoutError && <p className="text-xs text-red-600 mt-1">{buildoutError}</p>}
+      </div>
+
+      {/* Dynamic Summary */}
+      {summary && (
         <div className="bg-teal-50 border border-teal-100 rounded-xl p-4">
-          <p className="text-sm font-medium text-teal-800 mb-1">{tip.desc}</p>
-          <p className="text-xs text-teal-600">{tip.typical}</p>
-          <p className="text-xs text-teal-600 mt-1">{tip.note}</p>
+          <p className="text-sm font-medium text-teal-800">
+            Opening with {summary.foundingLabel} ({summary.foundingCount} {summary.foundingCount === 1 ? 'grade' : 'grades'})
+            {' → '}
+            Growing to {summary.buildoutLabel} ({summary.buildoutCount} {summary.buildoutCount === 1 ? 'grade' : 'grades'})
+          </p>
+          {summary.expansionGrades > 0 && (
+            <p className="text-xs text-teal-600 mt-1">
+              {summary.expansionGrades} {summary.expansionGrades === 1 ? 'grade' : 'grades'} added during expansion (Years 2–5)
+            </p>
+          )}
+          {summary.expansionGrades === 0 && (
+            <p className="text-xs text-teal-600 mt-1">
+              No expansion — all grades served from Year 1
+            </p>
+          )}
         </div>
       )}
 

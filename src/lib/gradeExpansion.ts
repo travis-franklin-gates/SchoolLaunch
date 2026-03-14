@@ -28,6 +28,18 @@ export function defaultOpeningGrades(config: string): string[] {
   return all.slice(0, Math.min(2, all.length))
 }
 
+/**
+ * Derive a grade config string (e.g. "K-8") from an array of buildout grades.
+ */
+export function deriveGradeConfig(buildoutGrades: string[]): string {
+  if (buildoutGrades.length === 0) return 'K-5'
+  const sorted = sortGrades(buildoutGrades)
+  const first = sorted[0]
+  const last = sorted[sorted.length - 1]
+  if (first === last) return first === 'K' ? 'K' : `${first}`
+  return `${first}-${last}`
+}
+
 export function isSecondaryGrade(grade: string): boolean {
   return gradeIndex(grade) >= gradeIndex('6')
 }

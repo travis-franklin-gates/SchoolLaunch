@@ -184,9 +184,20 @@ export default function OnboardingPage() {
     load()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const saveStep1 = useCallback(async (stepData: { schoolName: string; region: string; plannedOpenYear: number; gradeConfig: string }) => {
+  const saveStep1 = useCallback(async (stepData: {
+    schoolName: string; region: string; plannedOpenYear: number;
+    foundingGrades: string[]; buildoutGrades: string[]; gradeConfig: string
+  }) => {
     if (!schoolId) return
-    setData((prev) => ({ ...prev, ...stepData }))
+    setData((prev) => ({
+      ...prev,
+      schoolName: stepData.schoolName,
+      region: stepData.region,
+      plannedOpenYear: stepData.plannedOpenYear,
+      gradeConfig: stepData.gradeConfig,
+      openingGrades: stepData.foundingGrades,
+      buildoutGrades: stepData.buildoutGrades,
+    }))
 
     await supabase.from('schools').update({ name: stepData.schoolName }).eq('id', schoolId)
 
@@ -195,6 +206,8 @@ export default function OnboardingPage() {
       region: stepData.region,
       planned_open_year: stepData.plannedOpenYear,
       grade_config: stepData.gradeConfig,
+      opening_grades: stepData.foundingGrades,
+      buildout_grades: stepData.buildoutGrades,
     }, { onConflict: 'school_id' })
 
     setStep(1)
@@ -487,7 +500,8 @@ export default function OnboardingPage() {
             schoolName: data.schoolName,
             region: data.region,
             plannedOpenYear: data.plannedOpenYear,
-            gradeConfig: data.gradeConfig,
+            foundingGrades: data.openingGrades,
+            buildoutGrades: data.buildoutGrades,
           }}
           onNext={saveStep1}
         />
