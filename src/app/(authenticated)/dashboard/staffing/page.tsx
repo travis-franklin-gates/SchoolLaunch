@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { calcBenefits } from '@/lib/calculations'
 import { createClient } from '@/lib/supabase/client'
@@ -259,6 +259,7 @@ export default function StaffingPage() {
   const [positions, setPositions] = useState<MultiYearPosition[]>([])
   const [saving, setSaving] = useState(false)
   const [seeding, setSeeding] = useState(false)
+  const seedingRef = useRef(false)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const supabase = createClient()
   const benefitsRate = assumptions.benefits_load_pct / 100
@@ -347,8 +348,31 @@ export default function StaffingPage() {
 
   // Seed default positions into the DB when table is empty
   async function seedDefaults() {
-    if (!schoolId || seeding) return
+    // Ref guard: prevents double-execution from React StrictMode
+    if (!schoolId || seedingRef.current) return
+    seedingRef.current = true
     setSeeding(true)
+
+    // DB-level check: verify no rows exist before inserting
+    const { count, error: countError } = await supabase
+      .from('staffing_positions')
+      .select('id', { count: 'exact', head: true })
+      .eq('school_id', schoolId)
+
+    if (countError) {
+      console.error('Seed check failed:', countError)
+      seedingRef.current = false
+      setSeeding(false)
+      return
+    }
+
+    if ((count ?? 0) > 0) {
+      // Rows already exist (created by a concurrent call or another session)
+      seedingRef.current = false
+      setSeeding(false)
+      await reload()
+      return
+    }
 
     const seeds = buildSeedPositions()
     const rows: Array<{
@@ -390,7 +414,7 @@ export default function StaffingPage() {
   useEffect(() => {
     // No positions in DB — seed defaults
     if (dbPositions.length === 0 && dbAllPositions.length === 0) {
-      if (schoolId && !seeding) seedDefaults()
+      if (schoolId && !seedingRef.current) seedDefaults()
       return
     }
 
