@@ -610,6 +610,12 @@ export default function StaffingPage() {
             Personnel: {personnelPctY1}% of Revenue
             <span className="text-[10px] opacity-70 ml-1">(Y1)</span>
           </div>
+          <button
+            onClick={addPosition}
+            className="px-3 py-1.5 text-sm font-medium text-teal-600 border border-teal-300 rounded-lg hover:bg-teal-50 transition-colors"
+          >
+            + Add Position
+          </button>
         </div>
       </div>
 
@@ -709,12 +715,6 @@ export default function StaffingPage() {
       </div>
 
       <div className="flex gap-3">
-        <button
-          onClick={addPosition}
-          className="px-4 py-2 text-sm font-medium text-teal-600 bg-teal-50 hover:bg-teal-100 rounded-lg transition-colors"
-        >
-          + Add Position
-        </button>
         <button
           onClick={save}
           disabled={saving}
