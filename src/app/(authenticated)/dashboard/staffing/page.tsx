@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { calcBenefits } from '@/lib/calculations'
 import { createClient } from '@/lib/supabase/client'
@@ -298,123 +298,35 @@ export default function StaffingPage() {
   // Total revenue for Year 1 (for personnel % badge)
   const y1Revenue = projections.filter((p) => p.is_revenue).reduce((s, p) => s + p.amount, 0)
 
-  // Build the 6 default seed positions
-  function buildSeedPositions(): MultiYearPosition[] {
-    const teacherFte = computeSmartFte(
-      sectionsPerYear[0] || Math.ceil(enrollments[0] / 24) || 4,
-      'per_pupil', 'teacher_elem', enrollments, sectionsPerYear,
-    )
-    const paraFte = computeSmartFte(2, 'per_pupil', 'paraeducator', enrollments, sectionsPerYear)
-
-    return [
-      {
-        id: tempId(), positionType: 'ceo_director', title: 'CEO/Executive Director',
-        classification: 'Administrative', category: 'admin',
-        salary: 120000, benchmarkSalary: 164800, driver: 'fixed', studentsPerPosition: 0,
-        fte: [1, 1, 1, 1, 1],
-      },
-      {
-        id: tempId(), positionType: 'principal', title: 'Principal/Head of School',
-        classification: 'Administrative', category: 'admin',
-        salary: 95000, benchmarkSalary: 123600, driver: 'fixed', studentsPerPosition: 0,
-        fte: [1, 1, 1, 1, 1],
-      },
-      {
-        id: tempId(), positionType: 'teacher_elem', title: 'Classroom Teacher - Elementary',
-        classification: 'Certificated', category: 'certificated',
-        salary: 58000, benchmarkSalary: 80340, driver: 'per_pupil', studentsPerPosition: 24,
-        fte: teacherFte,
-      },
-      {
-        id: tempId(), positionType: 'sped_teacher', title: 'Special Education (SPED) Teacher',
-        classification: 'Certificated', category: 'certificated',
-        salary: 62000, benchmarkSalary: 87550, driver: 'per_pupil_sped', studentsPerPosition: 12,
-        fte: [1, 1, 1, 1, 1],
-      },
-      {
-        id: tempId(), positionType: 'office_mgr', title: 'Administrative Assistant/Office Manager',
-        classification: 'Classified', category: 'classified',
-        salary: 52000, benchmarkSalary: 56650, driver: 'fixed', studentsPerPosition: 0,
-        fte: [1, 1, 1, 1, 1],
-      },
-      {
-        id: tempId(), positionType: 'paraeducator', title: 'Instructional Aides/Paraeducators',
-        classification: 'Classified', category: 'classified',
-        salary: 38000, benchmarkSalary: 41200, driver: 'per_pupil', studentsPerPosition: 48,
-        fte: paraFte,
-      },
-    ]
-  }
-
-  // Seed default positions into the DB when table is empty
-  async function seedDefaults() {
-    // Ref guard: prevents double-execution from React StrictMode
+  // Server-side seed: call API endpoint that atomically checks + inserts
+  const ensureSeeded = useCallback(async () => {
     if (!schoolId || seedingRef.current) return
     seedingRef.current = true
     setSeeding(true)
 
-    // DB-level check: verify no rows exist before inserting
-    const { count, error: countError } = await supabase
-      .from('staffing_positions')
-      .select('id', { count: 'exact', head: true })
-      .eq('school_id', schoolId)
-
-    if (countError) {
-      console.error('Seed check failed:', countError)
-      seedingRef.current = false
-      setSeeding(false)
-      return
-    }
-
-    if ((count ?? 0) > 0) {
-      // Rows already exist (created by a concurrent call or another session)
-      seedingRef.current = false
-      setSeeding(false)
-      await reload()
-      return
-    }
-
-    const seeds = buildSeedPositions()
-    const rows: Array<{
-      school_id: string; year: number; title: string; category: string;
-      fte: number; annual_salary: number; position_type: string;
-      driver: string; classification: string; benchmark_salary: number;
-      students_per_position: number;
-    }> = []
-
-    for (const pos of seeds) {
-      for (let y = 1; y <= 5; y++) {
-        rows.push({
-          school_id: schoolId,
-          year: y,
-          title: pos.title,
-          category: pos.category,
-          fte: pos.fte[y - 1],
-          annual_salary: Math.round(pos.salary * Math.pow(1 + salaryEscalator, y - 1)),
-          position_type: pos.positionType,
-          driver: pos.driver,
-          classification: pos.classification,
-          benchmark_salary: pos.benchmarkSalary,
-          students_per_position: pos.studentsPerPosition,
-        })
+    try {
+      const res = await fetch('/api/staffing/seed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schoolId }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.seeded) {
+          await reload()
+        }
       }
+    } catch (err) {
+      console.error('Seed check failed:', err)
     }
 
-    const { error } = await supabase.from('staffing_positions').insert(rows)
-    if (error) {
-      console.error('Seed staffing failed:', error)
-      // Fall back to showing defaults in-memory without persisting
-      setPositions(seeds)
-    } else {
-      await reload()
-    }
     setSeeding(false)
-  }
+  }, [schoolId, reload])
 
   useEffect(() => {
-    // No positions in DB — seed defaults
+    // No positions loaded from the hook — ask the server to seed if needed
     if (dbPositions.length === 0 && dbAllPositions.length === 0) {
-      if (schoolId && !seedingRef.current) seedDefaults()
+      if (schoolId && !seedingRef.current) ensureSeeded()
       return
     }
 
