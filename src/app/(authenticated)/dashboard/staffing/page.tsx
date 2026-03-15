@@ -842,7 +842,7 @@ function PositionRow({
           className="w-24 text-right border border-slate-200 rounded px-2 py-1 text-sm"
         />
         {pos.benchmarkSalary > 0 && (
-          <div className="text-[9px] text-slate-400 text-right mt-0.5">BM: {fmt(pos.benchmarkSalary)}</div>
+          <div className="text-[9px] text-slate-400 text-right mt-0.5">BM: {fmt(Math.round(pos.benchmarkSalary * 1.3))}</div>
         )}
       </td>
       {[0, 1, 2, 3, 4].map((yi) => (
