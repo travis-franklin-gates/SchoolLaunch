@@ -31,6 +31,53 @@ function classificationToCategory(classification: string): 'certificated' | 'cla
   return 'classified'
 }
 
+function categoryToClassification(category: string): string {
+  if (category === 'admin') return 'Administrative'
+  if (category === 'certificated') return 'Instructional'
+  return 'Non-Instructional'
+}
+
+/**
+ * Infer a COMMISSION_POSITIONS type from a free-text title saved during onboarding.
+ * Returns the matched type string or 'custom' if no match.
+ */
+function inferPositionType(title: string): string {
+  const t = title.toLowerCase().trim()
+
+  // Admin
+  if (/\bceo\b/.test(t) || /\bexecutive director\b/.test(t)) return 'ceo_director'
+  if (/\bassistant principal\b/.test(t) || /\bvice principal\b/.test(t) || /\bap\b/.test(t)) return 'asst_principal'
+  if (/\bprincipal\b/.test(t) || /\bhead of school\b/.test(t)) return 'principal'
+  if (/\bregistrar\b/.test(t) || /\benrollment manager\b/.test(t)) return 'registrar'
+  if (/\bcoo\b/.test(t) || /\boperations manager\b/.test(t)) return 'coo'
+  if (/\bcfo\b/.test(t) || /\bfinance\b/.test(t) || /\bbusiness manager\b/.test(t)) return 'cfo'
+  if (/\bit coordinator\b/.test(t)) return 'it_coordinator'
+  if (/\bfacilities manager\b/.test(t)) return 'facilities_mgr'
+  if (/\bnutrition\b/.test(t)) return 'nutrition_mgr'
+
+  // Instructional
+  if (/\bspecial ed\b/.test(t) || /\bsped\b/.test(t)) return 'sped_teacher'
+  if (/\bell teacher\b/.test(t) || /\bell specialist\b/.test(t) || /\benglish learner\b/.test(t)) return 'el_specialist'
+  if (/\binstructional coach\b/.test(t) || /\bcurriculum\b/.test(t)) return 'instructional_coach'
+  if (/\bintervention\b/.test(t)) return 'interventionist'
+  if (/\bsubstitute\b/.test(t)) return 'substitute_pool'
+  if (/\bsubject teacher\b/.test(t)) return 'teacher_ms'
+  if (/\bteacher\b/.test(t)) return 'teacher_elem'
+  if (/\bparaeducator\b/.test(t) || /\bpara\b/.test(t) || /\binstructional aide\b/.test(t)) return 'paraeducator'
+
+  // Non-Instructional
+  if (/\bcounselor\b/.test(t)) return 'counselor'
+  if (/\bpsychologist\b/.test(t)) return 'psychologist'
+  if (/\boffice manager\b/.test(t) || /\badministrative assistant\b/.test(t)) return 'office_mgr'
+  if (/\bhuman resources\b/.test(t) || /\bhr\b/.test(t)) return 'hr_specialist'
+  if (/\bcustodian\b/.test(t) || /\bjanitor\b/.test(t)) return 'custodian'
+  if (/\bsecurity\b/.test(t) || /\bsafety\b/.test(t)) return 'security'
+  if (/\bfood service\b/.test(t)) return 'food_service'
+  if (/\btransportation\b/.test(t)) return 'transport_coord'
+
+  return 'custom'
+}
+
 const CLASSIFICATION_COLORS: Record<string, { bg: string; text: string }> = {
   Administrative: { bg: 'bg-purple-50', text: 'text-purple-700' },
   Instructional: { bg: 'bg-blue-50', text: 'text-blue-700' },
@@ -53,17 +100,34 @@ export default function StaffingPage() {
     if (dbPositions.length > 0) {
       setPositions(
         dbPositions.map((p) => {
-          const cp = p.position_type ? getCommissionPosition(p.position_type) : undefined
+          // If position_type is already set (saved from dashboard), use it directly
+          if (p.position_type && p.position_type !== 'custom') {
+            const cp = getCommissionPosition(p.position_type)
+            return {
+              id: p.id || tempId(),
+              title: p.title,
+              category: p.category,
+              fte: p.fte,
+              salary: p.annual_salary,
+              positionType: p.position_type,
+              classification: p.classification || cp?.classification || categoryToClassification(p.category),
+              benchmarkSalary: p.benchmark_salary || cp?.salary || 0,
+              driver: p.driver || cp?.driver || 'fixed',
+            }
+          }
+          // Infer position type from title (onboarding positions without position_type)
+          const inferred = inferPositionType(p.title)
+          const cp = inferred !== 'custom' ? getCommissionPosition(inferred) : undefined
           return {
             id: p.id || tempId(),
             title: p.title,
             category: p.category,
             fte: p.fte,
             salary: p.annual_salary,
-            positionType: p.position_type || 'custom',
-            classification: p.classification || cp?.classification || 'Administrative',
-            benchmarkSalary: p.benchmark_salary || cp?.salary || 0,
-            driver: p.driver || cp?.driver || 'fixed',
+            positionType: inferred,
+            classification: cp?.classification || categoryToClassification(p.category),
+            benchmarkSalary: cp?.salary || 0,
+            driver: cp?.driver || 'fixed',
           }
         })
       )
@@ -102,7 +166,7 @@ export default function StaffingPage() {
   function addPosition() {
     setPositions((prev) => [
       ...prev,
-      { id: tempId(), title: 'New Position', category: 'classified', fte: 1, salary: 45000, positionType: 'custom', classification: 'Administrative', benchmarkSalary: 0, driver: 'fixed' },
+      { id: tempId(), title: 'New Position', category: 'classified', fte: 1, salary: 45000, positionType: 'custom', classification: 'Non-Instructional', benchmarkSalary: 0, driver: 'fixed' },
     ])
   }
 
