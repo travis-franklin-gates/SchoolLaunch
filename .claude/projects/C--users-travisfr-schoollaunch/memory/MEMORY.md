@@ -1,0 +1,3 @@
+- [feedback_no_scenario_id.md](feedback_no_scenario_id.md) - budget_projections table has no scenario_id column, don't filter by it
+- budget_projections actual columns: id, school_id, year, category, subcategory, amount, is_revenue, notes, updated_at (no line_item, no scenario_id)
+- staffing_positions actual columns: school_id, year, title, category, fte, annual_salary, funding_source, notes (no benefits_rate or total_cost)

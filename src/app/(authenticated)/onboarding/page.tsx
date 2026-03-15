@@ -8,7 +8,7 @@ import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import StepIdentity from '@/components/onboarding/StepIdentity'
 import StepEnrollment from '@/components/onboarding/StepEnrollment'
 import StepDemographics from '@/components/onboarding/StepDemographics'
-import StepStaffing, { buildDefaultPositions } from '@/components/onboarding/StepStaffing'
+import StepStaffing from '@/components/onboarding/StepStaffing'
 import StepOperations, { defaultOperationsData } from '@/components/onboarding/StepOperations'
 import type { GrowthPreset, StartupFundingSource, GradeExpansionEntry, EnrollmentMode } from '@/lib/types'
 
@@ -35,7 +35,7 @@ interface WizardData {
   pctIep: number
   pctEll: number
   pctHicap: number
-  positions: { key: string; title: string; category: 'certificated' | 'classified' | 'admin'; fte: number; salary: number }[]
+  positions: { key: string; title: string; category: 'certificated' | 'classified' | 'admin'; fte: number; salary: number; positionType?: string; classification?: string; driver?: string }[]
   operations: {
     facilityMode: 'sqft' | 'flat'
     facilitySqft: number
@@ -297,6 +297,9 @@ export default function OnboardingPage() {
       category: p.category,
       fte: p.fte,
       annual_salary: p.salary,
+      position_type: p.positionType || null,
+      driver: p.driver || null,
+      classification: p.classification || null,
     }))
 
     if (rows.length > 0) {

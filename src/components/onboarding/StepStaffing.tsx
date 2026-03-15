@@ -10,6 +10,9 @@ interface LocalPosition {
   category: 'certificated' | 'classified' | 'admin'
   fte: number
   salary: number
+  positionType?: string
+  classification?: string
+  driver?: string
 }
 
 interface Props {
@@ -35,92 +38,80 @@ function nextKey() {
 }
 
 export function buildDefaultPositions(enrollment: number, maxClassSize: number, gradeConfig: string, pctIep: number, pctEll: number): LocalPosition[] {
-  const teachers = Math.ceil(enrollment / maxClassSize)
+  const sections = Math.ceil(enrollment / maxClassSize)
   const paras = Math.max(1, Math.ceil((enrollment * pctIep / 100) / 10))
   const isSecondary = gradeConfig === '6-8' || gradeConfig === '9-12'
-  const isLarge = enrollment > 250
 
   const positions: LocalPosition[] = []
 
-  // Teachers
-  for (let i = 0; i < teachers; i++) {
-    positions.push({
-      key: nextKey(),
-      title: isSecondary ? `Subject Teacher ${i + 1}` : `Teacher ${i + 1}`,
-      category: 'certificated',
-      fte: 1.0,
-      salary: isSecondary ? 62000 : 58000,
-    })
-  }
-
-  // Special education teacher if IEP > 10%
-  if (pctIep > 10) {
-    positions.push({
-      key: nextKey(),
-      title: 'Special Education Teacher',
-      category: 'certificated',
-      fte: 1.0,
-      salary: 62000,
-    })
-  }
-
-  // ELL teacher if ELL > 10%
-  if (pctEll > 10) {
-    positions.push({
-      key: nextKey(),
-      title: 'ELL Teacher',
-      category: 'certificated',
-      fte: pctEll > 20 ? 1.0 : 0.5,
-      salary: 60000,
-    })
-  }
-
-  // Admin
+  // Administrative
   positions.push({
     key: nextKey(),
-    title: 'CEO',
+    title: 'CEO/Executive Director',
     category: 'admin',
-    fte: 1.0,
+    fte: 1,
     salary: 120000,
+    positionType: 'ceo_director',
+    classification: 'Administrative',
+    driver: 'fixed',
   })
 
   positions.push({
     key: nextKey(),
-    title: 'Principal',
+    title: 'Principal/Head of School',
     category: 'admin',
-    fte: 1.0,
+    fte: 1,
     salary: 95000,
+    positionType: 'principal',
+    classification: 'Administrative',
+    driver: 'fixed',
+  })
+
+  // Certificated
+  positions.push({
+    key: nextKey(),
+    title: isSecondary ? 'Classroom Teacher - Middle School' : 'Classroom Teacher - Elementary',
+    category: 'certificated',
+    fte: sections,
+    salary: isSecondary ? 62000 : 58000,
+    positionType: isSecondary ? 'teacher_ms' : 'teacher_elem',
+    classification: 'Certificated',
+    driver: 'per_pupil',
+  })
+
+  positions.push({
+    key: nextKey(),
+    title: 'Special Education (SPED) Teacher',
+    category: 'certificated',
+    fte: 1,
+    salary: 62000,
+    positionType: 'sped_teacher',
+    classification: 'Certificated',
+    driver: 'per_pupil_sped',
   })
 
   // Classified
   positions.push({
     key: nextKey(),
-    title: 'Office Manager',
+    title: 'Administrative Assistant/Office Manager',
     category: 'classified',
-    fte: 1.0,
+    fte: 1,
     salary: 52000,
+    positionType: 'office_mgr',
+    classification: 'Classified',
+    driver: 'fixed',
   })
 
-  for (let i = 0; i < paras; i++) {
-    positions.push({
-      key: nextKey(),
-      title: `Paraeducator ${paras > 1 ? i + 1 : ''}`.trim(),
-      category: 'classified',
-      fte: 1.0,
-      salary: 38000,
-    })
-  }
-
-  // Counselor for secondary or 200+ students
-  if (isSecondary || enrollment >= 200) {
-    positions.push({
-      key: nextKey(),
-      title: isSecondary ? 'School Counselor' : 'Counselor',
-      category: 'certificated',
-      fte: enrollment >= 300 ? 1.0 : 0.5,
-      salary: 65000,
-    })
-  }
+  positions.push({
+    key: nextKey(),
+    title: 'Instructional Aides/Paraeducators',
+    category: 'classified',
+    fte: paras,
+    salary: 38000,
+    positionType: 'paraeducator',
+    classification: 'Classified',
+    driver: 'per_pupil',
+  })
 
   return positions
 }
@@ -191,7 +182,7 @@ export default function StepStaffing({ enrollment, maxClassSize, gradeConfig, pc
     <form onSubmit={handleNext} className="space-y-6">
       <div className="flex items-start justify-between">
         <p className="text-sm text-slate-500 max-w-lg">
-          We pre-populated positions based on your enrollment, grade config, and demographics. Adjust titles, FTE, and salaries as needed.
+          Each row is a position type with total FTE (e.g., FTE of 4 = four people at that salary). Adjust as needed.
         </p>
         <button
           type="button"
@@ -285,9 +276,8 @@ export default function StepStaffing({ enrollment, maxClassSize, gradeConfig, pc
                       type="number"
                       value={p.fte}
                       onChange={(e) => updatePosition(p.key, 'fte', Number(e.target.value))}
-                      min={0.1}
-                      max={2}
-                      step={0.1}
+                      min={0.5}
+                      step={0.5}
                       className="w-20 px-2 py-1.5 border border-slate-200 rounded text-right text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
                     />
                   </td>

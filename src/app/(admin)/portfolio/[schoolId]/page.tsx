@@ -8,13 +8,14 @@ import {
   computeSummaryFromProjections,
   computeMultiYearDetailed,
   computeCashFlow,
+  getGrantRevenueForYear,
   MONTHS,
   type BudgetSummary,
   type MultiYearDetailedRow,
   type CashFlowMonth,
 } from '@/lib/budgetEngine'
 import { calcCommissionRevenue } from '@/lib/calculations'
-import type { SchoolProfile, StaffingPosition, BudgetProjection, FinancialAssumptions } from '@/lib/types'
+import type { SchoolProfile, StaffingPosition, BudgetProjection, FinancialAssumptions, StartupFundingSource } from '@/lib/types'
 import { getAssumptions } from '@/lib/types'
 
 function fmt(n: number) {
@@ -98,11 +99,12 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
   }
 
   const assumptions = getAssumptions(profile.financial_assumptions as Partial<FinancialAssumptions> | null)
-  const summary = computeSummaryFromProjections(projections, positions, assumptions)
+  const y1Grant = getGrantRevenueForYear(profile.startup_funding as StartupFundingSource[] | null, 1)
+  const summary = computeSummaryFromProjections(projections, positions, assumptions, y1Grant)
   const rev = calcCommissionRevenue(profile.target_enrollment_y1, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
   const apportionment = rev.regularEd + rev.sped + rev.facilitiesRev
   const cashFlow = computeCashFlow(summary, apportionment)
-  const multiYear = computeMultiYearDetailed(profile, positions, projections, assumptions, 0)
+  const multiYear = computeMultiYearDetailed(profile, positions, projections, assumptions, 0, undefined, undefined, profile.startup_funding as StartupFundingSource[] | null)
 
   const rc = reserveColor(summary.reserveDays)
   const surplusColor = summary.netPosition >= 0

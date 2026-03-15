@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { calcCommissionRevenue, calcAAFTE } from '@/lib/calculations'
+import { getGrantAllocationsForYear } from '@/lib/budgetEngine'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -15,6 +16,7 @@ interface RevenueRow {
   calculated: number
   scenarioCalc: number
   override: number | null
+  helperNote?: string
 }
 
 export default function RevenuePage() {
@@ -34,6 +36,19 @@ export default function RevenuePage() {
 
   const baseRev = useMemo(() => calcCommissionRevenue(baseEnrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions), [baseEnrollment, profile, assumptions])
   const scenarioRev = useMemo(() => calcCommissionRevenue(scenarioEnrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions), [scenarioEnrollment, profile, assumptions])
+
+  // Grant allocations for Year 1
+  const grantRows = useMemo(() => {
+    const allocations = getGrantAllocationsForYear(profile.startup_funding, 1)
+    return allocations.map((a) => ({
+      label: a.source,
+      group: 'Startup & Other Grants',
+      formula: `Year 1 allocation: ${fmt(a.amount)}`,
+      calculated: a.amount,
+      scenarioCalc: a.amount, // grants don't change with scenarios
+      override: overrides[`grant:${a.source}`] ?? null,
+    }))
+  }, [profile.startup_funding, overrides])
 
   const rows: RevenueRow[] = useMemo(() => [
     // State & Local
@@ -60,6 +75,7 @@ export default function RevenuePage() {
       calculated: baseRev.levyEquity,
       scenarioCalc: scenarioRev.levyEquity,
       override: overrides['Levy Equity'] ?? null,
+      helperNote: 'Currently unfunded by legislature. Override if reinstated.',
     },
     {
       label: 'Facilities Revenue',
@@ -115,11 +131,21 @@ export default function RevenuePage() {
     },
   ], [baseEnrollment, scenarioEnrollment, baseAAFTE, profile, overrides, assumptions, baseRev, scenarioRev])
 
-  const totalBase = rows.reduce((sum, r) => sum + (r.override ?? r.calculated), 0)
-  const totalScenario = rows.reduce((sum, r) => sum + (r.override ?? r.scenarioCalc), 0)
+  // Operating revenue = all recurring state/local + federal + state categorical
+  const operatingBase = rows.reduce((sum, r) => sum + (r.override ?? r.calculated), 0)
+  const operatingScenario = rows.reduce((sum, r) => sum + (r.override ?? r.scenarioCalc), 0)
+
+  // Grant totals
+  const grantBase = grantRows.reduce((sum, r) => sum + (r.override ?? r.calculated), 0)
+  const grantScenario = grantRows.reduce((sum, r) => sum + (r.override ?? r.scenarioCalc), 0)
+
+  // Total = operating + grants
+  const totalBase = operatingBase + grantBase
+  const totalScenario = operatingScenario + grantScenario
 
   // Group rows for display
   const groups = ['State & Local', 'Federal', 'State Categorical']
+  const colSpan = isModified ? 6 : 5
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
@@ -155,55 +181,64 @@ export default function RevenuePage() {
           <tbody>
             {groups.map((group) => {
               const groupRows = rows.filter((r) => r.group === group)
-              const groupTotal = groupRows.reduce((s, r) => s + (r.override ?? r.calculated), 0)
               return (
                 <React.Fragment key={`group-${group}`}>
                   <tr className="section-header">
-                    <td colSpan={isModified ? 6 : 5} className="px-6 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide">
+                    <td colSpan={colSpan} className="px-6 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide">
                       {group}
                     </td>
                   </tr>
-                  {groupRows.map((row) => {
-                    const effective = row.override ?? (isModified ? row.scenarioCalc : row.calculated)
-                    return (
-                      <tr key={row.label} className="border-b border-slate-100">
-                        <td className="px-6 py-3 font-medium text-slate-800">{row.label}</td>
-                        <td className="px-6 py-3 text-slate-500 text-xs">{row.formula}</td>
-                        <td className="num px-6 py-3 text-slate-500">{fmt(row.calculated)}</td>
-                        {isModified && (
-                          <td className={`num px-6 py-3 ${row.scenarioCalc !== row.calculated ? 'text-teal-600 font-medium' : 'text-slate-500'}`}>
-                            {fmt(row.scenarioCalc)}
-                          </td>
-                        )}
-                        <td className="px-6 py-3 text-right">
-                          <input
-                            type="number"
-                            placeholder="—"
-                            value={row.override ?? ''}
-                            onChange={(e) => {
-                              const v = e.target.value
-                              setOverrides((prev) => {
-                                const next = { ...prev }
-                                if (v === '') { delete next[row.label] } else { next[row.label] = Number(v) }
-                                return next
-                              })
-                            }}
-                            className="w-28 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                          />
-                        </td>
-                        <td className={`num px-6 py-3 font-medium ${row.override !== null ? 'text-teal-600' : 'text-slate-800'}`}>
-                          {fmt(effective)}
-                        </td>
-                      </tr>
-                    )
-                  })}
+                  {groupRows.map((row) => (
+                    <RevenueRowComponent key={row.label} row={row} isModified={isModified} overrides={overrides} setOverrides={setOverrides} overrideKey={row.label} />
+                  ))}
                 </React.Fragment>
               )
             })}
+
+            {/* Operating Revenue subtotal */}
+            <tr className="border-b border-slate-200 bg-slate-50">
+              <td className="px-6 py-3 font-bold text-slate-800" colSpan={2}>Operating Revenue</td>
+              <td className="num px-6 py-3 font-bold text-slate-800">{fmt(operatingBase)}</td>
+              {isModified && (
+                <td className="num px-6 py-3 font-bold text-teal-600">{fmt(operatingScenario)}</td>
+              )}
+              <td></td>
+              <td className="num px-6 py-3 font-bold text-slate-800">
+                {fmt(isModified ? operatingScenario : operatingBase)}
+              </td>
+            </tr>
+
+            {/* Startup & Other Grants section */}
+            {grantRows.length > 0 && (
+              <>
+                <tr className="section-header">
+                  <td colSpan={colSpan} className="px-6 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide">
+                    Startup &amp; Other Grants
+                    <span className="ml-2 font-normal normal-case text-[10px]">(one-time — not included in sustainability metrics)</span>
+                  </td>
+                </tr>
+                {grantRows.map((row) => (
+                  <RevenueRowComponent key={row.label} row={row} isModified={isModified} overrides={overrides} setOverrides={setOverrides} overrideKey={`grant:${row.label}`} />
+                ))}
+                <tr className="border-b border-slate-200 bg-amber-50/50">
+                  <td className="px-6 py-2.5 font-semibold text-slate-700" colSpan={2}>Startup &amp; Other Grants Subtotal</td>
+                  <td className="num px-6 py-2.5 font-semibold text-slate-700">{fmt(grantBase)}</td>
+                  {isModified && (
+                    <td className="num px-6 py-2.5 font-semibold text-teal-600">{fmt(grantScenario)}</td>
+                  )}
+                  <td></td>
+                  <td className="num px-6 py-2.5 font-semibold text-slate-700">
+                    {fmt(isModified ? grantScenario : grantBase)}
+                  </td>
+                </tr>
+              </>
+            )}
           </tbody>
           <tfoot>
-            <tr>
-              <td className="px-6 py-3 font-bold text-slate-800" colSpan={2}>Total Revenue</td>
+            <tr className="border-t-2 border-slate-300">
+              <td className="px-6 py-3 font-bold text-slate-800" colSpan={2}>
+                Total Revenue {grantRows.length > 0 ? '(incl. Grants)' : ''}
+              </td>
               <td className="num px-6 py-3 font-bold text-slate-800">{fmt(totalBase)}</td>
               {isModified && (
                 <td className="num px-6 py-3 font-bold text-teal-600">{fmt(totalScenario)}</td>
@@ -216,6 +251,58 @@ export default function RevenuePage() {
           </tfoot>
         </table>
       </div>
+
+      {grantRows.length > 0 && (
+        <div className="mt-3 text-xs text-slate-400 italic">
+          Sustainability metrics (Personnel % of Revenue, Facility % of Revenue, Break-Even) use Operating Revenue as the denominator, excluding one-time grants.
+        </div>
+      )}
     </div>
+  )
+}
+
+function RevenueRowComponent({ row, isModified, overrides, setOverrides, overrideKey }: {
+  row: RevenueRow
+  isModified: boolean
+  overrides: Record<string, number>
+  setOverrides: React.Dispatch<React.SetStateAction<Record<string, number>>>
+  overrideKey: string
+}) {
+  const effective = row.override ?? (isModified ? row.scenarioCalc : row.calculated)
+  return (
+    <tr className="border-b border-slate-100">
+      <td className="px-6 py-3">
+        <span className="font-medium text-slate-800">{row.label}</span>
+        {row.helperNote && (
+          <span className="block text-[10px] text-slate-400 mt-0.5">{row.helperNote}</span>
+        )}
+      </td>
+      <td className="px-6 py-3 text-slate-500 text-xs">{row.formula}</td>
+      <td className="num px-6 py-3 text-slate-500">{fmt(row.calculated)}</td>
+      {isModified && (
+        <td className={`num px-6 py-3 ${row.scenarioCalc !== row.calculated ? 'text-teal-600 font-medium' : 'text-slate-500'}`}>
+          {fmt(row.scenarioCalc)}
+        </td>
+      )}
+      <td className="px-6 py-3 text-right">
+        <input
+          type="number"
+          placeholder="—"
+          value={row.override ?? ''}
+          onChange={(e) => {
+            const v = e.target.value
+            setOverrides((prev) => {
+              const next = { ...prev }
+              if (v === '') { delete next[overrideKey] } else { next[overrideKey] = Number(v) }
+              return next
+            })
+          }}
+          className="w-28 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+        />
+      </td>
+      <td className={`num px-6 py-3 font-medium ${row.override !== null ? 'text-teal-600' : 'text-slate-800'}`}>
+        {fmt(effective)}
+      </td>
+    </tr>
   )
 }

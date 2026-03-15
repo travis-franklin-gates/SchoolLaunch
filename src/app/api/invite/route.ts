@@ -2,14 +2,12 @@ import { NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
 export async function POST(request: Request) {
-  // Authenticate the user
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Verify user is org_admin or super_admin
   const { data: roleData } = await supabase
     .from('user_roles')
     .select('role, organization_id')
@@ -30,34 +28,7 @@ export async function POST(request: Request) {
   const admin = createServiceRoleClient()
   const orgId = roleData.organization_id
 
-  // 1. Create placeholder school (CEO sets name + details during onboarding)
-  const { data: school, error: schoolError } = await admin
-    .from('schools')
-    .insert({
-      name: 'New School',
-      organization_id: orgId,
-      status: 'planning',
-    })
-    .select('id')
-    .single()
-
-  if (schoolError || !school) {
-    return NextResponse.json({ error: 'Failed to create school', detail: schoolError }, { status: 500 })
-  }
-
-  // 2. Create minimal school profile (CEO completes during onboarding)
-  const { error: profileError } = await admin
-    .from('school_profiles')
-    .insert({
-      school_id: school.id,
-      onboarding_complete: false,
-    })
-
-  if (profileError) {
-    return NextResponse.json({ error: 'Failed to create school profile', detail: profileError }, { status: 500 })
-  }
-
-  // 3. Generate invitation token and create invitation
+  // Create invitation record only — school gets created when CEO accepts
   const token = crypto.randomUUID()
   const { error: inviteError } = await admin
     .from('invitations')
@@ -67,7 +38,7 @@ export async function POST(request: Request) {
       ceo_name: ceoName,
       role: 'school_ceo',
       organization_id: orgId,
-      school_id: school.id,
+      school_id: null,
       created_by: user.id,
       accepted: false,
     })
@@ -78,7 +49,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     success: true,
-    schoolId: school.id,
     token,
     inviteUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://schoollaunch.vercel.app'}/invite?token=${token}`,
   })

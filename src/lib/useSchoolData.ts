@@ -9,6 +9,7 @@ export interface SchoolData {
   schoolName: string
   profile: SchoolProfile
   positions: StaffingPosition[]
+  allPositions: StaffingPosition[]
   projections: BudgetProjection[]
   gradeExpansionPlan: GradeExpansionEntry[]
   scenarioId: string | null
@@ -37,6 +38,7 @@ export function useSchoolData(): SchoolData {
     onboarding_complete: false,
   })
   const [positions, setPositions] = useState<StaffingPosition[]>([])
+  const [allPositions, setAllPositions] = useState<StaffingPosition[]>([])
   const [projections, setProjections] = useState<BudgetProjection[]>([])
   const [gradeExpansionPlan, setGradeExpansionPlan] = useState<GradeExpansionEntry[]>([])
   const [scenarioId, setScenarioId] = useState<string | null>(null)
@@ -63,7 +65,7 @@ export function useSchoolData(): SchoolData {
     const [schoolRes, profileRes, posRes, projRes, scenRes, gepRes] = await Promise.all([
       supabase.from('schools').select('name').eq('id', sid).single(),
       supabase.from('school_profiles').select('*').eq('school_id', sid).single(),
-      supabase.from('staffing_positions').select('*').eq('school_id', sid).eq('year', 1),
+      supabase.from('staffing_positions').select('*').eq('school_id', sid).order('year'),
       supabase.from('budget_projections').select('*').eq('school_id', sid).eq('year', 1),
       supabase.from('scenarios').select('id').eq('school_id', sid).eq('is_base_case', true).single(),
       supabase.from('grade_expansion_plan').select('*').eq('school_id', sid).order('year').order('grade_level'),
@@ -71,7 +73,11 @@ export function useSchoolData(): SchoolData {
 
     if (schoolRes.data) setSchoolName(schoolRes.data.name)
     if (profileRes.data) setProfile(profileRes.data as SchoolProfile)
-    if (posRes.data) setPositions(posRes.data as StaffingPosition[])
+    if (posRes.data) {
+      const all = posRes.data as StaffingPosition[]
+      setAllPositions(all)
+      setPositions(all.filter((p) => p.year === 1))
+    }
     if (projRes.data) setProjections(projRes.data as BudgetProjection[])
     if (scenRes.data) setScenarioId(scenRes.data.id)
     if (gepRes.data) setGradeExpansionPlan(gepRes.data as GradeExpansionEntry[])
@@ -81,5 +87,5 @@ export function useSchoolData(): SchoolData {
 
   useEffect(() => { load() }, [])
 
-  return { schoolId, schoolName, profile, positions, projections, gradeExpansionPlan, scenarioId, loading, reload: load }
+  return { schoolId, schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, scenarioId, loading, reload: load }
 }

@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(cd C:/users/travisfr/schoollaunch && npx next build 2>&1 | tail -30)",
+      "Bash(cd C:/users/travisfr/schoollaunch && npx next build 2>&1 | tail -10)",
+      "Bash(cd C:/users/travisfr/schoollaunch && npx next build 2>&1 | tail -15)",
+      "Bash(npx tsc:*)",
+      "Bash(git commit:*)",
+      "Bash(ls -la /c/users/travisfr/schoollaunch/src/app/\\\\\\(authenticated\\\\\\)/dashboard/ | grep page)",
+      "Bash(npm install:*)",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__execute_sql",
+      "Bash(ls \"C:/users/travisfr/schoollaunch/src/app/\\(authenticated\\)/portfolio/\")",
+      "mcp__supabase__apply_migration",
+      "Bash(git status:*)",
+      "Bash(npx next:*)",
+      "Bash(find /c/users/travisfr/schoollaunch -type f -name \"*sidebar*\" -o -name \"*navigation*\" -o -name \"*nav*\" 2>/dev/null | head -20)",
+      "Bash(ls 'src/app/api/' && ls 'src/app/\\(authenticated\\)/dashboard/')",
+      "Bash(ls -la /c/users/travisfr/schoollaunch/src/app/\\\\\\(authenticated\\\\\\)/dashboard/)",
+      "Bash(find /c/users/travisfr/schoollaunch/supabase -type f -name \"*.sql\" 2>/dev/null | head -30)",
+      "Bash(find /c/users/travisfr/schoollaunch/supabase -type f -name \"*.sql\" | xargs grep -l \"staffing_positions\" 2>/dev/null)",
+      "Bash(find /c/users/travisfr/schoollaunch -type f -name \"*.ts\" -o -name \"*.tsx\" | xargs grep -l \"COMMISSION_POSITIONS\\\\|getCommissionPosition\" | head -10)",
+      "Bash(find /c/users/travisfr/schoollaunch -type f -name \"*.sql\" -o -name \"*.ts\" | xargs grep -l \"CREATE TABLE.*staffing_positions\" 2>/dev/null | head -5)",
+      "Bash(find /c/users/travisfr/schoollaunch -name \"schema.sql\" -o -name \"init.sql\" -o -name \"*schema*\" -type f 2>/dev/null | head -10)",
+      "Bash(find /c/users/travisfr/schoollaunch -path \"*/migrations*\" -o -path \"*/supabase/*\" 2>/dev/null | grep -v node_modules | head -20)"
+    ]
+  }
+}

@@ -65,6 +65,10 @@ export function getAssumptions(raw: Partial<FinancialAssumptions> | null | undef
     merged.regular_ed_per_pupil = 12000
     merged.sped_per_pupil = 4500
   }
+  // Migrate old levy_equity_per_student: legislature has not reinstated, default is $0
+  if (raw.levy_equity_per_student === 1500) {
+    merged.levy_equity_per_student = 0
+  }
   // Keep per_pupil_rate in sync for legacy code paths
   merged.per_pupil_rate = merged.regular_ed_per_pupil
   return merged
@@ -102,6 +106,14 @@ export interface SchoolProfile {
   opening_grades?: string[] | null
   buildout_grades?: string[] | null
   retention_rate?: number | null
+  pre_opening_expenses?: PreOpeningExpense[] | null
+}
+
+export interface PreOpeningExpense {
+  id: string
+  name: string
+  budgeted: number
+  actual: number
 }
 
 export interface StaffingPosition {

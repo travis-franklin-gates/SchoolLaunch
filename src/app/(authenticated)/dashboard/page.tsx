@@ -72,7 +72,7 @@ function HealthTile({ label, value, subtitle, colorClass }: {
 
 export default function DashboardPage() {
   const {
-    schoolData: { schoolName, profile, positions, projections, gradeExpansionPlan, loading },
+    schoolData: { schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, loading },
     assumptions,
     baseSummary,
     scenario,
@@ -96,8 +96,8 @@ export default function DashboardPage() {
   const [advisoryLoading, setAdvisoryLoading] = useState(false)
 
   const multiYear = useMemo(
-    () => computeMultiYearDetailed(profile, positions, projections, assumptions, 0, gradeExpansionPlan),
-    [profile, positions, projections, assumptions, gradeExpansionPlan]
+    () => computeMultiYearDetailed(profile, positions, projections, assumptions, 0, gradeExpansionPlan, allPositions, profile.startup_funding),
+    [profile, positions, allPositions, projections, assumptions, gradeExpansionPlan]
   )
   const cashFlowData = useMemo(
     () => computeCashFlow(baseSummary, baseApportionment, 0),
@@ -562,7 +562,13 @@ export default function DashboardPage() {
           </thead>
           <tbody>
             {[
-              { label: 'Total Revenue', base: baseSummary.totalRevenue, curr: current.totalRevenue },
+              { label: 'Operating Revenue', base: baseSummary.operatingRevenue, curr: current.operatingRevenue },
+              ...(baseSummary.grantRevenue > 0 ? [
+                { label: 'Startup Grants (Year 1)', base: baseSummary.grantRevenue, curr: current.grantRevenue },
+                { label: 'Total Revenue', base: baseSummary.totalRevenue, curr: current.totalRevenue },
+              ] : [
+                { label: 'Total Revenue', base: baseSummary.totalRevenue, curr: current.totalRevenue },
+              ]),
               { label: 'Total Personnel', base: baseSummary.totalPersonnel, curr: current.totalPersonnel },
               { label: 'Total Operations', base: baseSummary.totalOperations, curr: current.totalOperations },
               { label: 'Net Position', base: baseSummary.netPosition, curr: current.netPosition, bold: true },

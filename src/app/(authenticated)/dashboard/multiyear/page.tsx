@@ -20,7 +20,7 @@ const DEFAULT_SOURCES: StartupFundingSource[] = [
 
 export default function MultiYearPage() {
   const {
-    schoolData: { schoolId, profile, positions, projections, gradeExpansionPlan, loading, reload },
+    schoolData: { schoolId, profile, positions, allPositions, projections, gradeExpansionPlan, loading, reload },
     assumptions,
   } = useScenario()
   const supabase = createClient()
@@ -38,15 +38,15 @@ export default function MultiYearPage() {
     .reduce((s, f) => s + f.amount, 0)
 
   const years = useMemo(
-    () => computeMultiYearDetailed(profile, positions, projections, assumptions, -totalFunding + totalFunding, gradeExpansionPlan),
-    [profile, positions, projections, assumptions, totalFunding, gradeExpansionPlan]
+    () => computeMultiYearDetailed(profile, positions, projections, assumptions, -totalFunding + totalFunding, gradeExpansionPlan, allPositions, fundingSources),
+    [profile, positions, allPositions, projections, assumptions, totalFunding, gradeExpansionPlan, fundingSources]
   )
 
   // Recalculate with actual pre-opening net (funding minus a rough pre-opening cost estimate)
   const preOpenTotal = Math.round(totalFunding * 0.4) // rough estimate: 40% goes to pre-opening
   const yearsWithStartup = useMemo(
-    () => computeMultiYearDetailed(profile, positions, projections, assumptions, totalFunding - preOpenTotal, gradeExpansionPlan),
-    [profile, positions, projections, assumptions, totalFunding, preOpenTotal, gradeExpansionPlan]
+    () => computeMultiYearDetailed(profile, positions, projections, assumptions, totalFunding - preOpenTotal, gradeExpansionPlan, allPositions, fundingSources),
+    [profile, positions, allPositions, projections, assumptions, totalFunding, preOpenTotal, gradeExpansionPlan, fundingSources]
   )
 
   const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
@@ -271,7 +271,13 @@ export default function MultiYearPage() {
             <Row label="TBIP" values={yearsWithStartup.map((y) => y.revenue.tbip)} />
             <Row label="HiCap" values={yearsWithStartup.map((y) => y.revenue.hicap)} />
             <Row label="Interest & Other Income" values={yearsWithStartup.map((y) => y.revenue.interestIncome)} />
-            <TotalRow label="Total Revenue" values={yearsWithStartup.map((y) => y.revenue.total)} />
+            <TotalRow label="Operating Revenue" values={yearsWithStartup.map((y) => y.revenue.operatingRevenue)} />
+            {yearsWithStartup.some((y) => y.revenue.grantRevenue > 0) && (
+              <>
+                <Row label="Startup & Other Grants" values={yearsWithStartup.map((y) => y.revenue.grantRevenue)} />
+                <TotalRow label="Total Revenue (incl. Grants)" values={yearsWithStartup.map((y) => y.revenue.total)} />
+              </>
+            )}
 
             {/* Personnel Section */}
             <SectionHeader label="Personnel" cols={5} />
@@ -304,7 +310,7 @@ export default function MultiYearPage() {
 
             {/* Summary Section */}
             <SectionHeader label="Summary" cols={5} />
-            <TotalRow label="Total Revenue" values={yearsWithStartup.map((y) => y.revenue.total)} />
+            <TotalRow label={yearsWithStartup.some((y) => y.revenue.grantRevenue > 0) ? 'Total Revenue (incl. Grants)' : 'Total Revenue'} values={yearsWithStartup.map((y) => y.revenue.total)} />
             <TotalRow label="Total Expenses" values={yearsWithStartup.map((y) => y.totalExpenses)} />
             <tr className="border-b border-slate-200">
               <td className="px-5 py-3 font-bold text-slate-800">Net Position</td>

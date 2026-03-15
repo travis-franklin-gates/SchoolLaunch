@@ -61,15 +61,15 @@ const PROGRESS_STEPS = [
 
 export default function AlignmentPage() {
   const {
-    schoolData: { schoolId, schoolName, profile, positions, projections, gradeExpansionPlan, loading },
+    schoolData: { schoolId, schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, loading },
     assumptions,
     conservativeMode,
   } = useScenario()
   const supabase = createClient()
 
   const multiYear = useMemo(
-    () => computeMultiYearDetailed(profile, positions, projections, assumptions, 0, gradeExpansionPlan),
-    [profile, positions, projections, assumptions, gradeExpansionPlan]
+    () => computeMultiYearDetailed(profile, positions, projections, assumptions, 0, gradeExpansionPlan, allPositions, profile.startup_funding),
+    [profile, positions, allPositions, projections, assumptions, gradeExpansionPlan]
   )
   const startupFunding = profile.startup_funding?.reduce((s: number, f: { amount: number }) => s + f.amount, 0) || 0
   const preOpenCash = Math.round(startupFunding * 0.6)

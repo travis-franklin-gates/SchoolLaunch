@@ -48,23 +48,22 @@ export default function InviteForm({ invitation, ceoName }: { invitation: Invita
         return
       }
 
-      const { error: roleError } = await supabase.from('user_roles').insert({
-        user_id: authData.user.id,
-        role: invitation.role,
-        school_id: invitation.school_id,
-        organization_id: invitation.organization_id,
+      // Call server endpoint to create school, profile, user_roles, and mark invitation accepted
+      const acceptRes = await fetch('/api/invite/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          invitationId: invitation.id,
+          userId: authData.user.id,
+        }),
       })
 
-      if (roleError) {
-        setError('Failed to assign role. Please contact support.')
+      if (!acceptRes.ok) {
+        const acceptData = await acceptRes.json()
+        setError(acceptData.error || 'Failed to set up your school. Please contact support.')
         setLoading(false)
         return
       }
-
-      await supabase
-        .from('invitations')
-        .update({ accepted: true, accepted_at: new Date().toISOString() })
-        .eq('id', invitation.id)
 
       if (invitation.role === 'school_ceo') {
         router.push('/onboarding')

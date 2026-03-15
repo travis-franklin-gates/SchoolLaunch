@@ -5,6 +5,7 @@ import { useSchoolData, type SchoolData } from '@/lib/useSchoolData'
 import {
   computeSummaryFromProjections,
   computeScenario,
+  getGrantRevenueForYear,
   type ScenarioInputs,
   type BudgetSummary,
 } from '@/lib/budgetEngine'
@@ -44,9 +45,15 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
 
   const assumptions = useMemo(() => getAssumptions(profile.financial_assumptions), [profile.financial_assumptions])
 
+  // Year 1 grant revenue from startup funding allocations
+  const y1GrantRevenue = useMemo(
+    () => getGrantRevenueForYear(profile.startup_funding, 1),
+    [profile.startup_funding]
+  )
+
   const baseSummary = useMemo(
-    () => computeSummaryFromProjections(projections, positions, assumptions),
-    [projections, positions, assumptions]
+    () => computeSummaryFromProjections(projections, positions, assumptions, y1GrantRevenue),
+    [projections, positions, assumptions, y1GrantRevenue]
   )
 
   const baseFacilities = projections.find((p) => p.subcategory === 'Facilities' && !p.is_revenue)?.amount || 0
@@ -67,8 +74,8 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
   const scenarioInputs = scenario || baseInputs
 
   const scenarioSummary = useMemo(
-    () => computeScenario(scenarioInputs, profile, positions, projections, assumptions),
-    [scenarioInputs, profile, positions, projections, assumptions]
+    () => computeScenario(scenarioInputs, profile, positions, projections, assumptions, y1GrantRevenue),
+    [scenarioInputs, profile, positions, projections, assumptions, y1GrantRevenue]
   )
 
   // Conservative mode: 90% enrollment for revenue, 100% for expenses
@@ -80,7 +87,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
     }
     // Use computeScenario with reduced enrollment — this reduces BOTH revenue AND per-pupil ops
     // But we want expenses at 100%. So compute revenue at 90%, expenses at base.
-    const reducedSummary = computeScenario(conservativeInputs, profile, positions, projections, assumptions)
+    const reducedSummary = computeScenario(conservativeInputs, profile, positions, projections, assumptions, y1GrantRevenue)
     // Override: keep expenses from base, only use revenue from reduced enrollment
     const totalExpenses = baseSummary.totalExpenses
     const netPosition = reducedSummary.totalRevenue - totalExpenses
@@ -93,11 +100,11 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
       totalExpenses,
       netPosition,
       reserveDays,
-      personnelPctRevenue: reducedSummary.totalRevenue > 0 ? (baseSummary.totalPersonnel / reducedSummary.totalRevenue) * 100 : 0,
+      personnelPctRevenue: reducedSummary.operatingRevenue > 0 ? (baseSummary.totalPersonnel / reducedSummary.operatingRevenue) * 100 : 0,
       breakEvenEnrollment: baseSummary.breakEvenEnrollment,
-      facilityPct: reducedSummary.totalRevenue > 0 ? (baseFacilities / reducedSummary.totalRevenue) * 100 : 0,
+      facilityPct: reducedSummary.operatingRevenue > 0 ? (baseFacilities / reducedSummary.operatingRevenue) * 100 : 0,
     }
-  }, [profile, positions, projections, assumptions, baseInputs, baseSummary, baseFacilities])
+  }, [profile, positions, projections, assumptions, baseInputs, baseSummary, baseFacilities, y1GrantRevenue])
 
   const isModified = scenario !== null
 

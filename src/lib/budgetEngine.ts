@@ -9,11 +9,53 @@ import {
   PER_PUPIL_RATE,
   LEVY_EQUITY_RATE,
 } from './calculations'
-import type { SchoolProfile, StaffingPosition, BudgetProjection, FinancialAssumptions, GradeExpansionEntry } from './types'
+import type { SchoolProfile, StaffingPosition, BudgetProjection, FinancialAssumptions, GradeExpansionEntry, StartupFundingSource } from './types'
 import { DEFAULT_ASSUMPTIONS } from './types'
+
+// --- Grant Revenue Utility ---
+
+/** Get grant revenue for a specific year (1-5) from startup funding sources */
+export function getGrantRevenueForYear(
+  sources: StartupFundingSource[] | null | undefined,
+  year: number,
+): number {
+  if (!sources || sources.length === 0) return 0
+  let total = 0
+  for (const src of sources) {
+    if (src.yearAllocations?.[year]) {
+      total += src.yearAllocations[year]
+    } else if (src.selectedYears?.includes(year)) {
+      // Evenly divide across selected years if no explicit allocation
+      const yearCount = src.selectedYears.length
+      total += Math.round(src.amount / yearCount)
+    }
+    // If no selectedYears or yearAllocations for this year, no allocation (pre-opening only)
+  }
+  return total
+}
+
+/** Get per-source grant allocations for a specific year */
+export function getGrantAllocationsForYear(
+  sources: StartupFundingSource[] | null | undefined,
+  year: number,
+): { source: string; amount: number; type: StartupFundingSource['type'] }[] {
+  if (!sources || sources.length === 0) return []
+  return sources.map((src) => {
+    let amount = 0
+    if (src.yearAllocations?.[year]) {
+      amount = src.yearAllocations[year]
+    } else if (src.selectedYears?.includes(year)) {
+      const yearCount = src.selectedYears.length
+      amount = Math.round(src.amount / yearCount)
+    }
+    return { source: src.source, amount, type: src.type }
+  }).filter((a) => a.amount > 0)
+}
 import { expansionToEnrollmentArray, computeExpansionEnrollments, teachersPerNewGrade } from './gradeExpansion'
 
 export interface BudgetSummary {
+  operatingRevenue: number
+  grantRevenue: number
   totalRevenue: number
   totalPersonnel: number
   totalOperations: number
@@ -28,12 +70,14 @@ export interface BudgetSummary {
 export function computeSummaryFromProjections(
   projections: BudgetProjection[],
   positions: StaffingPosition[],
-  assumptions?: FinancialAssumptions
+  assumptions?: FinancialAssumptions,
+  grantRevenue: number = 0,
 ): BudgetSummary {
   const a = assumptions || DEFAULT_ASSUMPTIONS
-  const totalRevenue = projections
+  const operatingRevenue = projections
     .filter((p) => p.is_revenue)
     .reduce((s, p) => s + p.amount, 0)
+  const totalRevenue = operatingRevenue + grantRevenue
   const totalPersonnel = projections
     .filter((p) => !p.is_revenue && p.category === 'Personnel')
     .reduce((s, p) => s + p.amount, 0)
@@ -44,7 +88,8 @@ export function computeSummaryFromProjections(
   const netPosition = totalRevenue - totalExpenses
   const dailyExpense = totalExpenses / 365
   const reserveDays = dailyExpense > 0 ? Math.round(netPosition / dailyExpense) : 0
-  const personnelPctRevenue = totalRevenue > 0 ? (totalPersonnel / totalRevenue) * 100 : 0
+  // Personnel % uses operating revenue (excludes one-time grants) for sustainability assessment
+  const personnelPctRevenue = operatingRevenue > 0 ? (totalPersonnel / operatingRevenue) * 100 : 0
 
   // Break-even uses Commission revenue per pupil (AAFTE-adjusted)
   const aaftePct = a.aafte_pct / 100
@@ -56,9 +101,12 @@ export function computeSummaryFromProjections(
   const facilityCost = projections
     .filter((p) => !p.is_revenue && p.subcategory === 'Facilities')
     .reduce((s, p) => s + p.amount, 0)
-  const facilityPct = totalRevenue > 0 ? (facilityCost / totalRevenue) * 100 : 0
+  // Facility % uses operating revenue for sustainability assessment
+  const facilityPct = operatingRevenue > 0 ? (facilityCost / operatingRevenue) * 100 : 0
 
   return {
+    operatingRevenue,
+    grantRevenue,
     totalRevenue,
     totalPersonnel,
     totalOperations,
@@ -84,7 +132,8 @@ export function computeScenario(
   profile: SchoolProfile,
   basePositions: StaffingPosition[],
   baseProjections: BudgetProjection[],
-  assumptions?: FinancialAssumptions
+  assumptions?: FinancialAssumptions,
+  grantRevenue: number = 0,
 ): BudgetSummary {
   const a = assumptions || DEFAULT_ASSUMPTIONS
   const { enrollment, classSize, leadTeacherSalary, monthlyLease, extraTeacher } = inputs
@@ -93,7 +142,8 @@ export function computeScenario(
 
   // Revenue — use Commission revenue structure
   const rev = calcCommissionRevenue(enrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, a)
-  const totalRevenue = rev.total
+  const operatingRevenue = rev.total
+  const totalRevenue = operatingRevenue + grantRevenue
 
   // Personnel — scale certificated salaries proportionally
   const baseCertSalary = basePositions.find((p) => p.category === 'certificated')?.annual_salary || 58000
@@ -137,13 +187,16 @@ export function computeScenario(
   const netPosition = totalRevenue - totalExpenses
   const dailyExpense = totalExpenses / 365
   const reserveDays = dailyExpense > 0 ? Math.round(netPosition / dailyExpense) : 0
-  const personnelPctRevenue = totalRevenue > 0 ? (totalPersonnel / totalRevenue) * 100 : 0
+  // Personnel % uses operating revenue (excludes one-time grants)
+  const personnelPctRevenue = operatingRevenue > 0 ? (totalPersonnel / operatingRevenue) * 100 : 0
   const aaftePct = a.aafte_pct / 100
   const perPupilRevenue = (a.regular_ed_per_pupil + a.levy_equity_per_student) * aaftePct
   const breakEvenEnrollment = perPupilRevenue > 0 ? Math.ceil(totalExpenses / perPupilRevenue) : 0
-  const facilityPct = totalRevenue > 0 ? ((monthlyLease * 12) / totalRevenue) * 100 : 0
+  const facilityPct = operatingRevenue > 0 ? ((monthlyLease * 12) / operatingRevenue) * 100 : 0
 
   return {
+    operatingRevenue,
+    grantRevenue,
     totalRevenue,
     totalPersonnel,
     totalOperations,
@@ -258,6 +311,8 @@ export interface MultiYearDetailedRow {
     tbip: number
     hicap: number
     interestIncome: number
+    grantRevenue: number
+    operatingRevenue: number
     total: number
     // Legacy aliases
     apportionment: number
@@ -300,6 +355,8 @@ export function computeMultiYearDetailed(
   assumptions: FinancialAssumptions,
   preOpeningNet: number,
   gradeExpansionPlan?: GradeExpansionEntry[],
+  allPositions?: StaffingPosition[],
+  startupFunding?: StartupFundingSource[] | null,
 ): MultiYearDetailedRow[] {
   // Use grade expansion enrollments if available, else fall back to flat profile targets
   const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
@@ -345,20 +402,31 @@ export function computeMultiYearDetailed(
     const interestIncome = y === 1
       ? Math.round(Math.max(0, priorCash) * interestRate / 2) // half-year approximation
       : Math.round(Math.max(0, priorCash) * interestRate)
-    const totalRevenue = rev.total + interestIncome
+    // Grant revenue for this year from startup funding allocations
+    const yearGrantRevenue = getGrantRevenueForYear(startupFunding, y)
+    const operatingRevenue = rev.total + interestIncome
+    const totalRevenue = operatingRevenue + yearGrantRevenue
     // State apportionment = regularEd + sped + facilitiesRev (for authorizer fee)
     const stateApport = rev.regularEd + rev.sped + rev.facilitiesRev
 
-    // Personnel
+    // Personnel — use year-specific positions if available, else auto-scale
+    const yearPositions = allPositions?.filter((p) => p.year === y)
+    const hasYearPositions = yearPositions && yearPositions.length > 0
+    const positionsForYear = hasYearPositions ? yearPositions : positions
+
     const staffing = y === 1
       ? computeYear1Staffing(positions, benefitsRate)
-      : computeMultiYearPersonnel(enr, y, positions, enrollments[0], salaryEscalator, benefitsRate)
+      : hasYearPositions
+        ? computeYear1Staffing(yearPositions, benefitsRate)
+        : computeMultiYearPersonnel(enr, y, positions, enrollments[0], salaryEscalator, benefitsRate)
 
     let certCost = 0, classCost = 0, adminCost = 0, benefitsCost = 0, totalSalaries = 0
-    if (y === 1) {
-      // Use actual position data
-      for (const pos of positions) {
-        const cost = pos.fte * pos.annual_salary
+    if (hasYearPositions || y === 1) {
+      // Use actual position data for this year
+      const escalator = y === 1 ? 1 : Math.pow(salaryEscalator, y - 1)
+      for (const pos of positionsForYear) {
+        const salary = Math.round(pos.annual_salary * escalator)
+        const cost = pos.fte * salary
         const ben = calcBenefits(cost, benefitsRate)
         if (pos.category === 'certificated') certCost += cost
         else if (pos.category === 'classified') classCost += cost
@@ -367,7 +435,7 @@ export function computeMultiYearDetailed(
       }
       totalSalaries = certCost + classCost + adminCost
     } else {
-      // Scaled positions
+      // Scaled positions (legacy: no year-specific data)
       const escalator = Math.pow(salaryEscalator, y - 1)
       const teacherPositions = positions.filter(p => p.category === 'certificated' && /teacher/i.test(p.title))
       const additionalTeachers = staffing.teachers - teacherPositions.reduce((s, p) => s + p.fte, 0)
@@ -458,6 +526,8 @@ export function computeMultiYearDetailed(
         tbip: rev.tbip,
         hicap: rev.hicap,
         interestIncome,
+        grantRevenue: yearGrantRevenue,
+        operatingRevenue,
         total: totalRevenue,
         apportionment: rev.regularEd + rev.sped + rev.facilitiesRev,
       },
@@ -656,7 +726,7 @@ export function computeFPFScorecard(
     ),
   })
 
-  // 3. Total Margin
+  // 3. Total Margin (uses total revenue including grants — this reflects actual financial position)
   const totalMargin = multiYear.map(row =>
     row.revenue.total > 0 ? Math.round((row.net / row.revenue.total) * 1000) / 10 : 0
   )
