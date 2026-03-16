@@ -435,14 +435,14 @@ export default function StaffingPage() {
     const cp = getCommissionPosition(type)
     if (!cp) return
 
-    // Derive classification and driver from the authoritative maps
-    const classification = getClassification(type)
     const driver = getDriver(type)
     const studentsPerPos = getStudentsPerPosition(type)
 
     setPositions((prev) =>
       prev.map((p) => {
         if (p.id !== id) return p
+        // For custom positions, keep the current section's classification
+        const classification = type === 'custom' ? p.classification : getClassification(type)
         const newFte = computeSmartFte(p.fte[0] || 1, driver, type, enrollments, sectionsPerYear)
         return {
           ...p,
@@ -469,12 +469,6 @@ export default function StaffingPage() {
   function updateTitle(id: string, value: string) {
     setPositions((prev) =>
       prev.map((p) => (p.id === id ? { ...p, title: value } : p))
-    )
-  }
-
-  function updateClassification(id: string, cls: 'Administrative' | 'Certificated' | 'Classified') {
-    setPositions((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, classification: cls, category: classificationToCategory(cls) } : p))
     )
   }
 
@@ -670,7 +664,6 @@ export default function StaffingPage() {
                   onUpdateFte={updateFte}
                   onUpdateSalary={updateSalary}
                   onUpdateTitle={updateTitle}
-                  onUpdateClassification={updateClassification}
                   onRemove={removePosition}
                   onAdd={addPosition}
                 />
@@ -751,7 +744,6 @@ function GroupSection({
   onUpdateFte,
   onUpdateSalary,
   onUpdateTitle,
-  onUpdateClassification,
   onRemove,
   onAdd,
 }: {
@@ -763,7 +755,6 @@ function GroupSection({
   onUpdateFte: (id: string, yearIndex: number, value: number) => void
   onUpdateSalary: (id: string, value: number) => void
   onUpdateTitle: (id: string, value: string) => void
-  onUpdateClassification: (id: string, cls: 'Administrative' | 'Certificated' | 'Classified') => void
   onRemove: (id: string) => void
   onAdd: (classification: 'Administrative' | 'Certificated' | 'Classified') => void
 }) {
@@ -785,7 +776,6 @@ function GroupSection({
           onUpdateFte={onUpdateFte}
           onUpdateSalary={onUpdateSalary}
           onUpdateTitle={onUpdateTitle}
-          onUpdateClassification={onUpdateClassification}
           onRemove={onRemove}
         />
       ))}
@@ -819,7 +809,6 @@ function PositionRow({
   onUpdateFte,
   onUpdateSalary,
   onUpdateTitle,
-  onUpdateClassification,
   onRemove,
 }: {
   pos: MultiYearPosition
@@ -828,7 +817,6 @@ function PositionRow({
   onUpdateFte: (id: string, yearIndex: number, value: number) => void
   onUpdateSalary: (id: string, value: number) => void
   onUpdateTitle: (id: string, value: string) => void
-  onUpdateClassification: (id: string, cls: 'Administrative' | 'Certificated' | 'Classified') => void
   onRemove: (id: string) => void
 }) {
   const driverLabel = DRIVER_LABELS[pos.driver] || pos.driver.replace(/_/g, ' ')
@@ -851,54 +839,18 @@ function PositionRow({
           onChange={(e) => onSelectType(pos.id, e.target.value)}
           className="w-full border border-slate-200 rounded px-2 py-1 text-sm"
         >
-          {/* Show section-relevant types first */}
-          <optgroup label={classification}>
-            {sectionTypes.map(cp => (
-              <option key={cp.type} value={cp.type}>{cp.name}</option>
-            ))}
-            <option value="custom">Custom Position</option>
-          </optgroup>
-          {/* Other categories in case the position was moved or for flexibility */}
-          {classification !== 'Administrative' && (
-            <optgroup label="Administrative">
-              {ADMIN_TYPES.map(cp => (
-                <option key={cp.type} value={cp.type}>{cp.name}</option>
-              ))}
-            </optgroup>
-          )}
-          {classification !== 'Certificated' && (
-            <optgroup label="Certificated">
-              {CERT_TYPES.map(cp => (
-                <option key={cp.type} value={cp.type}>{cp.name}</option>
-              ))}
-            </optgroup>
-          )}
-          {classification !== 'Classified' && (
-            <optgroup label="Classified">
-              {CLASS_TYPES.map(cp => (
-                <option key={cp.type} value={cp.type}>{cp.name}</option>
-              ))}
-            </optgroup>
-          )}
+          {sectionTypes.map(cp => (
+            <option key={cp.type} value={cp.type}>{cp.name}</option>
+          ))}
+          <option value="custom">Custom Position</option>
         </select>
         {isCustom && (
-          <div className="flex gap-1 mt-1">
-            <input
-              value={pos.title}
-              onChange={(e) => onUpdateTitle(pos.id, e.target.value)}
-              className="flex-1 border border-slate-200 rounded px-2 py-1 text-sm"
-              placeholder="Custom position name"
-            />
-            <select
-              value={pos.classification}
-              onChange={(e) => onUpdateClassification(pos.id, e.target.value as 'Administrative' | 'Certificated' | 'Classified')}
-              className="border border-slate-200 rounded px-1 py-1 text-[10px] w-24"
-            >
-              <option value="Administrative">Admin</option>
-              <option value="Certificated">Cert</option>
-              <option value="Classified">Class</option>
-            </select>
-          </div>
+          <input
+            value={pos.title}
+            onChange={(e) => onUpdateTitle(pos.id, e.target.value)}
+            className="w-full border border-slate-200 rounded px-2 py-1 text-sm mt-1"
+            placeholder="Custom position name"
+          />
         )}
       </td>
       <td className="px-2 py-1.5">
