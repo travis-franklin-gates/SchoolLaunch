@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { computeMultiYearDetailed, getGrantRevenueForYear } from '@/lib/budgetEngine'
-import type { StartupFundingSource } from '@/lib/types'
+import type { StartupFundingSource, PreOpeningTransaction } from '@/lib/types'
 import Link from 'next/link'
 
 function fmt(n: number) {
@@ -25,11 +25,28 @@ export default function MultiYearPage() {
     .filter((f) => f.status === 'received' || f.status === 'pledged')
     .reduce((s, f) => s + f.amount, 0)
 
-  // Recalculate with actual pre-opening net (funding minus a rough pre-opening cost estimate)
-  const preOpenTotal = Math.round(totalFunding * 0.4)
+  // Year 0 funding: use explicit Y0 allocations, or fall back to full amount for sources with no year selection
+  const year0Total = useMemo(() => {
+    let y0 = 0
+    for (const src of fundingSources) {
+      if (src.selectedYears?.includes(0) && src.yearAllocations?.[0]) {
+        y0 += src.yearAllocations[0]
+      } else if (!src.selectedYears || src.selectedYears.length === 0) {
+        y0 += src.amount
+      }
+    }
+    return y0 || totalFunding
+  }, [fundingSources, totalFunding])
+  const preOpenTransactions: PreOpeningTransaction[] = profile.pre_opening_transactions || []
+  const preOpenActualSpend = preOpenTransactions.reduce((s, tx) => s + tx.amount, 0)
+  const preOpenBudget = (profile.pre_opening_expenses || []).reduce((s, e) => s + e.budgeted, 0)
+  // Use actual spend when transactions exist, otherwise fall back to budgeted
+  const preOpenExpenses = preOpenActualSpend > 0 ? preOpenActualSpend : preOpenBudget
+  const carryForward = year0Total - preOpenExpenses
+
   const yearsWithStartup = useMemo(
-    () => computeMultiYearDetailed(profile, positions, projections, assumptions, totalFunding - preOpenTotal, gradeExpansionPlan, allPositions, fundingSources),
-    [profile, positions, allPositions, projections, assumptions, totalFunding, preOpenTotal, gradeExpansionPlan, fundingSources]
+    () => computeMultiYearDetailed(profile, positions, projections, assumptions, carryForward, gradeExpansionPlan, allPositions, fundingSources),
+    [profile, positions, allPositions, projections, assumptions, carryForward, gradeExpansionPlan, fundingSources]
   )
 
   const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
@@ -66,6 +83,7 @@ export default function MultiYearPage() {
                 <tr className="bg-slate-50 border-b border-slate-200">
                   <th className="text-left px-3 py-2 font-semibold text-slate-600">Source</th>
                   <th className="text-left px-3 py-2 font-semibold text-slate-600 w-20">Status</th>
+                  <th className="text-right px-3 py-2 font-semibold text-slate-500 w-24">Year 0</th>
                   {yrs.map((y) => (
                     <th key={y} className="text-right px-3 py-2 font-semibold text-slate-600 w-24">Year {y}</th>
                   ))}
@@ -86,6 +104,13 @@ export default function MultiYearPage() {
                           {src.status}
                         </span>
                       </td>
+                      <td className="px-3 py-2 text-right text-slate-500 tabular-nums">
+                        {(() => {
+                          if (allocs[0]) return fmt(allocs[0])
+                          if (!src.selectedYears || src.selectedYears.length === 0) return fmt(src.amount)
+                          return '—'
+                        })()}
+                      </td>
                       {yrs.map((y) => (
                         <td key={y} className="px-3 py-2 text-right text-slate-600 tabular-nums">
                           {allocs[y] ? fmt(allocs[y]) : '—'}
@@ -100,6 +125,9 @@ export default function MultiYearPage() {
                 <tr className="bg-slate-50 border-t border-slate-200">
                   <td className="px-3 py-2 font-bold text-slate-800">Total</td>
                   <td></td>
+                  <td className="px-3 py-2 text-right font-bold text-slate-500 tabular-nums">
+                    {year0Total > 0 ? fmt(year0Total) : '—'}
+                  </td>
                   {yrs.map((y) => {
                     const yearTotal = getGrantRevenueForYear(fundingSources, y)
                     return (
@@ -124,6 +152,15 @@ export default function MultiYearPage() {
               <span className="text-amber-600 font-semibold">Pending:</span>
               <span className="text-amber-700 font-bold ml-1">{fmt(totalFunding - securedFunding)}</span>
             </div>
+          </div>
+
+          {/* Year 0 carry-forward summary */}
+          <div className="mt-4 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-600 flex flex-wrap gap-x-4 gap-y-1">
+            <span>Year 0 Funding: <strong className="text-slate-800">{fmt(year0Total)}</strong></span>
+            <span className="text-slate-300">|</span>
+            <span>Pre-Opening {preOpenActualSpend > 0 ? 'Actual Spend' : 'Budget'}: <strong className="text-slate-800">{fmt(preOpenExpenses)}</strong></span>
+            <span className="text-slate-300">|</span>
+            <span>Carry-Forward to Year 1: <strong className={carryForward >= 0 ? 'text-emerald-700' : 'text-red-600'}>{fmt(carryForward)}</strong></span>
           </div>
         </div>
       )}
@@ -246,28 +283,46 @@ export default function MultiYearPage() {
                 </td>
               ))}
             </tr>
+            <tr className="border-b border-slate-100 bg-slate-50/30">
+              <td className="px-5 py-2.5 text-slate-600">Beginning Cash</td>
+              {yearsWithStartup.map((y) => {
+                const beginCash = y.cumulativeNet - y.net
+                return (
+                  <td key={y.year} className={`px-5 py-2.5 text-right tabular-nums font-medium ${beginCash >= 0 ? 'text-slate-700' : 'text-red-600'}`}>
+                    {fmt(beginCash)}
+                  </td>
+                )
+              })}
+            </tr>
             <tr className="border-b border-slate-200">
-              <td className="px-5 py-3 font-medium text-slate-700">Cumulative Net</td>
+              <td className="px-5 py-3 font-bold text-slate-800">Ending Cash</td>
               {yearsWithStartup.map((y) => (
-                <td key={y.year} className={`px-5 py-3 text-right font-medium ${y.cumulativeNet >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                <td key={y.year} className={`px-5 py-3 text-right font-bold ${y.cumulativeNet >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                   {fmt(y.cumulativeNet)}
                 </td>
               ))}
             </tr>
             <tr>
               <td className="px-5 py-3 font-bold text-slate-800">Reserve Days</td>
-              {yearsWithStartup.map((y) => (
-                <td key={y.year} className={`px-5 py-3 text-right font-bold ${
-                  y.reserveDays >= 60 ? 'text-emerald-600' :
-                  y.reserveDays >= 30 ? 'text-amber-600' :
-                  'text-red-600'
-                }`}>
-                  {y.reserveDays}
-                </td>
-              ))}
+              {yearsWithStartup.map((y) => {
+                const dailyExpense = y.totalExpenses / 365
+                const days = dailyExpense > 0 ? Math.round(y.cumulativeNet / dailyExpense) : 0
+                return (
+                  <td key={y.year} className={`px-5 py-3 text-right font-bold ${
+                    days >= 60 ? 'text-emerald-600' :
+                    days >= 30 ? 'text-amber-600' :
+                    'text-red-600'
+                  }`}>
+                    {days}
+                  </td>
+                )
+              })}
             </tr>
           </tbody>
         </table>
+        <p className="px-5 py-3 text-xs text-slate-400 italic border-t border-slate-100">
+          Beginning Cash each year equals the prior year&apos;s Ending Cash. Year 1 begins with funds carried forward from pre-opening.
+        </p>
       </div>
     </div>
   )

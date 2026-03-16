@@ -107,6 +107,7 @@ export interface SchoolProfile {
   buildout_grades?: string[] | null
   retention_rate?: number | null
   pre_opening_expenses?: PreOpeningExpense[] | null
+  pre_opening_transactions?: PreOpeningTransaction[] | null
   advisory_cache?: AdvisoryCache | null
 }
 
@@ -130,6 +131,19 @@ export interface PreOpeningExpense {
   name: string
   budgeted: number
   actual: number
+  /** Source name from startup funding for Y0 tracking */
+  fundingSource?: string
+}
+
+export interface PreOpeningTransaction {
+  id: string
+  /** Lowercase month key: 'mar' | 'apr' | 'may' | 'jun' | 'jul' | 'aug' */
+  month: string
+  description: string
+  amount: number
+  /** Matches a PreOpeningExpense.name for roll-up */
+  expense_category: string
+  created_at: string
 }
 
 export interface StaffingPosition {

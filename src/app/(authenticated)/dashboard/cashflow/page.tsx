@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { computeCashFlow } from '@/lib/budgetEngine'
 import { createClient } from '@/lib/supabase/client'
-import type { StartupFundingSource, PreOpeningExpense } from '@/lib/types'
+import type { StartupFundingSource, PreOpeningExpense, PreOpeningTransaction } from '@/lib/types'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -14,31 +14,21 @@ let _id = 0
 function uid() { return `poe-${++_id}-${Date.now()}` }
 
 const PRE_OPEN_MONTHS = ['Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug']
+const MONTH_KEYS = ['mar', 'apr', 'may', 'jun', 'jul', 'aug']
 
 const DEFAULT_EXPENSES: PreOpeningExpense[] = [
   { id: uid(), name: 'Founder/CEO Compensation', budgeted: 0, actual: 0 },
 ]
 
-// Distribute total pre-opening budget evenly across 6 months
-function computeYear0CashFlow(totalBudgeted: number, totalActual: number, funding: number) {
-  const monthlyBudget = Math.round(totalBudgeted / PRE_OPEN_MONTHS.length)
-  const monthlyActual = Math.round(totalActual / PRE_OPEN_MONTHS.length)
-
-  let cumBudget = 0
-  let cumActual = 0
-  return PRE_OPEN_MONTHS.map((month) => {
-    cumBudget += monthlyBudget
-    cumActual += monthlyActual
-    return {
-      month,
-      budgeted: monthlyBudget,
-      actual: monthlyActual,
-      cumulativeBudgeted: cumBudget,
-      cumulativeActual: cumActual,
-      balanceBudgeted: funding - cumBudget,
-      balanceActual: funding - cumActual,
-    }
-  })
+/** Get Y0 allocation for a funding source, falling back to full amount if no years selected */
+function getY0Allocation(src: StartupFundingSource): number {
+  if (src.selectedYears?.includes(0) && src.yearAllocations?.[0]) {
+    return src.yearAllocations[0]
+  }
+  if (!src.selectedYears || src.selectedYears.length === 0) {
+    return src.amount
+  }
+  return 0
 }
 
 export default function CashFlowPage() {
@@ -52,9 +42,10 @@ export default function CashFlowPage() {
   } = useScenario()
 
   const supabase = createClient()
-  const [view, setView] = useState<'year0' | 'year1'>('year1')
+  const [view, setView] = useState<'year0' | 'year1'>('year0')
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set())
 
   // Load expenses from profile or use defaults
   const [expenses, setExpenses] = useState<PreOpeningExpense[]>(() => {
@@ -64,41 +55,129 @@ export default function CashFlowPage() {
     return DEFAULT_EXPENSES.map((e) => ({ ...e, id: uid() }))
   })
 
-  // Funding
+  // Load transactions from profile
+  const [transactions, setTransactions] = useState<PreOpeningTransaction[]>(
+    () => profile.pre_opening_transactions || []
+  )
+
+  // Funding — always read from profile (database) so it syncs with Revenue tab saves
   const fundingSources: StartupFundingSource[] = profile.startup_funding && profile.startup_funding.length > 0
     ? profile.startup_funding
-    : [{ source: 'Pre-Opening Funding', amount: 250000, type: 'grant' as const, status: 'projected' as const }]
+    : []
 
-  const totalFunding = fundingSources.reduce((s, f) => s + f.amount, 0)
+  // Secured/At Risk calculated from current database status values
   const securedFunding = fundingSources
     .filter((f) => f.status === 'received' || f.status === 'pledged')
     .reduce((s, f) => s + f.amount, 0)
+  const totalFunding = fundingSources.reduce((s, f) => s + f.amount, 0)
 
   // Year 0 allocation from startup funding
   const year0Funding = useMemo(() => {
     let y0 = 0
     for (const src of fundingSources) {
-      if (src.selectedYears?.includes(0) && src.yearAllocations?.[0]) {
-        y0 += src.yearAllocations[0]
-      } else if (!src.selectedYears || src.selectedYears.length === 0) {
-        y0 += src.amount
-      }
+      y0 += getY0Allocation(src)
     }
     return y0 || totalFunding
   }, [fundingSources, totalFunding])
 
-  // Totals
+  // Funding sources with Y0 allocations — used for expense assignment dropdown
+  const y0Sources = useMemo(() => {
+    const result: { name: string; y0Amount: number }[] = []
+    for (const src of fundingSources) {
+      const y0 = getY0Allocation(src)
+      if (y0 > 0 && src.source) {
+        result.push({ name: src.source, y0Amount: y0 })
+      }
+    }
+    return result
+  }, [fundingSources])
+
+  // Set of valid Y0 source names for detecting removed sources
+  const validY0SourceNames = useMemo(() => new Set(y0Sources.map((s) => s.name)), [y0Sources])
+
+  // Roll up transaction totals per expense category
+  const actualsByCategory = useMemo(() => {
+    const map: Record<string, number> = {}
+    for (const tx of transactions) {
+      map[tx.expense_category] = (map[tx.expense_category] || 0) + tx.amount
+    }
+    return map
+  }, [transactions])
+
+  // Totals — actuals driven by transactions
   const totalBudgeted = expenses.reduce((s, e) => s + e.budgeted, 0)
-  const totalActual = expenses.reduce((s, e) => s + e.actual, 0)
+  const totalActual = transactions.reduce((s, tx) => s + tx.amount, 0)
   const totalRemaining = totalBudgeted - totalActual
   const pctFundingUsed = year0Funding > 0 ? (totalBudgeted / year0Funding * 100) : 0
 
-  const year0Flow = useMemo(
-    () => computeYear0CashFlow(totalBudgeted, totalActual, year0Funding),
-    [totalBudgeted, totalActual, year0Funding]
-  )
+  // Expense names for transaction category dropdown
+  const expenseNames = useMemo(() => expenses.map((e) => e.name).filter(Boolean), [expenses])
 
-  const year0EndingBalance = year0Flow.length > 0 ? year0Flow[year0Flow.length - 1].balanceBudgeted : 0
+  // Build expense→fundingSource lookup for utilization
+  const expenseFundingMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const e of expenses) {
+      if (e.fundingSource && e.name) map[e.name] = e.fundingSource
+    }
+    return map
+  }, [expenses])
+
+  // Funding source utilization — budgeted from expenses, spent from transactions
+  const fundingUtilization = useMemo(() => {
+    return y0Sources.map((src) => {
+      const assignedExpenses = expenses.filter((e) => e.fundingSource === src.name)
+      const budgeted = assignedExpenses.reduce((s, e) => s + e.budgeted, 0)
+      const spent = transactions
+        .filter((tx) => expenseFundingMap[tx.expense_category] === src.name)
+        .reduce((s, tx) => s + tx.amount, 0)
+      return {
+        name: src.name,
+        y0Amount: src.y0Amount,
+        budgeted,
+        spent,
+        remaining: src.y0Amount - spent,
+      }
+    })
+  }, [y0Sources, expenses, transactions, expenseFundingMap])
+
+  // Unassigned totals
+  const unassignedBudgeted = expenses
+    .filter((e) => !e.fundingSource || !validY0SourceNames.has(e.fundingSource))
+    .reduce((s, e) => s + e.budgeted, 0)
+  const unassignedSpent = transactions
+    .filter((tx) => !expenseFundingMap[tx.expense_category] || !validY0SourceNames.has(expenseFundingMap[tx.expense_category]))
+    .reduce((s, tx) => s + tx.amount, 0)
+
+  // Monthly cash flow — budget evenly spread, actuals from transactions per month
+  const year0Flow = useMemo(() => {
+    const monthlyBudget = Math.round(totalBudgeted / PRE_OPEN_MONTHS.length)
+    let cumBudget = 0
+    let cumActual = 0
+
+    return MONTH_KEYS.map((key, i) => {
+      const monthTxs = transactions.filter((tx) => tx.month === key)
+      const monthActual = monthTxs.reduce((s, tx) => s + tx.amount, 0)
+      cumBudget += monthlyBudget
+      cumActual += monthActual
+      return {
+        month: PRE_OPEN_MONTHS[i],
+        monthKey: key,
+        budgeted: monthlyBudget,
+        actual: monthActual,
+        txCount: monthTxs.length,
+        cumulativeBudgeted: cumBudget,
+        cumulativeActual: cumActual,
+        balanceActual: year0Funding - cumActual,
+        balanceBudgeted: year0Funding - cumBudget,
+      }
+    })
+  }, [totalBudgeted, transactions, year0Funding])
+
+  // Ending balance: use actual if transactions exist, otherwise budget
+  const hasTransactions = transactions.length > 0
+  const year0EndingBalance = hasTransactions
+    ? year0Funding - totalActual
+    : (year0Flow.length > 0 ? year0Flow[year0Flow.length - 1].balanceBudgeted : year0Funding)
 
   const baseCashFlow = useMemo(
     () => computeCashFlow(baseSummary, baseApportionment, year0EndingBalance),
@@ -112,7 +191,7 @@ export default function CashFlowPage() {
 
   const cashFlow = isModified ? scenarioCashFlow : baseCashFlow
 
-  // Expense CRUD
+  // ── Expense CRUD ──
   function updateExpense(id: string, field: keyof PreOpeningExpense, value: string | number) {
     setExpenses((prev) => prev.map((e) => e.id === id ? { ...e, [field]: value } : e))
   }
@@ -125,25 +204,59 @@ export default function CashFlowPage() {
     setExpenses((prev) => prev.filter((e) => e.id !== id))
   }
 
-  const saveExpenses = useCallback(async () => {
+  // ── Transaction CRUD ──
+  function addTransaction(monthKey: string) {
+    const tx: PreOpeningTransaction = {
+      id: uid(),
+      month: monthKey,
+      description: '',
+      amount: 0,
+      expense_category: '',
+      created_at: new Date().toISOString(),
+    }
+    setTransactions((prev) => [...prev, tx])
+  }
+
+  function updateTransaction(id: string, field: keyof PreOpeningTransaction, value: string | number) {
+    setTransactions((prev) => prev.map((tx) => tx.id === id ? { ...tx, [field]: value } : tx))
+  }
+
+  function removeTransaction(id: string) {
+    setTransactions((prev) => prev.filter((tx) => tx.id !== id))
+  }
+
+  function toggleMonth(monthKey: string) {
+    setExpandedMonths((prev) => {
+      const next = new Set(prev)
+      if (next.has(monthKey)) next.delete(monthKey)
+      else next.add(monthKey)
+      return next
+    })
+  }
+
+  // ── Save ──
+  const saveAll = useCallback(async () => {
     if (!schoolId) return
     setSaving(true)
     setToast(null)
 
     const { error } = await supabase
       .from('school_profiles')
-      .update({ pre_opening_expenses: expenses })
+      .update({
+        pre_opening_expenses: expenses,
+        pre_opening_transactions: transactions,
+      })
       .eq('school_id', schoolId)
 
     if (error) {
       setToast({ type: 'error', message: `Failed to save: ${error.message}` })
     } else {
-      setToast({ type: 'success', message: 'Pre-opening expenses saved.' })
+      setToast({ type: 'success', message: 'Pre-opening data saved.' })
       await reload()
       setTimeout(() => setToast(null), 3000)
     }
     setSaving(false)
-  }, [schoolId, expenses, supabase, reload])
+  }, [schoolId, expenses, transactions, supabase, reload])
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
@@ -192,76 +305,88 @@ export default function CashFlowPage() {
 
       {view === 'year0' ? (
         <>
-          {/* Startup Funding Sources summary */}
+          {/* ── SECTION: Startup Funding Inflows ── */}
           <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
             <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Startup Funding Inflows</h2>
-            <div className="overflow-x-auto sl-scroll">
-            <table className="w-full text-sm sl-table mb-4">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-left px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide">Source</th>
-                  <th className="text-right px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-28">Amount</th>
-                  <th className="text-left px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-24">Type</th>
-                  <th className="text-left px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-24">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fundingSources.map((src, idx) => (
-                  <tr key={idx} className="border-b border-slate-100">
-                    <td className="px-3 py-2 text-slate-700">{src.source || 'Unnamed'}</td>
-                    <td className="px-3 py-2 text-right font-medium text-slate-800 num">{fmt(src.amount)}</td>
-                    <td className="px-3 py-2">
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                        src.type === 'grant' ? 'bg-blue-100 text-blue-700' :
-                        src.type === 'donation' ? 'bg-purple-100 text-purple-700' :
-                        src.type === 'debt' ? 'bg-red-100 text-red-700' :
-                        'bg-slate-100 text-slate-700'
-                      }`}>
-                        {src.type}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                        src.status === 'received' ? 'bg-emerald-100 text-emerald-700' :
-                        src.status === 'pledged' ? 'bg-blue-100 text-blue-700' :
-                        src.status === 'applied' ? 'bg-amber-100 text-amber-700' :
-                        'bg-slate-100 text-slate-700'
-                      }`}>
-                        {src.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="bg-slate-50 border-t border-slate-200">
-                  <td className="px-3 py-2 font-bold text-slate-800">Total Available</td>
-                  <td className="px-3 py-2 text-right font-bold text-slate-800 num">{fmt(year0Funding)}</td>
-                  <td colSpan={2}></td>
-                </tr>
-              </tfoot>
-            </table>
-            </div>
+            {fundingSources.length > 0 ? (
+              <>
+                <div className="overflow-x-auto sl-scroll">
+                  <table className="w-full text-sm sl-table mb-4">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200">
+                        <th className="text-left px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide">Source</th>
+                        <th className="text-right px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-28">Y0 Allocation</th>
+                        <th className="text-left px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-24">Type</th>
+                        <th className="text-left px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-24">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {fundingSources.map((src, idx) => {
+                        const y0 = getY0Allocation(src)
+                        if (y0 === 0) return null
+                        return (
+                          <tr key={idx} className="border-b border-slate-100">
+                            <td className="px-3 py-2 text-slate-700">{src.source || 'Unnamed'}</td>
+                            <td className="px-3 py-2 text-right font-medium text-slate-800 num">{fmt(y0)}</td>
+                            <td className="px-3 py-2">
+                              <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                                src.type === 'grant' ? 'bg-blue-100 text-blue-700' :
+                                src.type === 'donation' ? 'bg-purple-100 text-purple-700' :
+                                src.type === 'debt' ? 'bg-red-100 text-red-700' :
+                                'bg-slate-100 text-slate-700'
+                              }`}>
+                                {src.type}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2">
+                              <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                                src.status === 'received' ? 'bg-emerald-100 text-emerald-700' :
+                                src.status === 'pledged' ? 'bg-blue-100 text-blue-700' :
+                                src.status === 'applied' ? 'bg-amber-100 text-amber-700' :
+                                'bg-slate-100 text-slate-700'
+                              }`}>
+                                {src.status}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-slate-50 border-t border-slate-200">
+                        <td className="px-3 py-2 font-bold text-slate-800">Total Year 0 Funding</td>
+                        <td className="px-3 py-2 text-right font-bold text-slate-800 num">{fmt(year0Funding)}</td>
+                        <td colSpan={2}></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
 
-            <div className="flex flex-wrap gap-3">
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 text-xs">
-                <span className="text-emerald-600 font-semibold">Secured:</span>
-                <span className="text-emerald-700 font-bold ml-1">{fmt(securedFunding)}</span>
+                <div className="flex flex-wrap gap-3">
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 text-xs">
+                    <span className="text-emerald-600 font-semibold">Secured:</span>
+                    <span className="text-emerald-700 font-bold ml-1">{fmt(securedFunding)}</span>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 text-xs">
+                    <span className="text-amber-600 font-semibold">At Risk:</span>
+                    <span className="text-amber-700 font-bold ml-1">{fmt(totalFunding - securedFunding)}</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-sm text-slate-500 py-4">
+                No funding sources configured. Add funding sources on the Revenue tab.
               </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 text-xs">
-                <span className="text-amber-600 font-semibold">At Risk:</span>
-                <span className="text-amber-700 font-bold ml-1">{fmt(totalFunding - securedFunding)}</span>
-              </div>
-            </div>
+            )}
 
             <p className="text-xs text-slate-500 mt-3">
               Manage funding sources on the Revenue tab. Only &quot;received&quot; and &quot;pledged&quot; funds count as secured.
             </p>
           </div>
 
-          {/* Pre-Opening Expenses — custom rows with budget vs actual */}
+          {/* ── SECTION 1: Pre-Opening Expenses (Budget + Rolled-Up Actuals) ── */}
           <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
-            <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Pre-Opening Expenses</h2>
+            <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Pre-Opening Expense Budget</h2>
 
             {/* Summary badges */}
             <div className="flex flex-wrap gap-3 mb-5">
@@ -274,7 +399,7 @@ export default function CashFlowPage() {
                 <p className="text-sm font-bold text-slate-800">{fmt(totalActual)}</p>
               </div>
               <div className={`border rounded-lg px-3 py-2 ${totalRemaining >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-                <p className="text-[10px] text-slate-400 uppercase font-medium">Remaining</p>
+                <p className="text-[10px] text-slate-400 uppercase font-medium">Variance</p>
                 <p className={`text-sm font-bold ${totalRemaining >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{fmt(totalRemaining)}</p>
               </div>
               <div className={`border rounded-lg px-3 py-2 ${pctFundingUsed <= 100 ? 'bg-blue-50 border-blue-200' : 'bg-red-50 border-red-200'}`}>
@@ -283,84 +408,101 @@ export default function CashFlowPage() {
               </div>
             </div>
 
-            {/* Expense table */}
+            {/* Expense budget table */}
             <div className="overflow-x-auto sl-scroll">
-            <table className="w-full text-sm sl-table mb-3">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-left px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide">Expense Name</th>
-                  <th className="text-right px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-32">Budgeted</th>
-                  <th className="text-right px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-32">Actual</th>
-                  <th className="text-right px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-28">Variance</th>
-                  <th className="py-2 w-10"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {expenses.map((exp) => {
-                  const variance = exp.budgeted - exp.actual
-                  return (
-                    <tr key={exp.id} className="border-b border-slate-100">
-                      <td className="px-3 py-2">
-                        <input
-                          type="text"
-                          value={exp.name}
-                          onChange={(e) => updateExpense(exp.id, 'name', e.target.value)}
-                          placeholder="Expense name..."
-                          className="w-full border border-slate-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <input
-                          type="number"
-                          step={500}
-                          min={0}
-                          value={exp.budgeted}
-                          onChange={(e) => updateExpense(exp.id, 'budgeted', Number(e.target.value))}
-                          className="w-full text-right border border-slate-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <input
-                          type="number"
-                          step={100}
-                          min={0}
-                          value={exp.actual}
-                          onChange={(e) => updateExpense(exp.id, 'actual', Number(e.target.value))}
-                          className="w-full text-right border border-slate-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
-                        />
-                      </td>
-                      <td className={`px-3 py-2 text-right font-medium num ${
-                        variance > 0 ? 'text-emerald-600' : variance < 0 ? 'text-red-600' : 'text-slate-400'
-                      }`}>
-                        {variance !== 0 && (variance > 0 ? '+' : '')}{fmt(variance)}
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <button
-                          onClick={() => removeExpense(exp.id)}
-                          className="text-red-400 hover:text-red-600 text-lg leading-none"
-                          title="Remove"
-                        >
-                          &times;
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-              <tfoot>
-                <tr className="bg-slate-50 border-t border-slate-200">
-                  <td className="px-3 py-2 font-bold text-slate-800">Total Pre-Opening Expenses</td>
-                  <td className="px-3 py-2 text-right font-bold text-slate-800 num">{fmt(totalBudgeted)}</td>
-                  <td className="px-3 py-2 text-right font-bold text-slate-800 num">{fmt(totalActual)}</td>
-                  <td className={`px-3 py-2 text-right font-bold num ${
-                    totalRemaining > 0 ? 'text-emerald-600' : totalRemaining < 0 ? 'text-red-600' : 'text-slate-400'
-                  }`}>
-                    {totalRemaining !== 0 && (totalRemaining > 0 ? '+' : '')}{fmt(totalRemaining)}
-                  </td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            </table>
+              <table className="w-full text-sm sl-table mb-3">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="text-left px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide min-w-[180px]">Expense Name</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide min-w-[160px]">Funding Source</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-28">Budgeted</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-28">Actual</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-24">Variance</th>
+                    <th className="py-2 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {expenses.map((exp) => {
+                    const actual = actualsByCategory[exp.name] || 0
+                    const variance = exp.budgeted - actual
+                    const hasRemovedSource = exp.fundingSource && !validY0SourceNames.has(exp.fundingSource)
+                    return (
+                      <tr key={exp.id} className="border-b border-slate-100">
+                        <td className="px-3 py-2">
+                          <input
+                            type="text"
+                            value={exp.name}
+                            onChange={(e) => updateExpense(exp.id, 'name', e.target.value)}
+                            placeholder="Expense name..."
+                            className="w-full border border-slate-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <select
+                            value={hasRemovedSource ? '' : (exp.fundingSource || '')}
+                            onChange={(e) => updateExpense(exp.id, 'fundingSource', e.target.value)}
+                            className={`w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                              hasRemovedSource ? 'border-amber-300 bg-amber-50' : 'border-slate-200'
+                            }`}
+                          >
+                            <option value="">Unassigned</option>
+                            {y0Sources.map((src) => (
+                              <option key={src.name} value={src.name}>
+                                {src.name} ({fmt(src.y0Amount)})
+                              </option>
+                            ))}
+                          </select>
+                          {hasRemovedSource && (
+                            <div className="text-[10px] text-amber-600 mt-0.5">
+                              &ldquo;{exp.fundingSource}&rdquo; no longer has Y0 allocation
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          <input
+                            type="number"
+                            step={500}
+                            min={0}
+                            value={exp.budgeted}
+                            onChange={(e) => updateExpense(exp.id, 'budgeted', Number(e.target.value))}
+                            className="w-full text-right border border-slate-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-right text-slate-700 num tabular-nums">
+                          {fmt(actual)}
+                        </td>
+                        <td className={`px-3 py-2 text-right font-medium num ${
+                          variance > 0 ? 'text-emerald-600' : variance < 0 ? 'text-red-600' : 'text-slate-400'
+                        }`}>
+                          {variance !== 0 && (variance > 0 ? '+' : '')}{fmt(variance)}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <button
+                            onClick={() => removeExpense(exp.id)}
+                            className="text-red-400 hover:text-red-600 text-lg leading-none"
+                            title="Remove"
+                          >
+                            &times;
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-slate-50 border-t border-slate-200">
+                    <td className="px-3 py-2 font-bold text-slate-800" colSpan={2}>Total</td>
+                    <td className="px-3 py-2 text-right font-bold text-slate-800 num">{fmt(totalBudgeted)}</td>
+                    <td className="px-3 py-2 text-right font-bold text-slate-800 num">{fmt(totalActual)}</td>
+                    <td className={`px-3 py-2 text-right font-bold num ${
+                      totalRemaining > 0 ? 'text-emerald-600' : totalRemaining < 0 ? 'text-red-600' : 'text-slate-400'
+                    }`}>
+                      {totalRemaining !== 0 && (totalRemaining > 0 ? '+' : '')}{fmt(totalRemaining)}
+                    </td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
 
             <div className="flex gap-3">
@@ -368,55 +510,152 @@ export default function CashFlowPage() {
                 onClick={addExpense}
                 className="text-sm text-teal-600 hover:text-teal-800 font-medium"
               >
-                + Add Expense
-              </button>
-              <button
-                onClick={saveExpenses}
-                disabled={saving}
-                className="px-4 py-1.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
-              >
-                {saving ? 'Saving...' : 'Save Changes'}
+                + Add Expense Category
               </button>
             </div>
           </div>
 
-          {/* Year 0 monthly cash flow table */}
-          <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto sl-scroll shadow-sm">
-            <table className="w-full text-sm whitespace-nowrap sl-table">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Month</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Budgeted</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Actual</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Cumulative Budget</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Cumulative Actual</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Balance (Budget)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {year0Flow.map((m) => (
-                  <tr key={m.month} className={`border-b border-slate-100 ${m.balanceBudgeted < 0 ? 'bg-red-50' : ''}`}>
-                    <td className="px-4 py-3 font-medium text-slate-800">{m.month}</td>
-                    <td className="px-4 py-3 text-right text-slate-600 num">{fmt(m.budgeted)}</td>
-                    <td className="px-4 py-3 text-right text-slate-600 num">{fmt(m.actual)}</td>
-                    <td className="px-4 py-3 text-right text-slate-600 num">{fmt(m.cumulativeBudgeted)}</td>
-                    <td className={`px-4 py-3 text-right num ${
-                      m.cumulativeActual > m.cumulativeBudgeted ? 'text-red-600 font-medium' : 'text-slate-600'
-                    }`}>{fmt(m.cumulativeActual)}</td>
-                    <td className={`px-4 py-3 text-right font-bold num ${m.balanceBudgeted >= 0 ? 'text-slate-800' : 'text-red-600'}`}>
-                      {fmt(m.balanceBudgeted)}
+          {/* ── SECTION 2: Funding Source Utilization ── */}
+          {y0Sources.length > 0 && (
+            <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
+              <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Funding Source Utilization</h2>
+              <div className="overflow-x-auto sl-scroll">
+                <table className="w-full text-sm sl-table">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200">
+                      <th className="text-left px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide">Source</th>
+                      <th className="text-right px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-28">Y0 Allocation</th>
+                      <th className="text-right px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-28">Budgeted</th>
+                      <th className="text-right px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-28">Spent</th>
+                      <th className="text-right px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide w-28">Remaining</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fundingUtilization.map((fu) => (
+                      <tr key={fu.name} className="border-b border-slate-100">
+                        <td className="px-3 py-2 text-slate-700 font-medium">{fu.name}</td>
+                        <td className="px-3 py-2 text-right text-slate-800 num">{fmt(fu.y0Amount)}</td>
+                        <td className="px-3 py-2 text-right text-slate-600 num">{fmt(fu.budgeted)}</td>
+                        <td className="px-3 py-2 text-right text-slate-600 num">{fmt(fu.spent)}</td>
+                        <td className={`px-3 py-2 text-right font-semibold num ${
+                          fu.remaining < 0 ? 'text-red-600' : 'text-emerald-600'
+                        }`}>
+                          {fmt(fu.remaining)}
+                        </td>
+                      </tr>
+                    ))}
+                    {(unassignedBudgeted > 0 || unassignedSpent > 0) && (
+                      <tr className="border-b border-slate-100">
+                        <td className="px-3 py-2 text-slate-500 italic">Unassigned</td>
+                        <td className="px-3 py-2 text-right text-slate-400 num">&mdash;</td>
+                        <td className="px-3 py-2 text-right text-slate-500 num">{fmt(unassignedBudgeted)}</td>
+                        <td className="px-3 py-2 text-right text-slate-500 num">{fmt(unassignedSpent)}</td>
+                        <td className="px-3 py-2 text-right text-slate-400 num">&mdash;</td>
+                      </tr>
+                    )}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-slate-50 border-t border-slate-200">
+                      <td className="px-3 py-2 font-bold text-slate-800">Total</td>
+                      <td className="px-3 py-2 text-right font-bold text-slate-800 num">{fmt(year0Funding)}</td>
+                      <td className="px-3 py-2 text-right font-bold text-slate-800 num">{fmt(totalBudgeted)}</td>
+                      <td className="px-3 py-2 text-right font-bold text-slate-800 num">{fmt(totalActual)}</td>
+                      <td className={`px-3 py-2 text-right font-bold num ${
+                        year0Funding - totalActual >= 0 ? 'text-emerald-600' : 'text-red-600'
+                      }`}>
+                        {fmt(year0Funding - totalActual)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ── SECTION 3: Monthly Cash Flow with Transaction Entry ── */}
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm mb-6">
+            <div className="px-6 py-4 border-b border-slate-200">
+              <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide">Monthly Cash Flow &amp; Transactions</h2>
+              <p className="text-xs text-slate-500 mt-1">Click a month to expand and add individual transactions. Transactions roll up to expense categories above.</p>
+            </div>
+            <div className="overflow-x-auto sl-scroll">
+              <table className="w-full text-sm sl-table">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="text-left px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide w-10"></th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Month</th>
+                    <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Budgeted</th>
+                    <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Actual</th>
+                    <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Cum. Budget</th>
+                    <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Cum. Actual</th>
+                    <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {year0Flow.map((m) => {
+                    const isExpanded = expandedMonths.has(m.monthKey)
+                    const monthTxs = transactions.filter((tx) => tx.month === m.monthKey)
+                    const balanceNegative = m.balanceActual < 0
+
+                    return (
+                      <MonthSection
+                        key={m.monthKey}
+                        month={m.month}
+                        monthKey={m.monthKey}
+                        budgeted={m.budgeted}
+                        actual={m.actual}
+                        txCount={m.txCount}
+                        cumulativeBudgeted={m.cumulativeBudgeted}
+                        cumulativeActual={m.cumulativeActual}
+                        balanceActual={m.balanceActual}
+                        balanceNegative={balanceNegative}
+                        isExpanded={isExpanded}
+                        onToggle={() => toggleMonth(m.monthKey)}
+                        monthTxs={monthTxs}
+                        expenseNames={expenseNames}
+                        onAddTx={() => addTransaction(m.monthKey)}
+                        onUpdateTx={updateTransaction}
+                        onRemoveTx={removeTransaction}
+                      />
+                    )
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-slate-50 border-t border-slate-200">
+                    <td></td>
+                    <td className="px-2 py-3 font-bold text-slate-800">Total</td>
+                    <td className="px-4 py-3 text-right font-bold text-slate-800 num">{fmt(totalBudgeted)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-slate-800 num">{fmt(totalActual)}</td>
+                    <td colSpan={2}></td>
+                    <td className={`px-4 py-3 text-right font-bold num ${year0EndingBalance >= 0 ? 'text-slate-800' : 'text-red-600'}`}>
+                      {fmt(year0EndingBalance)}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </tfoot>
+              </table>
+            </div>
           </div>
 
-          <div className="mt-4 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-600">
+          {/* Save button */}
+          <div className="flex gap-3 mb-6">
+            <button
+              onClick={saveAll}
+              disabled={saving}
+              className="px-5 py-2.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save All Changes'}
+            </button>
+          </div>
+
+          {/* Carry-forward note */}
+          <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-600">
             Year 0 ending balance of <strong>{fmt(year0EndingBalance)}</strong> carries forward as Year 1 starting cash.
+            {hasTransactions && (
+              <span className="text-slate-500 ml-1">(Based on {transactions.length} transaction{transactions.length !== 1 ? 's' : ''})</span>
+            )}
           </div>
 
-          {year0Flow.some((m) => m.balanceBudgeted < 0) && (
+          {year0EndingBalance < 0 && (
             <div className="mt-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
               <strong>Warning:</strong> Pre-opening funding is insufficient. You need additional startup capital to cover shortfalls.
             </div>
@@ -428,7 +667,7 @@ export default function CashFlowPage() {
             </div>
           )}
 
-          {securedFunding < totalFunding * 0.5 && (
+          {securedFunding < totalFunding * 0.5 && totalFunding > 0 && (
             <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-700">
               <strong>Funding Risk:</strong> Less than 50% of startup funding is secured.
               Cash flow projections may be optimistic if pending funding does not materialize.
@@ -487,5 +726,153 @@ export default function CashFlowPage() {
         </>
       )}
     </div>
+  )
+}
+
+/* ── Month Section (expandable row + transaction list) ── */
+
+function MonthSection({
+  month,
+  monthKey,
+  budgeted,
+  actual,
+  txCount,
+  cumulativeBudgeted,
+  cumulativeActual,
+  balanceActual,
+  balanceNegative,
+  isExpanded,
+  onToggle,
+  monthTxs,
+  expenseNames,
+  onAddTx,
+  onUpdateTx,
+  onRemoveTx,
+}: {
+  month: string
+  monthKey: string
+  budgeted: number
+  actual: number
+  txCount: number
+  cumulativeBudgeted: number
+  cumulativeActual: number
+  balanceActual: number
+  balanceNegative: boolean
+  isExpanded: boolean
+  onToggle: () => void
+  monthTxs: PreOpeningTransaction[]
+  expenseNames: string[]
+  onAddTx: () => void
+  onUpdateTx: (id: string, field: keyof PreOpeningTransaction, value: string | number) => void
+  onRemoveTx: (id: string) => void
+}) {
+  return (
+    <>
+      {/* Summary row */}
+      <tr
+        className={`border-b border-slate-100 cursor-pointer hover:bg-slate-50/70 transition-colors ${balanceNegative ? 'bg-red-50/50' : ''}`}
+        onClick={onToggle}
+      >
+        <td className="px-4 py-3 text-center">
+          <svg
+            className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </td>
+        <td className="px-2 py-3">
+          <span className="font-medium text-slate-800">{month}</span>
+          {txCount > 0 && (
+            <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-teal-100 text-teal-700">
+              {txCount} tx
+            </span>
+          )}
+        </td>
+        <td className="px-4 py-3 text-right text-slate-600 num">{fmt(budgeted)}</td>
+        <td className={`px-4 py-3 text-right num ${actual > budgeted ? 'text-red-600 font-medium' : 'text-slate-600'}`}>
+          {fmt(actual)}
+        </td>
+        <td className="px-4 py-3 text-right text-slate-600 num">{fmt(cumulativeBudgeted)}</td>
+        <td className={`px-4 py-3 text-right num ${cumulativeActual > cumulativeBudgeted ? 'text-red-600 font-medium' : 'text-slate-600'}`}>
+          {fmt(cumulativeActual)}
+        </td>
+        <td className={`px-4 py-3 text-right font-bold num ${balanceNegative ? 'text-red-600' : 'text-slate-800'}`}>
+          {fmt(balanceActual)}
+        </td>
+      </tr>
+
+      {/* Expanded transaction rows */}
+      {isExpanded && (
+        <>
+          {monthTxs.length > 0 ? monthTxs.map((tx) => (
+            <tr key={tx.id} className="bg-slate-50/60 border-b border-slate-100">
+              <td></td>
+              <td className="px-2 py-1.5" colSpan={2}>
+                <input
+                  type="text"
+                  value={tx.description}
+                  onChange={(e) => onUpdateTx(tx.id, 'description', e.target.value)}
+                  placeholder="Transaction description..."
+                  className="w-full border border-slate-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </td>
+              <td className="px-2 py-1.5">
+                <input
+                  type="number"
+                  step={100}
+                  min={0}
+                  value={tx.amount}
+                  onChange={(e) => onUpdateTx(tx.id, 'amount', Number(e.target.value))}
+                  className="w-full text-right border border-slate-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </td>
+              <td className="px-2 py-1.5" colSpan={2}>
+                <select
+                  value={tx.expense_category}
+                  onChange={(e) => onUpdateTx(tx.id, 'expense_category', e.target.value)}
+                  className="w-full border border-slate-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <option value="">Other / Uncategorized</option>
+                  {expenseNames.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </td>
+              <td className="px-2 py-1.5 text-center">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onRemoveTx(tx.id) }}
+                  className="text-red-400 hover:text-red-600 text-sm leading-none"
+                  title="Remove transaction"
+                >
+                  &times;
+                </button>
+              </td>
+            </tr>
+          )) : (
+            <tr className="bg-slate-50/60 border-b border-slate-100">
+              <td></td>
+              <td colSpan={6} className="px-4 py-3 text-xs text-slate-400 italic">
+                No transactions for {month}. Click &ldquo;+ Add Transaction&rdquo; below to start tracking.
+              </td>
+            </tr>
+          )}
+          <tr className="bg-slate-50/60 border-b border-slate-200">
+            <td></td>
+            <td colSpan={6} className="px-4 py-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); onAddTx() }}
+                className="text-xs text-teal-600 hover:text-teal-800 font-medium"
+              >
+                + Add Transaction
+              </button>
+            </td>
+          </tr>
+        </>
+      )}
+    </>
   )
 }
