@@ -17,7 +17,8 @@ export function buildSchoolContextString(
   const enroll = profile.target_enrollment_y1
   const rev = calcCommissionRevenue(enroll, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
   const aafte = calcAAFTE(enroll, assumptions.aafte_pct)
-  const totalRevenue = rev.total
+  const operatingRevenue = rev.total
+  const totalRevenue = operatingRevenue // Year 1 operating = total commission revenue
 
   const totalFte = positions.reduce((s, p) => s + p.fte, 0)
   const totalPersonnel = positions.reduce(
@@ -34,11 +35,11 @@ export function buildSchoolContextString(
   const netPosition = totalRevenue - totalExpenses
   const dailyCost = totalExpenses > 0 ? totalExpenses / 365 : 1
   const reserveDays = Math.round(netPosition / dailyCost)
-  const personnelPct = totalRevenue > 0 ? ((totalPersonnel / totalRevenue) * 100).toFixed(1) : '0'
+  const personnelPct = operatingRevenue > 0 ? ((totalPersonnel / operatingRevenue) * 100).toFixed(1) : '0'
   const revenuePerStudent = enroll > 0 ? totalRevenue / enroll : 0
   const breakEvenEnrollment = revenuePerStudent > 0 ? Math.ceil(totalExpenses / revenuePerStudent) : 0
   const facilityCost = opsProjections.find((p) => p.subcategory === 'Facilities')?.amount || 0
-  const facilityPct = totalRevenue > 0 ? ((facilityCost / totalRevenue) * 100).toFixed(1) : '0'
+  const facilityPct = operatingRevenue > 0 ? ((facilityCost / operatingRevenue) * 100).toFixed(1) : '0'
 
   const teacherCount = positions.filter((p) => p.category === 'certificated' && /teacher/i.test(p.title)).reduce((s, p) => s + p.fte, 0)
   const studentTeacherRatio = teacherCount > 0 ? Math.round(enroll / teacherCount) : 0

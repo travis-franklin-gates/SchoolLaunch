@@ -246,7 +246,7 @@ export default function RevenuePage() {
         </div>
       )}
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto sl-scroll shadow-sm">
         <table className="sl-table w-full text-sm">
           <thead>
             <tr>

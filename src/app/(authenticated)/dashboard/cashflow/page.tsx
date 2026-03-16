@@ -195,6 +195,7 @@ export default function CashFlowPage() {
           {/* Startup Funding Sources summary */}
           <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
             <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Startup Funding Inflows</h2>
+            <div className="overflow-x-auto sl-scroll">
             <table className="w-full text-sm sl-table mb-4">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
@@ -240,6 +241,7 @@ export default function CashFlowPage() {
                 </tr>
               </tfoot>
             </table>
+            </div>
 
             <div className="flex flex-wrap gap-3">
               <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 text-xs">
@@ -253,7 +255,7 @@ export default function CashFlowPage() {
             </div>
 
             <p className="text-xs text-slate-500 mt-3">
-              Manage funding sources on the Multi-Year tab. Only &quot;received&quot; and &quot;pledged&quot; funds count as secured.
+              Manage funding sources on the Revenue tab. Only &quot;received&quot; and &quot;pledged&quot; funds count as secured.
             </p>
           </div>
 
@@ -282,6 +284,7 @@ export default function CashFlowPage() {
             </div>
 
             {/* Expense table */}
+            <div className="overflow-x-auto sl-scroll">
             <table className="w-full text-sm sl-table mb-3">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
@@ -358,6 +361,7 @@ export default function CashFlowPage() {
                 </tr>
               </tfoot>
             </table>
+            </div>
 
             <div className="flex gap-3">
               <button
