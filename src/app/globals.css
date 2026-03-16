@@ -164,6 +164,18 @@ input[type="password"],
 select,
 textarea {
   font-family: var(--font-body-var);
+  font-size: 16px; /* Prevents iOS auto-zoom on focus */
+}
+
+@media (min-width: 640px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  select,
+  textarea {
+    font-size: 14px; /* Restore normal size on desktop */
+  }
 }
 
 input[type="range"] {

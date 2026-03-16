@@ -1,14 +1,118 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
+import { calcCommissionRevenue, calcBenefits } from '@/lib/calculations'
+import type { SchoolProfile, StaffingPosition, BudgetProjection } from '@/lib/types'
+import type { BudgetSummary } from '@/lib/budgetEngine'
 import type { FinancialAssumptions } from '@/lib/types'
-import { getAssumptions } from '@/lib/types'
-import { calcCommissionRevenue, calcAAFTE } from '@/lib/calculations'
 
 interface Message {
   role: 'user' | 'assistant' | 'system'
   content: string
+}
+
+interface SchoolContext {
+  schoolName?: string
+  gradeConfig?: string
+  plannedOpenYear?: number
+  region?: string
+  targetEnrollmentY1?: number
+  targetEnrollmentY2?: number
+  targetEnrollmentY3?: number
+  targetEnrollmentY4?: number
+  pctFrl?: number
+  pctIep?: number
+  pctEll?: number
+  pctHicap?: number
+  perPupilRate?: number
+  levyEquityPerStudent?: number
+  benefitsLoadPct?: number
+  authorizerFeePct?: number
+  totalRevenue?: number
+  totalPersonnel?: number
+  totalOperations?: number
+  netPosition?: number
+  reserveDays?: number
+  personnelPct?: number
+  breakEvenEnrollment?: number
+  revenueBreakdown?: string
+  staffingList?: string
+  operationsBreakdown?: string
+}
+
+function buildSchoolContext(
+  schoolName: string,
+  profile: SchoolProfile,
+  positions: StaffingPosition[],
+  projections: BudgetProjection[],
+  summary: BudgetSummary,
+  assumptions: FinancialAssumptions,
+): SchoolContext {
+  // Revenue breakdown from the budget engine (same calc as dashboard)
+  const rev = calcCommissionRevenue(
+    profile.target_enrollment_y1,
+    profile.pct_frl, profile.pct_iep,
+    profile.pct_ell, profile.pct_hicap,
+    assumptions,
+  )
+  const revenueLines = [
+    `Regular Ed Apportionment: $${rev.regularEd.toLocaleString()}`,
+    `Special Education: $${rev.sped.toLocaleString()}`,
+    `Facilities Allocation: $${rev.facilitiesRev.toLocaleString()}`,
+    `Levy Equity: $${rev.levyEquity.toLocaleString()}`,
+    rev.titleI > 0 ? `Title I: $${rev.titleI.toLocaleString()}` : null,
+    rev.idea > 0 ? `IDEA: $${rev.idea.toLocaleString()}` : null,
+    rev.lap > 0 ? `LAP: $${rev.lap.toLocaleString()}` : null,
+    rev.tbip > 0 ? `TBIP: $${rev.tbip.toLocaleString()}` : null,
+    rev.hicap > 0 ? `HiCap: $${rev.hicap.toLocaleString()}` : null,
+  ].filter(Boolean).join('\n')
+
+  // Staffing list from actual positions (same data as staffing tab)
+  const staffingLines = positions
+    .filter((p) => p.position_type)
+    .map((p) => {
+      const benefits = calcBenefits(p.annual_salary, assumptions.benefits_load_pct / 100)
+      const total = p.annual_salary + benefits
+      return `- ${p.position_type} (${p.fte} FTE, ${p.classification || p.category}): $${p.annual_salary.toLocaleString()} salary + $${benefits.toLocaleString()} benefits = $${total.toLocaleString()}`
+    })
+    .join('\n')
+
+  // Operations breakdown from projections
+  const opsLines = projections
+    .filter((p) => !p.is_revenue && p.subcategory !== 'Personnel')
+    .map((p) => `- ${p.subcategory}: $${p.amount.toLocaleString()}`)
+    .join('\n')
+
+  return {
+    schoolName,
+    gradeConfig: profile.grade_config,
+    plannedOpenYear: profile.planned_open_year,
+    region: profile.region,
+    targetEnrollmentY1: profile.target_enrollment_y1,
+    targetEnrollmentY2: profile.target_enrollment_y2,
+    targetEnrollmentY3: profile.target_enrollment_y3,
+    targetEnrollmentY4: profile.target_enrollment_y4,
+    pctFrl: profile.pct_frl,
+    pctIep: profile.pct_iep,
+    pctEll: profile.pct_ell,
+    pctHicap: profile.pct_hicap,
+    perPupilRate: assumptions.regular_ed_per_pupil,
+    levyEquityPerStudent: assumptions.levy_equity_per_student,
+    benefitsLoadPct: assumptions.benefits_load_pct,
+    authorizerFeePct: assumptions.authorizer_fee_pct,
+    // All summary numbers come from the budget engine — same as dashboard
+    totalRevenue: summary.totalRevenue,
+    totalPersonnel: summary.totalPersonnel,
+    totalOperations: summary.totalOperations,
+    netPosition: summary.netPosition,
+    reserveDays: summary.reserveDays,
+    personnelPct: Math.round(summary.personnelPctRevenue * 10) / 10,
+    breakEvenEnrollment: summary.breakEvenEnrollment,
+    revenueBreakdown: revenueLines,
+    staffingList: staffingLines || 'No positions entered',
+    operationsBreakdown: opsLines || 'No operations data available',
+  }
 }
 
 const SUGGESTED_QUESTIONS = [
@@ -20,126 +124,8 @@ const SUGGESTED_QUESTIONS = [
   'What are the biggest risks in our financial model?',
 ]
 
-function buildSchoolContext(
-  schoolName: string,
-  profile: {
-    grade_config: string
-    planned_open_year: number
-    region: string
-    target_enrollment_y1: number
-    target_enrollment_y2: number
-    target_enrollment_y3: number
-    target_enrollment_y4: number
-    pct_frl: number
-    pct_iep: number
-    pct_ell: number
-    pct_hicap: number
-    financial_assumptions?: Partial<FinancialAssumptions> | null
-  },
-  positions: { title: string; fte: number; annual_salary: number; category: string }[],
-  projections: { subcategory: string; amount: number; is_revenue: boolean }[]
-) {
-  const assumptions = getAssumptions(profile.financial_assumptions)
-  const enroll = profile.target_enrollment_y1
-  const benefitsMultiplier = 1 + assumptions.benefits_load_pct / 100
-
-  // --- Revenue breakdown (Commission-aligned with AAFTE) ---
-  const rev = calcCommissionRevenue(enroll, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
-  const aafte = calcAAFTE(enroll, assumptions.aafte_pct)
-  const totalRevenue = rev.total
-
-  const titleIEligibility = profile.pct_frl >= 40 ? 'SCHOOLWIDE PROGRAM ELIGIBLE (FRL ≥ 40%)' : 'TARGETED ASSISTANCE ONLY (FRL < 40%)'
-
-  const revenueLines = [
-    `- Regular Ed Apportionment: $${rev.regularEd.toLocaleString()} (${aafte} AAFTE × $${assumptions.regular_ed_per_pupil.toLocaleString()})`,
-    `- SPED Apportionment: $${rev.sped.toLocaleString()} (${aafte} × ${profile.pct_iep}% IEP × $${assumptions.sped_per_pupil.toLocaleString()})`,
-    `- Facilities Revenue: $${rev.facilitiesRev.toLocaleString()}`,
-    `- Levy Equity: $${rev.levyEquity.toLocaleString()} (${aafte} AAFTE × $${assumptions.levy_equity_per_student.toLocaleString()})`,
-  ]
-  if (rev.titleI > 0) revenueLines.push(`- Title I: $${rev.titleI.toLocaleString()} (${enroll} × ${profile.pct_frl}% FRL × $880) — ${titleIEligibility}`)
-  if (rev.idea > 0) revenueLines.push(`- IDEA: $${rev.idea.toLocaleString()} (${enroll} × ${profile.pct_iep}% IEP × $2,200)`)
-  if (rev.lap > 0) revenueLines.push(`- LAP: $${rev.lap.toLocaleString()} (${enroll} × ${profile.pct_frl}% FRL × $400)`)
-  if (rev.tbip > 0) revenueLines.push(`- TBIP: $${rev.tbip.toLocaleString()} (${enroll} × ${profile.pct_ell}% ELL × $1,800)`)
-  if (rev.hicap > 0) revenueLines.push(`- HiCap: $${rev.hicap.toLocaleString()} (${enroll} × ${profile.pct_hicap}% HiCap × $500)`)
-  revenueLines.push(`- Total Revenue: $${totalRevenue.toLocaleString()}`)
-
-  const revenueBreakdown = revenueLines.join('\n')
-
-  // --- Staffing breakdown with benefits ---
-  const totalFte = positions.reduce((s, p) => s + p.fte, 0)
-  const totalPersonnel = positions.reduce(
-    (s, p) => s + Math.round(p.annual_salary * p.fte * benefitsMultiplier),
-    0
-  )
-
-  const staffingList = positions.length > 0
-    ? positions
-        .map((p) => {
-          const totalCost = Math.round(p.annual_salary * p.fte * benefitsMultiplier)
-          return `- ${p.title}: ${p.fte} FTE at $${p.annual_salary.toLocaleString()} (${p.category}) — Total cost with benefits: $${totalCost.toLocaleString()}`
-        })
-        .join('\n') + `\nTotal Personnel: $${totalPersonnel.toLocaleString()} (${totalFte} FTE)`
-    : 'No positions entered'
-
-  // --- Operations breakdown ---
-  const opsProjections = projections.filter((p) => !p.is_revenue && p.subcategory !== 'Total Personnel')
-  const totalOperations = opsProjections.reduce((s, p) => s + p.amount, 0)
-
-  const operationsBreakdown = opsProjections.length > 0
-    ? opsProjections
-        .map((p) => {
-          const note = p.subcategory === 'Authorizer Fee'
-            ? ` (${assumptions.authorizer_fee_pct}% of state apportionment)`
-            : ''
-          return `- ${p.subcategory}: $${p.amount.toLocaleString()}${note}`
-        })
-        .join('\n') + `\nTotal Operations: $${totalOperations.toLocaleString()}`
-    : 'No operations expenses entered'
-
-  // --- Summary metrics ---
-  const totalExpenses = totalPersonnel + totalOperations
-  const netPosition = totalRevenue - totalExpenses
-  const dailyCost = totalExpenses > 0 ? totalExpenses / 365 : 1
-  const reserveDays = Math.round(netPosition / dailyCost)
-  const personnelPct = totalRevenue > 0 ? Math.round((totalPersonnel / totalRevenue) * 100) : 0
-
-  const revenuePerStudent = enroll > 0 ? totalRevenue / enroll : 0
-  const breakEvenEnrollment = revenuePerStudent > 0
-    ? Math.ceil(totalExpenses / revenuePerStudent)
-    : 0
-
-  return {
-    schoolName,
-    gradeConfig: profile.grade_config,
-    plannedOpenYear: profile.planned_open_year,
-    region: profile.region,
-    targetEnrollmentY1: enroll,
-    targetEnrollmentY2: profile.target_enrollment_y2,
-    targetEnrollmentY3: profile.target_enrollment_y3,
-    targetEnrollmentY4: profile.target_enrollment_y4,
-    pctFrl: profile.pct_frl,
-    pctIep: profile.pct_iep,
-    pctEll: profile.pct_ell,
-    pctHicap: profile.pct_hicap,
-    perPupilRate: assumptions.per_pupil_rate,
-    levyEquityPerStudent: assumptions.levy_equity_per_student,
-    benefitsLoadPct: assumptions.benefits_load_pct,
-    authorizerFeePct: assumptions.authorizer_fee_pct,
-    totalRevenue,
-    totalPersonnel,
-    totalOperations,
-    netPosition,
-    reserveDays,
-    personnelPct,
-    breakEvenEnrollment,
-    revenueBreakdown,
-    staffingList,
-    operationsBreakdown,
-  }
-}
-
 export default function AskPage() {
-  const { schoolData } = useScenario()
+  const { schoolData, baseSummary, assumptions } = useScenario()
   const { schoolName, profile, positions, projections, loading } = schoolData
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -164,7 +150,7 @@ export default function AskPage() {
       setCooldown(true)
       setTimeout(() => setCooldown(false), 2000)
 
-      const schoolContext = buildSchoolContext(schoolName, profile, positions, projections)
+      const schoolContext = buildSchoolContext(schoolName, profile, positions, projections, baseSummary, assumptions)
 
       try {
         const res = await fetch('/api/chat', {
@@ -221,7 +207,7 @@ export default function AskPage() {
 
       setStreaming(false)
     },
-    [messages, streaming, cooldown, schoolName, profile, positions, projections]
+    [messages, streaming, cooldown, schoolName, profile, positions, projections, baseSummary, assumptions]
   )
 
   function handleSubmit(e: React.FormEvent) {
