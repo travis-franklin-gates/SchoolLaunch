@@ -1,6 +1,6 @@
 import type { FinancialAssumptions, SchoolProfile, StaffingPosition, BudgetProjection, GradeExpansionEntry } from './types'
 import { getAssumptions } from './types'
-import { calcCommissionRevenue, calcAAFTE } from './calculations'
+import { calcCommissionRevenue, calcAAFTE, calcBenefits } from './calculations'
 import { computeExpansionEnrollments, expansionToEnrollmentArray } from './gradeExpansion'
 import type { MultiYearDetailedRow, FPFScorecard } from './budgetEngine'
 
@@ -15,15 +15,16 @@ export function buildSchoolContextString(
 ): string {
   const assumptions = getAssumptions(profile.financial_assumptions)
   const enroll = profile.target_enrollment_y1
-  const benefitsMultiplier = 1 + assumptions.benefits_load_pct / 100
-
   const rev = calcCommissionRevenue(enroll, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
   const aafte = calcAAFTE(enroll, assumptions.aafte_pct)
   const totalRevenue = rev.total
 
   const totalFte = positions.reduce((s, p) => s + p.fte, 0)
   const totalPersonnel = positions.reduce(
-    (s, p) => s + Math.round(p.annual_salary * p.fte * benefitsMultiplier),
+    (s, p) => {
+      const cost = p.annual_salary * p.fte
+      return s + cost + calcBenefits(cost, assumptions.benefits_load_pct / 100)
+    },
     0
   )
 
@@ -44,7 +45,8 @@ export function buildSchoolContextString(
 
   const staffingList = positions.length > 0
     ? positions.map((p) => {
-        const cost = Math.round(p.annual_salary * p.fte * benefitsMultiplier)
+        const baseCost = p.annual_salary * p.fte
+        const cost = baseCost + calcBenefits(baseCost, assumptions.benefits_load_pct / 100)
         return `- ${p.title}: ${p.fte} FTE, $${p.annual_salary.toLocaleString()} salary, ${p.category}, total cost with benefits: $${cost.toLocaleString()}`
       }).join('\n')
     : 'No positions entered'

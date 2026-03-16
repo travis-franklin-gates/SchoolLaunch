@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
-import { calcBenefits } from '@/lib/calculations'
+import { calcBenefits, calcCommissionRevenue } from '@/lib/calculations'
 import { createClient } from '@/lib/supabase/client'
 import { COMMISSION_POSITIONS, getCommissionPosition } from '@/lib/types'
 import { expansionToEnrollmentArray } from '@/lib/gradeExpansion'
@@ -295,8 +295,14 @@ export default function StaffingPage() {
     return result
   }, [gradeExpansionPlan])
 
-  // Total revenue for Year 1 (for personnel % badge)
-  const y1Revenue = projections.filter((p) => p.is_revenue).reduce((s, p) => s + p.amount, 0)
+  // Operating revenue for Year 1 (for personnel % badge) — calculated live, same as Overview
+  const y1Revenue = useMemo(() => {
+    const rev = calcCommissionRevenue(
+      profile.target_enrollment_y1, profile.pct_frl, profile.pct_iep,
+      profile.pct_ell, profile.pct_hicap, assumptions,
+    )
+    return rev.total
+  }, [profile, assumptions])
 
   // Server-side seed: call API endpoint that atomically checks + inserts
   const ensureSeeded = useCallback(async () => {
@@ -466,7 +472,14 @@ export default function StaffingPage() {
     )
   }
 
-  function addPosition() {
+  function updateClassification(id: string, cls: 'Administrative' | 'Certificated' | 'Classified') {
+    setPositions((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, classification: cls, category: classificationToCategory(cls) } : p))
+    )
+  }
+
+  function addPosition(classification?: 'Administrative' | 'Certificated' | 'Classified') {
+    const cls = classification || 'Classified'
     const fte = computeSmartFte(1, 'fixed', 'custom', enrollments, sectionsPerYear)
     setPositions((prev) => [
       ...prev,
@@ -474,8 +487,8 @@ export default function StaffingPage() {
         id: tempId(),
         positionType: 'custom',
         title: 'New Position',
-        classification: 'Classified',
-        category: 'classified',
+        classification: cls,
+        category: classificationToCategory(cls),
         salary: 45000,
         benchmarkSalary: 0,
         driver: 'fixed',
@@ -611,7 +624,7 @@ export default function StaffingPage() {
             <span className="text-[10px] opacity-70 ml-1">(Y1)</span>
           </div>
           <button
-            onClick={addPosition}
+            onClick={() => addPosition()}
             className="px-3 py-1.5 text-sm font-medium text-teal-600 border border-teal-300 rounded-lg hover:bg-teal-50 transition-colors"
           >
             + Add Position
@@ -646,22 +659,22 @@ export default function StaffingPage() {
               </tr>
             </thead>
             <tbody>
-              {groups.map((group) => {
-                if (group.positions.length === 0) return null
-                return (
-                  <GroupSection
-                    key={group.label}
-                    label={group.label}
-                    color={group.color}
-                    positions={group.positions}
-                    onSelectType={selectPositionType}
-                    onUpdateFte={updateFte}
-                    onUpdateSalary={updateSalary}
-                    onUpdateTitle={updateTitle}
-                    onRemove={removePosition}
-                  />
-                )
-              })}
+              {groups.map((group) => (
+                <GroupSection
+                  key={group.label}
+                  label={group.label}
+                  classification={group.label as 'Administrative' | 'Certificated' | 'Classified'}
+                  color={group.color}
+                  positions={group.positions}
+                  onSelectType={selectPositionType}
+                  onUpdateFte={updateFte}
+                  onUpdateSalary={updateSalary}
+                  onUpdateTitle={updateTitle}
+                  onUpdateClassification={updateClassification}
+                  onRemove={removePosition}
+                  onAdd={addPosition}
+                />
+              ))}
             </tbody>
             <tfoot>
               <tr className="bg-slate-50 border-t border-slate-200">
@@ -731,22 +744,28 @@ export default function StaffingPage() {
 
 function GroupSection({
   label,
+  classification,
   color,
   positions,
   onSelectType,
   onUpdateFte,
   onUpdateSalary,
   onUpdateTitle,
+  onUpdateClassification,
   onRemove,
+  onAdd,
 }: {
   label: string
+  classification: 'Administrative' | 'Certificated' | 'Classified'
   color: { bg: string; text: string }
   positions: MultiYearPosition[]
   onSelectType: (id: string, type: string) => void
   onUpdateFte: (id: string, yearIndex: number, value: number) => void
   onUpdateSalary: (id: string, value: number) => void
   onUpdateTitle: (id: string, value: string) => void
+  onUpdateClassification: (id: string, cls: 'Administrative' | 'Certificated' | 'Classified') => void
   onRemove: (id: string) => void
+  onAdd: (classification: 'Administrative' | 'Certificated' | 'Classified') => void
 }) {
   return (
     <>
@@ -761,36 +780,68 @@ function GroupSection({
         <PositionRow
           key={pos.id}
           pos={pos}
+          classification={classification}
           onSelectType={onSelectType}
           onUpdateFte={onUpdateFte}
           onUpdateSalary={onUpdateSalary}
           onUpdateTitle={onUpdateTitle}
+          onUpdateClassification={onUpdateClassification}
           onRemove={onRemove}
         />
       ))}
+      <tr className="border-b border-slate-100">
+        <td colSpan={10} className="px-3 py-1.5">
+          <button
+            onClick={() => onAdd(classification)}
+            className={`text-xs font-medium ${color.text} opacity-70 hover:opacity-100 transition-opacity`}
+          >
+            + Add {label} Position
+          </button>
+        </td>
+      </tr>
     </>
   )
 }
 
 /* --- Position Row --- */
 
+/** Get position types relevant to a classification */
+function getTypesForClassification(cls: 'Administrative' | 'Certificated' | 'Classified') {
+  if (cls === 'Administrative') return ADMIN_TYPES
+  if (cls === 'Certificated') return CERT_TYPES
+  return CLASS_TYPES
+}
+
 function PositionRow({
   pos,
+  classification,
   onSelectType,
   onUpdateFte,
   onUpdateSalary,
   onUpdateTitle,
+  onUpdateClassification,
   onRemove,
 }: {
   pos: MultiYearPosition
+  classification: 'Administrative' | 'Certificated' | 'Classified'
   onSelectType: (id: string, type: string) => void
   onUpdateFte: (id: string, yearIndex: number, value: number) => void
   onUpdateSalary: (id: string, value: number) => void
   onUpdateTitle: (id: string, value: string) => void
+  onUpdateClassification: (id: string, cls: 'Administrative' | 'Certificated' | 'Classified') => void
   onRemove: (id: string) => void
 }) {
   const driverLabel = DRIVER_LABELS[pos.driver] || pos.driver.replace(/_/g, ' ')
   const clsColor = CLASSIFICATION_COLORS[pos.classification] || CLASSIFICATION_COLORS.Classified
+
+  // Show section-filtered types + Custom, with full dropdown as fallback
+  const sectionTypes = getTypesForClassification(classification)
+  const isCustom = pos.positionType === 'custom'
+
+  // BM: use OSPI benchmark if available, otherwise use salary × 1.30 for custom positions
+  const bmAmount = pos.benchmarkSalary > 0
+    ? Math.round(pos.benchmarkSalary * 1.3)
+    : (isCustom && pos.salary > 0 ? Math.round(pos.salary * 1.3) : 0)
 
   return (
     <tr className="border-b border-slate-100 hover:bg-slate-50/50">
@@ -800,29 +851,54 @@ function PositionRow({
           onChange={(e) => onSelectType(pos.id, e.target.value)}
           className="w-full border border-slate-200 rounded px-2 py-1 text-sm"
         >
-          <optgroup label="Administrative">
-            {ADMIN_TYPES.map(cp => (
+          {/* Show section-relevant types first */}
+          <optgroup label={classification}>
+            {sectionTypes.map(cp => (
               <option key={cp.type} value={cp.type}>{cp.name}</option>
             ))}
+            <option value="custom">Custom Position</option>
           </optgroup>
-          <optgroup label="Certificated">
-            {CERT_TYPES.map(cp => (
-              <option key={cp.type} value={cp.type}>{cp.name}</option>
-            ))}
-          </optgroup>
-          <optgroup label="Classified">
-            {CLASS_TYPES.map(cp => (
-              <option key={cp.type} value={cp.type}>{cp.name}</option>
-            ))}
-          </optgroup>
+          {/* Other categories in case the position was moved or for flexibility */}
+          {classification !== 'Administrative' && (
+            <optgroup label="Administrative">
+              {ADMIN_TYPES.map(cp => (
+                <option key={cp.type} value={cp.type}>{cp.name}</option>
+              ))}
+            </optgroup>
+          )}
+          {classification !== 'Certificated' && (
+            <optgroup label="Certificated">
+              {CERT_TYPES.map(cp => (
+                <option key={cp.type} value={cp.type}>{cp.name}</option>
+              ))}
+            </optgroup>
+          )}
+          {classification !== 'Classified' && (
+            <optgroup label="Classified">
+              {CLASS_TYPES.map(cp => (
+                <option key={cp.type} value={cp.type}>{cp.name}</option>
+              ))}
+            </optgroup>
+          )}
         </select>
-        {pos.positionType === 'custom' && (
-          <input
-            value={pos.title}
-            onChange={(e) => onUpdateTitle(pos.id, e.target.value)}
-            className="w-full border border-slate-200 rounded px-2 py-1 text-sm mt-1"
-            placeholder="Custom position name"
-          />
+        {isCustom && (
+          <div className="flex gap-1 mt-1">
+            <input
+              value={pos.title}
+              onChange={(e) => onUpdateTitle(pos.id, e.target.value)}
+              className="flex-1 border border-slate-200 rounded px-2 py-1 text-sm"
+              placeholder="Custom position name"
+            />
+            <select
+              value={pos.classification}
+              onChange={(e) => onUpdateClassification(pos.id, e.target.value as 'Administrative' | 'Certificated' | 'Classified')}
+              className="border border-slate-200 rounded px-1 py-1 text-[10px] w-24"
+            >
+              <option value="Administrative">Admin</option>
+              <option value="Certificated">Cert</option>
+              <option value="Classified">Class</option>
+            </select>
+          </div>
         )}
       </td>
       <td className="px-2 py-1.5">
@@ -841,8 +917,8 @@ function PositionRow({
           onChange={(e) => onUpdateSalary(pos.id, Number(e.target.value))}
           className="w-24 text-right border border-slate-200 rounded px-2 py-1 text-sm"
         />
-        {pos.benchmarkSalary > 0 && (
-          <div className="text-[9px] text-slate-400 text-right mt-0.5">BM: {fmt(Math.round(pos.benchmarkSalary * 1.3))}</div>
+        {bmAmount > 0 && (
+          <div className="text-[9px] text-slate-400 text-right mt-0.5">BM: {fmt(bmAmount)}</div>
         )}
       </td>
       {[0, 1, 2, 3, 4].map((yi) => (

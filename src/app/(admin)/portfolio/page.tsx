@@ -131,7 +131,14 @@ export default function PortfolioPage() {
       const schoolProjections = projections.filter((p) => p.school_id === school.id)
       const schoolNotes = notes.filter((n) => n.school_id === school.id)
       const assumptions = getAssumptions(profile?.financial_assumptions as Partial<FinancialAssumptions> | null)
-      const summary = computeSummaryFromProjections(schoolProjections, schoolPositions, assumptions)
+      const revenueProfile = profile ? {
+        target_enrollment_y1: profile.target_enrollment_y1 || 0,
+        pct_frl: profile.pct_frl || 0,
+        pct_iep: profile.pct_iep || 0,
+        pct_ell: profile.pct_ell || 0,
+        pct_hicap: profile.pct_hicap || 0,
+      } : undefined
+      const summary = computeSummaryFromProjections(schoolProjections, schoolPositions, assumptions, 0, revenueProfile)
 
       return {
         id: school.id,

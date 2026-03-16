@@ -12,6 +12,15 @@ import {
 import type { SchoolProfile, StaffingPosition, BudgetProjection, FinancialAssumptions, GradeExpansionEntry, StartupFundingSource } from './types'
 import { DEFAULT_ASSUMPTIONS } from './types'
 
+/** Minimal profile fields needed for live revenue calculation */
+export interface RevenueProfile {
+  target_enrollment_y1: number
+  pct_frl: number
+  pct_iep: number
+  pct_ell: number
+  pct_hicap: number
+}
+
 // --- Grant Revenue Utility ---
 
 /** Get grant revenue for a specific year (1-5) from startup funding sources */
@@ -72,15 +81,37 @@ export function computeSummaryFromProjections(
   positions: StaffingPosition[],
   assumptions?: FinancialAssumptions,
   grantRevenue: number = 0,
+  revenueProfile?: RevenueProfile,
 ): BudgetSummary {
   const a = assumptions || DEFAULT_ASSUMPTIONS
-  const operatingRevenue = projections
-    .filter((p) => p.is_revenue)
-    .reduce((s, p) => s + p.amount, 0)
+  // Compute revenue live from profile demographics if available (avoids stale budget_projections)
+  let operatingRevenue: number
+  if (revenueProfile) {
+    const rev = calcCommissionRevenue(
+      revenueProfile.target_enrollment_y1,
+      revenueProfile.pct_frl,
+      revenueProfile.pct_iep,
+      revenueProfile.pct_ell,
+      revenueProfile.pct_hicap,
+      a,
+    )
+    operatingRevenue = rev.total
+  } else {
+    operatingRevenue = projections
+      .filter((p) => p.is_revenue)
+      .reduce((s, p) => s + p.amount, 0)
+  }
   const totalRevenue = operatingRevenue + grantRevenue
-  const totalPersonnel = projections
-    .filter((p) => !p.is_revenue && p.category === 'Personnel')
-    .reduce((s, p) => s + p.amount, 0)
+  // Compute personnel live from positions (source of truth) to avoid stale budget_projections
+  const benefitsRate = a.benefits_load_pct / 100
+  const totalPersonnel = positions.length > 0
+    ? positions.reduce((s, p) => {
+        const cost = p.fte * p.annual_salary
+        return s + cost + calcBenefits(cost, benefitsRate)
+      }, 0)
+    : projections
+        .filter((p) => !p.is_revenue && p.category === 'Personnel')
+        .reduce((s, p) => s + p.amount, 0)
   const totalOperations = projections
     .filter((p) => !p.is_revenue && p.category === 'Operations')
     .reduce((s, p) => s + p.amount, 0)
@@ -280,14 +311,18 @@ export function computeMultiYearPersonnel(
     totalBenefits += calcBenefits(cost, benefitsRate)
   }
 
-  const otherCount = basePositions.length - teacherPositions.length - paraPositions.length - officePositions.length
+  const baseTotalFte = basePositions.reduce((s, p) => s + p.fte, 0)
+  const otherFte = baseTotalFte - y1TeacherFte - y1ParaFte - y1OfficeFte
+  const totalTeachers = y1TeacherFte + additionalTeachers
+  const totalParas = y1ParaFte + additionalParas
+  const totalOffice = y1OfficeFte + additionalOffice
 
   return {
-    teachers: y1TeacherFte + additionalTeachers,
-    paras: y1ParaFte + additionalParas,
-    officeStaff: y1OfficeFte + additionalOffice,
-    otherStaff: otherCount,
-    totalPositions: basePositions.length + additionalTeachers + additionalParas + additionalOffice,
+    teachers: totalTeachers,
+    paras: totalParas,
+    officeStaff: totalOffice,
+    otherStaff: otherFte,
+    totalPositions: totalTeachers + totalParas + totalOffice + otherFte,
     totalPersonnelCost: totalSalaries + totalBenefits,
     totalSalaries,
     totalBenefits,
@@ -569,12 +604,16 @@ function computeYear1Staffing(positions: StaffingPosition[], benefitsRate: numbe
     totalSalaries += cost
     totalBenefits += calcBenefits(cost, benefitsRate)
   }
+  const teacherFte = teacherPositions.reduce((s, p) => s + p.fte, 0)
+  const paraFte = paraPositions.reduce((s, p) => s + p.fte, 0)
+  const officeFte = officePositions.reduce((s, p) => s + p.fte, 0)
+  const totalFte = positions.reduce((s, p) => s + p.fte, 0)
   return {
-    teachers: teacherPositions.reduce((s, p) => s + p.fte, 0),
-    paras: paraPositions.reduce((s, p) => s + p.fte, 0),
-    officeStaff: officePositions.reduce((s, p) => s + p.fte, 0),
-    otherStaff: otherCount,
-    totalPositions: positions.length,
+    teachers: teacherFte,
+    paras: paraFte,
+    officeStaff: officeFte,
+    otherStaff: totalFte - teacherFte - paraFte - officeFte,
+    totalPositions: totalFte,
     totalPersonnelCost: totalSalaries + totalBenefits,
     totalSalaries,
     totalBenefits,

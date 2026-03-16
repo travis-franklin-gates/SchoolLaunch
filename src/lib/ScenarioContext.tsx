@@ -52,8 +52,8 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
   )
 
   const baseSummary = useMemo(
-    () => computeSummaryFromProjections(projections, positions, assumptions, y1GrantRevenue),
-    [projections, positions, assumptions, y1GrantRevenue]
+    () => computeSummaryFromProjections(projections, positions, assumptions, y1GrantRevenue, profile),
+    [projections, positions, assumptions, y1GrantRevenue, profile]
   )
 
   const baseFacilities = projections.find((p) => p.subcategory === 'Facilities' && !p.is_revenue)?.amount || 0

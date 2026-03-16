@@ -255,7 +255,7 @@ export default function MultiYearPage() {
                     </td>
                   ))}
                 </tr>
-                <TotalRow label="Total Enrollment" values={yearsWithStartup.map((y) => y.enrollment)} />
+                <TotalRow label="Total Enrollment" values={yearsWithStartup.map((y) => y.enrollment)} format="number" />
               </>
             )}
 
@@ -368,12 +368,14 @@ function Row({ label, values }: { label: string; values: number[] }) {
   )
 }
 
-function TotalRow({ label, values }: { label: string; values: number[] }) {
+function TotalRow({ label, values, format = 'currency' }: { label: string; values: number[]; format?: 'currency' | 'number' }) {
   return (
     <tr className="border-b border-slate-200 bg-slate-50 total">
       <td className="px-5 py-3 font-bold text-slate-800">{label}</td>
       {values.map((v, i) => (
-        <td key={i} className="px-5 py-3 text-right font-bold text-slate-800 tabular-nums num">{fmt(v)}</td>
+        <td key={i} className="px-5 py-3 text-right font-bold text-slate-800 tabular-nums num">
+          {format === 'number' ? v.toLocaleString() : fmt(v)}
+        </td>
       ))}
     </tr>
   )

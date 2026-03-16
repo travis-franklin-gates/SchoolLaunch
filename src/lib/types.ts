@@ -107,6 +107,22 @@ export interface SchoolProfile {
   buildout_grades?: string[] | null
   retention_rate?: number | null
   pre_opening_expenses?: PreOpeningExpense[] | null
+  advisory_cache?: AdvisoryCache | null
+}
+
+export interface AdvisoryCache {
+  briefing: string
+  agents: {
+    id: string
+    name: string
+    icon: string
+    subtitle: string
+    status: 'strong' | 'needs_attention' | 'risk'
+    summary: string
+    actions: string[]
+  }[]
+  generatedAt: string
+  dataHash: string
 }
 
 export interface PreOpeningExpense {

@@ -1,25 +1,18 @@
 'use client'
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { computeMultiYearDetailed, computeCashFlow, computeFPFScorecard, type FPFScorecard } from '@/lib/budgetEngine'
 import { buildSchoolContextString } from '@/lib/buildSchoolContext'
+import { createClient } from '@/lib/supabase/client'
+import type { AdvisoryCache } from '@/lib/types'
 import Link from 'next/link'
 
-interface AgentResult {
-  id: string
-  name: string
-  icon: string
-  subtitle: string
-  status: 'strong' | 'needs_attention' | 'risk'
-  summary: string
-  actions: string[]
-}
+type AdvisoryData = AdvisoryCache
 
-interface AdvisoryData {
-  briefing: string
-  agents: AgentResult[]
-  generatedAt: string
+/** Simple hash of key financial metrics to detect model changes */
+function computeDataHash(revenue: number, personnel: number, operations: number, enrollment: number, staffCount: number): string {
+  return `r:${Math.round(revenue)}|p:${Math.round(personnel)}|o:${Math.round(operations)}|e:${enrollment}|s:${Math.round(staffCount * 10) / 10}`
 }
 
 function fmt(n: number) {
@@ -72,7 +65,7 @@ function HealthTile({ label, value, subtitle, colorClass }: {
 
 export default function DashboardPage() {
   const {
-    schoolData: { schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, loading },
+    schoolData: { schoolId, schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, loading },
     assumptions,
     baseSummary,
     scenario,
@@ -94,26 +87,49 @@ export default function DashboardPage() {
   const [commissionExporting, setCommissionExporting] = useState(false)
   const [advisory, setAdvisory] = useState<AdvisoryData | null>(null)
   const [advisoryLoading, setAdvisoryLoading] = useState(false)
-
-  const multiYear = useMemo(
-    () => computeMultiYearDetailed(profile, positions, projections, assumptions, 0, gradeExpansionPlan, allPositions, profile.startup_funding),
-    [profile, positions, allPositions, projections, assumptions, gradeExpansionPlan]
-  )
-  const cashFlowData = useMemo(
-    () => computeCashFlow(baseSummary, baseApportionment, 0),
-    [baseSummary, baseApportionment]
-  )
+  const [modelChanged, setModelChanged] = useState(false)
+  const advisoryInitRef = useRef(false)
+  const supabase = createClient()
 
   const startupFunding = profile.startup_funding?.reduce((s: number, f: { amount: number }) => s + f.amount, 0) || 0
   const preOpenCash = Math.round(startupFunding * 0.6)
+
+  const multiYear = useMemo(
+    () => computeMultiYearDetailed(profile, positions, projections, assumptions, preOpenCash, gradeExpansionPlan, allPositions, profile.startup_funding),
+    [profile, positions, allPositions, projections, assumptions, gradeExpansionPlan, preOpenCash]
+  )
+  const cashFlowData = useMemo(
+    () => computeCashFlow(baseSummary, baseApportionment, preOpenCash),
+    [baseSummary, baseApportionment, preOpenCash]
+  )
+
   const scorecard = useMemo(
     () => computeFPFScorecard(multiYear, preOpenCash, conservativeMode),
     [multiYear, preOpenCash, conservativeMode]
   )
 
+  // Compute current data hash for change detection
+  const totalFte = positions.reduce((s, p) => s + p.fte, 0)
+  const currentDataHash = useMemo(
+    () => computeDataHash(baseSummary.operatingRevenue, baseSummary.totalPersonnel, baseSummary.totalOperations, profile.target_enrollment_y1, totalFte),
+    [baseSummary.operatingRevenue, baseSummary.totalPersonnel, baseSummary.totalOperations, profile.target_enrollment_y1, totalFte]
+  )
+
+  // Save advisory to DB cache
+  const saveAdvisoryCache = useCallback(async (data: AdvisoryData) => {
+    if (!schoolId) return
+    const cache: AdvisoryCache = { ...data, dataHash: currentDataHash }
+    await supabase
+      .from('school_profiles')
+      .update({ advisory_cache: cache })
+      .eq('school_id', schoolId)
+  }, [schoolId, currentDataHash, supabase])
+
+  // Fetch fresh advisory from API and cache it
   const fetchAdvisory = useCallback(async () => {
     if (!schoolName || loading) return
     setAdvisoryLoading(true)
+    setModelChanged(false)
     try {
       const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
       const res = await fetch('/api/advisory', {
@@ -122,26 +138,44 @@ export default function DashboardPage() {
         body: JSON.stringify({ schoolContext }),
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json() as AdvisoryData
+        data.dataHash = currentDataHash
         setAdvisory(data)
+        await saveAdvisoryCache(data)
       }
     } catch (err) {
       console.error('Advisory fetch failed:', err)
     }
     setAdvisoryLoading(false)
-  }, [schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard, loading])
+  }, [schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard, loading, currentDataHash, saveAdvisoryCache])
 
+  // Load cached advisory on mount; auto-generate only on first visit (no cache)
   useEffect(() => {
-    if (!advisory && !advisoryLoading && schoolName && !loading) {
+    if (loading || advisoryInitRef.current) return
+    advisoryInitRef.current = true
+
+    const cached = profile.advisory_cache
+    if (cached && cached.briefing) {
+      setAdvisory(cached)
+      // Check if the model has changed since the cached briefing
+      if (cached.dataHash && cached.dataHash !== currentDataHash) {
+        setModelChanged(true)
+      }
+    } else {
+      // First visit — no cached briefing, auto-generate
       fetchAdvisory()
     }
-  }, [advisory, advisoryLoading, schoolName, loading, fetchAdvisory])
+  }, [loading, profile.advisory_cache, currentDataHash, fetchAdvisory])
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
   }
 
-  const rc = reserveColor(current.reserveDays)
+  // Days of Cash = (starting cash + Y1 net) / daily expense — matches scorecard methodology
+  const dailyExpense = current.totalExpenses / 365
+  const daysOfCash = dailyExpense > 0 ? Math.round((preOpenCash + current.netPosition) / dailyExpense) : 0
+  const baseDaysOfCash = baseSummary.totalExpenses > 0 ? Math.round((preOpenCash + baseSummary.netPosition) / (baseSummary.totalExpenses / 365)) : 0
+  const rc = reserveColor(daysOfCash)
   const surplusColor = current.netPosition >= 0
     ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
     : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
@@ -171,6 +205,7 @@ export default function DashboardPage() {
     try {
       let advisoryForPdf = advisory
       if (!advisoryForPdf) {
+        // Try generating a fresh one for the export
         const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
         const advRes = await fetch('/api/advisory', {
           method: 'POST',
@@ -180,6 +215,7 @@ export default function DashboardPage() {
         if (advRes.ok) {
           advisoryForPdf = await advRes.json()
           setAdvisory(advisoryForPdf)
+          if (advisoryForPdf) await saveAdvisoryCache(advisoryForPdf)
         }
       }
 
@@ -285,15 +321,26 @@ export default function DashboardPage() {
             <button
               onClick={fetchAdvisory}
               disabled={advisoryLoading}
-              className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors"
+              className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors disabled:opacity-50"
             >
               <svg className={`w-3.5 h-3.5 ${advisoryLoading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Refresh
+              {advisoryLoading ? 'Generating...' : 'Refresh'}
             </button>
           </div>
-          <div className="text-[15px] text-slate-700 leading-[1.7] whitespace-pre-line mb-4">
+
+          {/* Model changed banner */}
+          {modelChanged && !advisoryLoading && (
+            <div className="mb-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700 flex items-center justify-between">
+              <span>Your financial model has changed since the last briefing.</span>
+              <button onClick={fetchAdvisory} className="font-medium text-amber-800 hover:text-amber-900 underline ml-2">
+                Click Refresh for updated analysis
+              </button>
+            </div>
+          )}
+
+          <div className={`text-[15px] text-slate-700 leading-[1.7] whitespace-pre-line mb-4 ${advisoryLoading ? 'opacity-50' : ''}`}>
             {advisory.briefing}
           </div>
 
@@ -317,7 +364,7 @@ export default function DashboardPage() {
           </div>
           {advisory.generatedAt && (
             <div className="text-[11px] text-slate-400 mt-2">
-              Last updated: {new Date(advisory.generatedAt).toLocaleTimeString()}
+              Last updated: {new Date(advisory.generatedAt).toLocaleString()}
             </div>
           )}
         </div>
@@ -394,9 +441,9 @@ export default function DashboardPage() {
       {/* Health tiles */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
         <HealthTile
-          label="Year-End Reserve"
-          value={`${current.reserveDays} days`}
-          subtitle={delta(baseSummary.reserveDays, current.reserveDays, 'days') || (current.reserveDays >= 30 ? 'Meets Stage 1' : current.reserveDays >= 21 ? 'Approaches Stage 1' : 'Below Stage 1 minimum')}
+          label="Days of Cash"
+          value={`${daysOfCash} days`}
+          subtitle={delta(baseDaysOfCash, daysOfCash, 'days') || (daysOfCash >= 60 ? 'Meets Stage 2' : daysOfCash >= 30 ? 'Meets Stage 1' : daysOfCash >= 21 ? 'Approaches Stage 1' : 'Below Stage 1 minimum')}
           colorClass={rc}
         />
         <HealthTile
@@ -425,16 +472,19 @@ export default function DashboardPage() {
       </div>
 
       {/* 90% enrollment sensitivity */}
-      {!conservativeMode && baseSummary.reserveDays !== conservativeSummary.reserveDays && (
-        <div className="mb-8 bg-slate-50 border border-slate-200 rounded-xl px-5 py-3 text-sm text-slate-600">
-          <strong>90% enrollment sensitivity:</strong> At {conservativeEnrollment} students,
-          reserve days drop from {baseSummary.reserveDays} to{' '}
-          <span className={conservativeSummary.reserveDays < 21 ? 'text-red-600 font-semibold' : conservativeSummary.reserveDays < 30 ? 'text-amber-600 font-semibold' : 'text-emerald-600 font-semibold'}>
-            {conservativeSummary.reserveDays} days
-          </span>.
-          {conservativeSummary.reserveDays < 30 && ' Toggle conservative mode below to plan for this scenario.'}
-        </div>
-      )}
+      {!conservativeMode && (() => {
+        const conservativeDaysOfCash = conservativeSummary.totalExpenses > 0 ? Math.round((preOpenCash + conservativeSummary.netPosition) / (conservativeSummary.totalExpenses / 365)) : 0
+        return baseDaysOfCash !== conservativeDaysOfCash ? (
+          <div className="mb-8 bg-slate-50 border border-slate-200 rounded-xl px-5 py-3 text-sm text-slate-600">
+            <strong>90% enrollment sensitivity:</strong> At {conservativeEnrollment} students,
+            days of cash drop from {baseDaysOfCash} to{' '}
+            <span className={conservativeDaysOfCash < 21 ? 'text-red-600 font-semibold' : conservativeDaysOfCash < 30 ? 'text-amber-600 font-semibold' : 'text-emerald-600 font-semibold'}>
+              {conservativeDaysOfCash} days
+            </span>.
+            {conservativeDaysOfCash < 30 && ' Toggle conservative mode below to plan for this scenario.'}
+          </div>
+        ) : null
+      })()}
 
       {/* Facility cost alert */}
       {current.facilityPct > 15 && (
@@ -572,7 +622,7 @@ export default function DashboardPage() {
               { label: 'Total Personnel', base: baseSummary.totalPersonnel, curr: current.totalPersonnel },
               { label: 'Total Operations', base: baseSummary.totalOperations, curr: current.totalOperations },
               { label: 'Net Position', base: baseSummary.netPosition, curr: current.netPosition, bold: true },
-              { label: 'Reserve Days', base: baseSummary.reserveDays, curr: current.reserveDays, bold: true, isDays: true },
+              { label: 'Days of Cash', base: baseDaysOfCash, curr: daysOfCash, bold: true, isDays: true },
             ].map((row) => {
               const diff = row.curr - row.base
               return (

@@ -100,7 +100,14 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
 
   const assumptions = getAssumptions(profile.financial_assumptions as Partial<FinancialAssumptions> | null)
   const y1Grant = getGrantRevenueForYear(profile.startup_funding as StartupFundingSource[] | null, 1)
-  const summary = computeSummaryFromProjections(projections, positions, assumptions, y1Grant)
+  const revenueProfile = {
+    target_enrollment_y1: profile.target_enrollment_y1,
+    pct_frl: profile.pct_frl,
+    pct_iep: profile.pct_iep,
+    pct_ell: profile.pct_ell,
+    pct_hicap: profile.pct_hicap,
+  }
+  const summary = computeSummaryFromProjections(projections, positions, assumptions, y1Grant, revenueProfile)
   const rev = calcCommissionRevenue(profile.target_enrollment_y1, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
   const apportionment = rev.regularEd + rev.sped + rev.facilitiesRev
   const cashFlow = computeCashFlow(summary, apportionment)
