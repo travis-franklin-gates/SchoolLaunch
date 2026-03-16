@@ -209,6 +209,7 @@ export default function PortfolioPage() {
           <p className="text-sm text-slate-500 mt-1">{orgName}</p>
         </div>
         <button
+          data-tour="invite-button"
           onClick={() => setShowInviteModal(true)}
           className="px-5 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-medium hover:bg-teal-700 transition-colors"
         >
@@ -241,14 +242,14 @@ export default function PortfolioPage() {
           <p className="text-sm text-slate-400 mt-1">Click &ldquo;Invite School&rdquo; to get started.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {schools.map((school) => (
+        <div data-tour="school-cards" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {schools.map((school, idx) => (
             <div key={school.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
               {/* Card header */}
               <div className="p-5 border-b border-slate-100">
                 <div className="flex items-start justify-between mb-2">
                   <h3 className="font-semibold text-slate-800">{school.name}</h3>
-                  <StatusBadge status={school.status} />
+                  <span {...(idx === 0 ? { 'data-tour': 'status-badge' } : {})}><StatusBadge status={school.status} /></span>
                 </div>
                 <div className="flex gap-4 text-xs text-slate-500">
                   <span>{school.gradeConfig}</span>
@@ -286,7 +287,7 @@ export default function PortfolioPage() {
               )}
 
               {/* Notes */}
-              <div className="border-t border-slate-100 p-4">
+              <div {...(idx === 0 ? { 'data-tour': 'notes-panel' } : {})} className="border-t border-slate-100 p-4">
                 <button
                   onClick={() => setExpandedNotes((prev) => ({ ...prev, [school.id]: !prev[school.id] }))}
                   className="text-xs font-medium text-slate-500 hover:text-slate-700 mb-2 flex items-center gap-1"

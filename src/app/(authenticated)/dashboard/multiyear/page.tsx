@@ -66,7 +66,7 @@ export default function MultiYearPage() {
 
       {/* Startup Funding Sources — read-only summary */}
       {fundingSources.length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
+        <div data-tour="funding-sources-table" className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide">Startup Funding Sources</h2>
             <Link
@@ -166,7 +166,7 @@ export default function MultiYearPage() {
       )}
 
       {/* Main multi-year table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm overflow-x-auto sl-scroll">
+      <div data-tour="multiyear-table" className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm overflow-x-auto sl-scroll">
         <table className="w-full text-sm whitespace-nowrap sl-table">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
@@ -272,7 +272,7 @@ export default function MultiYearPage() {
             <TotalRow label="Total Operations" values={yearsWithStartup.map((y) => y.operations.total)} />
 
             {/* Summary Section */}
-            <SectionHeader label="Summary" cols={5} />
+            <SectionHeader label="Summary" cols={5} dataTour="summary-rows" />
             <TotalRow label={yearsWithStartup.some((y) => y.revenue.grantRevenue > 0) ? 'Total Revenue (incl. Grants)' : 'Total Revenue'} values={yearsWithStartup.map((y) => y.revenue.total)} />
             <TotalRow label="Total Expenses" values={yearsWithStartup.map((y) => y.totalExpenses)} />
             <tr className="border-b border-slate-200">
@@ -328,9 +328,9 @@ export default function MultiYearPage() {
   )
 }
 
-function SectionHeader({ label, cols }: { label: string; cols: number }) {
+function SectionHeader({ label, cols, dataTour }: { label: string; cols: number; dataTour?: string }) {
   return (
-    <tr className="bg-slate-100 border-b border-slate-200 section-header">
+    <tr className="bg-slate-100 border-b border-slate-200 section-header" {...(dataTour ? { 'data-tour': dataTour } : {})}>
       <td className="px-5 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide" colSpan={cols + 1}>
         {label}
       </td>

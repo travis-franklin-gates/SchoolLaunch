@@ -608,7 +608,7 @@ export default function StaffingPage() {
           <p className="text-sm text-slate-500 mt-1">Multi-year staffing projection — Commission V8 template format.</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className={`text-sm font-semibold px-3 py-1.5 rounded-full ${
+          <div data-tour="personnel-pct" className={`text-sm font-semibold px-3 py-1.5 rounded-full ${
             Number(personnelPctY1) < 72 ? 'bg-red-50 text-red-700' :
             Number(personnelPctY1) <= 78 ? 'bg-emerald-50 text-emerald-700' :
             Number(personnelPctY1) <= 80 ? 'bg-amber-50 text-amber-700' :
@@ -618,6 +618,7 @@ export default function StaffingPage() {
             <span className="text-[10px] opacity-70 ml-1">(Y1)</span>
           </div>
           <button
+            data-tour="add-position"
             onClick={() => addPosition()}
             className="px-3 py-1.5 text-sm font-medium text-teal-600 border border-teal-300 rounded-lg hover:bg-teal-50 transition-colors"
           >
@@ -637,17 +638,17 @@ export default function StaffingPage() {
         )}
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-4">
+      <div data-tour="staffing-table" className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-4">
         <div className="overflow-x-auto">
           <table className="sl-table w-full text-sm">
             <thead>
               <tr>
                 <th className="text-left px-3 py-3 min-w-[220px]">Position</th>
                 <th className="text-left px-2 py-3 w-[100px]">Classification</th>
-                <th className="text-left px-2 py-3 w-[80px]">Driver</th>
-                <th className="text-right px-2 py-3 w-[100px]">Salary (Y1)</th>
+                <th data-tour="driver-column" className="text-left px-2 py-3 w-[80px]">Driver</th>
+                <th data-tour="bm-column" className="text-right px-2 py-3 w-[100px]">Salary (Y1)</th>
                 {[1, 2, 3, 4, 5].map((y) => (
-                  <th key={y} className="text-right px-2 py-3 w-[70px]">Y{y} FTE</th>
+                  <th key={y} {...(y === 1 ? { 'data-tour': 'year-columns' } : {})} className="text-right px-2 py-3 w-[70px]">Y{y} FTE</th>
                 ))}
                 <th className="px-2 py-3 w-[50px]"></th>
               </tr>

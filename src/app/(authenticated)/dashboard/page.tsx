@@ -296,7 +296,7 @@ export default function DashboardPage() {
 
       {/* AI Briefing */}
       {advisoryLoading && !advisory ? (
-        <div className="bg-white border-l-[3px] border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
+        <div data-tour="ai-briefing" className="bg-white border-l-[3px] border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-5 h-5 rounded animate-shimmer" />
             <div className="h-4 rounded w-44 animate-shimmer" />
@@ -310,7 +310,7 @@ export default function DashboardPage() {
           </div>
         </div>
       ) : advisory ? (
-        <div className="bg-white border-l-[3px] border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-6 shadow-sm animate-fade-in-up">
+        <div data-tour="ai-briefing" className="bg-white border-l-[3px] border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-6 shadow-sm animate-fade-in-up">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -371,7 +371,7 @@ export default function DashboardPage() {
       ) : null}
 
       {/* Commission FPF Scorecard */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm animate-fade-in-up stagger-1">
+      <div data-tour="scorecard" className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm animate-fade-in-up stagger-1">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide">Commission Scorecard</h2>
           <div className="flex gap-4 text-[10px] text-slate-400">
@@ -439,7 +439,7 @@ export default function DashboardPage() {
       )}
 
       {/* Health tiles */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+      <div data-tour="health-tiles" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
         <HealthTile
           label="Days of Cash"
           value={`${daysOfCash} days`}
@@ -500,7 +500,7 @@ export default function DashboardPage() {
       )}
 
       {/* Scenario panel */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 shadow-sm">
+      <div data-tour="scenario-controls" className="bg-white border border-slate-200 rounded-xl p-6 mb-8 shadow-sm">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Scenario Controls</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-5">
           <div>
@@ -600,7 +600,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Budget summary table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-6 shadow-sm">
+      <div data-tour="budget-summary" className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-6 shadow-sm">
         <table className="sl-table">
           <thead>
             <tr>
@@ -657,7 +657,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Export buttons */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div data-tour="export-buttons" className="flex flex-col sm:flex-row gap-3">
         <button
           onClick={handleExport}
           disabled={exporting}

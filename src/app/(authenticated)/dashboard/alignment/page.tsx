@@ -242,7 +242,7 @@ export default function AlignmentPage() {
 
   return (
     <div className="max-w-4xl animate-fade-in">
-      <h1 className="text-[28px] font-semibold text-slate-900 mb-1">Application Alignment Review</h1>
+      <h1 data-tour="alignment-header" className="text-[28px] font-semibold text-slate-900 mb-1">Application Alignment Review</h1>
       <p className="text-sm text-slate-500 mb-6">
         Upload your draft application narrative and we&apos;ll check it against your financial model for misalignments the Commission would flag.
       </p>
@@ -252,7 +252,7 @@ export default function AlignmentPage() {
       )}
 
       {/* Upload area */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+      <div data-tour="alignment-input" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
         <div
           onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
           onDragLeave={() => setDragging(false)}
@@ -331,7 +331,7 @@ export default function AlignmentPage() {
 
       {/* Results */}
       {displayResult && !analyzing && (
-        <div className="space-y-6 animate-fade-in-up">
+        <div data-tour="alignment-results" className="space-y-6 animate-fade-in-up">
           {/* Part A: Alignment Score */}
           <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
             <div className="flex items-center gap-4 mb-4">

@@ -80,7 +80,7 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-3 overflow-y-auto sl-scroll">
+      <nav data-tour="sidebar-nav" className="flex-1 px-3 py-3 overflow-y-auto sl-scroll">
         {navGroups.map((group, gi) => (
           <div key={gi}>
             {gi > 0 && <div className="mx-3 my-2 border-t border-white/[0.06]" />}

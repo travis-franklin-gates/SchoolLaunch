@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { buildSchoolContextString } from '@/lib/buildSchoolContext'
 import { computeMultiYearDetailed, computeFPFScorecard } from '@/lib/budgetEngine'
 import { createClient } from '@/lib/supabase/client'
+import type { AdvisoryCache } from '@/lib/types'
 import Link from 'next/link'
 
 interface AgentResult {
@@ -21,6 +22,12 @@ interface AdvisoryData {
   briefing: string
   agents: AgentResult[]
   generatedAt: string
+  dataHash?: string
+}
+
+/** Same hash function used by Overview page */
+function computeDataHash(revenue: number, personnel: number, operations: number, enrollment: number, staffCount: number): string {
+  return `r:${Math.round(revenue)}|p:${Math.round(personnel)}|o:${Math.round(operations)}|e:${enrollment}|s:${Math.round(staffCount * 10) / 10}`
 }
 
 const STATUS_CONFIG = {
@@ -77,6 +84,7 @@ export default function AdvisoryPage() {
   const {
     schoolData: { schoolId, schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, loading },
     assumptions,
+    baseSummary,
     conservativeMode,
   } = useScenario()
   const supabase = createClient()
@@ -95,7 +103,16 @@ export default function AdvisoryPage() {
   const [data, setData] = useState<AdvisoryData | null>(null)
   const [fetching, setFetching] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [modelChanged, setModelChanged] = useState(false)
   const [alignmentReview, setAlignmentReview] = useState<AlignmentReview | null>(null)
+  const initRef = useRef(false)
+
+  // Compute current data hash — same inputs as Overview page
+  const totalFte = positions.reduce((s, p) => s + p.fte, 0)
+  const currentDataHash = useMemo(
+    () => computeDataHash(baseSummary.operatingRevenue, baseSummary.totalPersonnel, baseSummary.totalOperations, profile.target_enrollment_y1, totalFte),
+    [baseSummary.operatingRevenue, baseSummary.totalPersonnel, baseSummary.totalOperations, profile.target_enrollment_y1, totalFte]
+  )
 
   // Fetch alignment review from Supabase
   useEffect(() => {
@@ -112,10 +129,27 @@ export default function AdvisoryPage() {
       })
   }, [schoolId, loading, supabase])
 
+  // Save advisory to DB cache (same column as Overview)
+  const saveAdvisoryCache = useCallback(async (advisoryData: AdvisoryData) => {
+    if (!schoolId) return
+    const cache: AdvisoryCache = {
+      briefing: advisoryData.briefing,
+      agents: advisoryData.agents,
+      generatedAt: advisoryData.generatedAt,
+      dataHash: currentDataHash,
+    }
+    await supabase
+      .from('school_profiles')
+      .update({ advisory_cache: cache })
+      .eq('school_id', schoolId)
+  }, [schoolId, currentDataHash, supabase])
+
+  // Fetch fresh advisory from API and cache it
   const fetchAdvisory = useCallback(async () => {
     if (!schoolName || loading) return
     setFetching(true)
     setError(null)
+    setModelChanged(false)
     try {
       let schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
 
@@ -136,20 +170,39 @@ ${criticalFindings ? `Key misalignments:\n${criticalFindings}` : 'No critical mi
         body: JSON.stringify({ schoolContext }),
       })
       if (!res.ok) throw new Error(`API returned ${res.status}`)
-      const result = await res.json()
+      const result = await res.json() as AdvisoryData
+      result.dataHash = currentDataHash
       setData(result)
+      await saveAdvisoryCache(result)
     } catch (err) {
       console.error('Advisory fetch failed:', err)
       setError('Failed to generate advisory analysis. Please try again.')
     }
     setFetching(false)
-  }, [schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard, loading, alignmentReview])
+  }, [schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard, loading, alignmentReview, currentDataHash, saveAdvisoryCache])
 
+  // Load cached advisory on mount; auto-generate only on first visit (no cache)
   useEffect(() => {
-    if (!data && !fetching && schoolName && !loading) {
+    if (loading || initRef.current) return
+    initRef.current = true
+
+    const cached = profile.advisory_cache
+    if (cached && cached.briefing) {
+      setData({
+        briefing: cached.briefing,
+        agents: cached.agents,
+        generatedAt: cached.generatedAt,
+        dataHash: cached.dataHash,
+      })
+      // Check if the model has changed since the cached analysis
+      if (cached.dataHash && cached.dataHash !== currentDataHash) {
+        setModelChanged(true)
+      }
+    } else {
+      // First visit — no cached analysis, auto-generate
       fetchAdvisory()
     }
-  }, [data, fetching, schoolName, loading, fetchAdvisory])
+  }, [loading, profile.advisory_cache, currentDataHash, fetchAdvisory])
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
@@ -188,7 +241,7 @@ ${criticalFindings ? `Key misalignments:\n${criticalFindings}` : 'No critical mi
           disabled={fetching}
           className="px-4 py-2 text-sm font-medium text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className={`w-4 h-4 ${fetching ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
           {fetching ? 'Analyzing...' : 'Refresh Analysis'}
@@ -197,6 +250,16 @@ ${criticalFindings ? `Key misalignments:\n${criticalFindings}` : 'No critical mi
 
       {error && (
         <div className="mb-6 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+
+      {/* Model changed banner */}
+      {modelChanged && !fetching && (
+        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-700 flex items-center justify-between">
+          <span>Your financial model has changed since the last analysis.</span>
+          <button onClick={fetchAdvisory} className="font-medium text-amber-800 hover:text-amber-900 underline ml-2">
+            Click Refresh for updated results
+          </button>
+        </div>
       )}
 
       {/* Briefing */}
@@ -213,7 +276,7 @@ ${criticalFindings ? `Key misalignments:\n${criticalFindings}` : 'No critical mi
           </div>
         </div>
       ) : data ? (
-        <div className="bg-white border-l-4 border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-8 animate-fade-in-up">
+        <div data-tour="advisor-briefing" className={`bg-white border-l-4 border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-8 animate-fade-in-up ${fetching ? 'opacity-50' : ''}`}>
           <div className="flex items-center gap-2 mb-4">
             <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -237,14 +300,14 @@ ${criticalFindings ? `Key misalignments:\n${criticalFindings}` : 'No critical mi
               <span className="text-slate-500">{riskCount} Risk</span>
             </div>
             <div className="ml-auto text-xs text-slate-400">
-              {data.generatedAt && `Updated ${new Date(data.generatedAt).toLocaleTimeString()}`}
+              {data.generatedAt && `Last updated: ${new Date(data.generatedAt).toLocaleString()}`}
             </div>
           </div>
         </div>
       ) : null}
 
       {/* Agent cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
+      <div data-tour="agent-cards" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
         {fetching && !data
           ? Array.from({ length: 7 }).map((_, i) => <SkeletonCard key={i} />)
           : allAgents.map((agent, agentIdx) => {

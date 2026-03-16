@@ -229,7 +229,7 @@ export default function AskPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] animate-fade-in">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto bg-white border border-slate-200 rounded-xl p-4 mb-4 space-y-4 sl-scroll">
+      <div data-tour="chat-area" className="flex-1 overflow-y-auto bg-white border border-slate-200 rounded-xl p-4 mb-4 space-y-4 sl-scroll">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-12">
             <div className="w-14 h-14 bg-teal-50 rounded-2xl flex items-center justify-center mb-4">
@@ -295,7 +295,7 @@ export default function AskPage() {
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="flex gap-3">
+      <form data-tour="chat-input" onSubmit={handleSubmit} className="flex gap-3">
         <input
           ref={inputRef}
           type="text"

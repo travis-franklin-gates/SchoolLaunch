@@ -154,7 +154,7 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-3xl animate-fade-in">
-      <h1 className="text-[28px] font-semibold text-slate-900 mb-6">Settings</h1>
+      <h1 data-tour="settings-header" className="text-[28px] font-semibold text-slate-900 mb-6">Settings</h1>
 
       {toast && (
         <div className={`mb-6 px-4 py-3 rounded-lg text-sm font-medium animate-slide-in-right ${
@@ -165,7 +165,7 @@ export default function SettingsPage() {
       )}
 
       {/* Section 1: School Profile */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+      <div data-tour="school-profile" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">School Profile</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -212,7 +212,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Section 2: Enrollment & Demographics */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+      <div data-tour="enrollment-demographics" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Enrollment & Demographics</h2>
 
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-2">
@@ -270,7 +270,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Section: Grade Expansion Plan */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+      <div data-tour="grade-expansion" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">Grade Expansion Plan</h2>
         <p className="text-xs text-slate-500 mb-4">
           Define which grade levels you open with and how you expand year over year. This produces cohort-based enrollment projections that authorizers find more credible than flat growth rates.
@@ -287,7 +287,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Section 3: Programs */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+      <div data-tour="programs-section" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Programs</h2>
         <p className="text-xs text-slate-500 mb-4">
           Toggle programs your school plans to offer. Enabling a program adds its line item to the Operations budget.
@@ -336,7 +336,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Section 4: Revenue Assumptions */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+      <div data-tour="revenue-assumptions" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Revenue Assumptions</h2>
         <p className="text-xs text-slate-500 mb-4">Commission-aligned per-pupil rates. State apportionment uses AAFTE (Annual Average FTE).</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -384,7 +384,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Section 4b: Expense Assumptions */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+      <div data-tour="expense-assumptions" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Expense Assumptions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -422,7 +422,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Section 5: Operations Benchmarks */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+      <div data-tour="operations-benchmarks" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Operations Benchmarks</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>

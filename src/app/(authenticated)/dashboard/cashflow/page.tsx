@@ -278,7 +278,7 @@ export default function CashFlowPage() {
       </p>
 
       {/* View toggle */}
-      <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit mb-6">
+      <div data-tour="cashflow-tabs" className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit mb-6">
         <button
           onClick={() => setView('year0')}
           className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
@@ -306,7 +306,7 @@ export default function CashFlowPage() {
       {view === 'year0' ? (
         <>
           {/* ── SECTION: Startup Funding Inflows ── */}
-          <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
+          <div data-tour="funding-inflows" className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
             <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Startup Funding Inflows</h2>
             {fundingSources.length > 0 ? (
               <>
@@ -385,7 +385,7 @@ export default function CashFlowPage() {
           </div>
 
           {/* ── SECTION 1: Pre-Opening Expenses (Budget + Rolled-Up Actuals) ── */}
-          <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
+          <div data-tour="preopen-expenses" className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
             <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Pre-Opening Expense Budget</h2>
 
             {/* Summary badges */}
@@ -517,7 +517,7 @@ export default function CashFlowPage() {
 
           {/* ── SECTION 2: Funding Source Utilization ── */}
           {y0Sources.length > 0 && (
-            <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
+            <div data-tour="funding-utilization" className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
               <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Funding Source Utilization</h2>
               <div className="overflow-x-auto sl-scroll">
                 <table className="w-full text-sm sl-table">
@@ -591,7 +591,7 @@ export default function CashFlowPage() {
                     <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Balance</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody data-tour="monthly-transactions">
                   {year0Flow.map((m) => {
                     const isExpanded = expandedMonths.has(m.monthKey)
                     const monthTxs = transactions.filter((tx) => tx.month === m.monthKey)

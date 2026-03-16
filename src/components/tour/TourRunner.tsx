@@ -1,0 +1,145 @@
+'use client'
+
+import { useEffect, useRef, useCallback } from 'react'
+import dynamic from 'next/dynamic'
+import { usePathname } from 'next/navigation'
+import type { CallBackProps, STATUS, EVENTS, ACTIONS } from 'react-joyride'
+import { useTourContext } from './TourContext'
+import { getOverviewSteps, getTabSteps } from './tourSteps'
+
+// Dynamic import to avoid SSR issues with react-joyride
+const Joyride = dynamic(() => import('react-joyride'), { ssr: false })
+
+const JOYRIDE_STYLES = {
+  options: {
+    primaryColor: '#0D9488',
+    zIndex: 10000,
+    arrowColor: '#fff',
+    backgroundColor: '#fff',
+    overlayColor: 'rgba(0, 0, 0, 0.5)',
+    textColor: '#334155',
+  },
+  tooltip: {
+    borderRadius: 12,
+    fontSize: 14,
+    padding: '20px 24px',
+    fontFamily: 'var(--font-heading-var), "DM Sans", system-ui, sans-serif',
+  },
+  tooltipTitle: {
+    fontSize: 16,
+    fontWeight: 600,
+    color: '#0f172a',
+    marginBottom: 8,
+  },
+  tooltipContent: {
+    fontSize: 14,
+    lineHeight: 1.6,
+    color: '#475569',
+    padding: '8px 0 0',
+  },
+  buttonNext: {
+    borderRadius: 8,
+    fontSize: 13,
+    fontWeight: 600,
+    padding: '8px 18px',
+  },
+  buttonBack: {
+    color: '#64748b',
+    fontSize: 13,
+    fontWeight: 500,
+    marginRight: 8,
+  },
+  buttonSkip: {
+    color: '#94a3b8',
+    fontSize: 12,
+  },
+  spotlight: {
+    borderRadius: 12,
+  },
+  beacon: {
+    display: 'none' as const,
+  },
+}
+
+export default function TourRunner() {
+  const pathname = usePathname()
+  const {
+    activeTour,
+    tourCompleted,
+    role,
+    loading,
+    startOverviewTour,
+    markTourComplete,
+    stopTour,
+  } = useTourContext()
+
+  const autoStartedRef = useRef(false)
+
+  // Auto-start overview tour on first login (1-second delay)
+  useEffect(() => {
+    if (loading || autoStartedRef.current || tourCompleted || activeTour) return
+    if (!role) return
+    // Only auto-start on the overview dashboard or portfolio page
+    const isHome = pathname === '/dashboard' || pathname === '/portfolio'
+    if (!isHome) return
+
+    autoStartedRef.current = true
+    const timer = setTimeout(() => {
+      startOverviewTour()
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [loading, tourCompleted, activeTour, role, pathname, startOverviewTour])
+
+  const handleCallback = useCallback((data: CallBackProps) => {
+    const { status, action } = data
+    const finishedStatuses: string[] = ['finished', 'skipped']
+
+    if (finishedStatuses.includes(status as string)) {
+      if (activeTour) {
+        markTourComplete(activeTour)
+      }
+    }
+    // If user closes via overlay click or escape
+    if (action === 'close') {
+      stopTour()
+    }
+  }, [activeTour, markTourComplete, stopTour])
+
+  if (!activeTour || loading) return null
+
+  const steps = activeTour === 'overview'
+    ? getOverviewSteps(role)
+    : getTabSteps(activeTour, role)
+
+  if (steps.length === 0) return null
+
+  // Add step counter to locale
+  const totalSteps = steps.length
+
+  return (
+    <Joyride
+      steps={steps}
+      run={true}
+      continuous
+      showSkipButton
+      showProgress
+      scrollToFirstStep={true}
+      scrollOffset={100}
+      disableScrollParentFix={false}
+      disableOverlayClose={false}
+      spotlightClicks={false}
+      styles={JOYRIDE_STYLES}
+      locale={{
+        back: 'Back',
+        close: 'Close',
+        last: 'Finish',
+        next: 'Next',
+        skip: 'Skip Tour',
+      }}
+      callback={handleCallback}
+      floaterProps={{
+        disableAnimation: false,
+      }}
+    />
+  )
+}

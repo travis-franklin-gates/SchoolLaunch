@@ -310,13 +310,13 @@ export default function OperationsPage() {
         </div>
       )}
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-4">
+      <div data-tour="operations-table" className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-4">
         <div className="overflow-x-auto sl-scroll">
           <table className="w-full text-sm sl-table">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="text-left px-6 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Expense</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Rate</th>
+                <th data-tour="rate-column" className="text-left px-6 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Rate</th>
                 <th className="text-left px-6 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide hidden sm:table-cell">Benchmark</th>
                 <th className="text-right px-6 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Amount</th>
               </tr>
@@ -386,7 +386,7 @@ function GroupSection({
         const hasRate = row.rateKey !== null
         const unit = row.perFte ? '/FTE' : '/student'
         return (
-          <tr key={row.lineItem} className="border-b border-slate-100">
+          <tr key={row.lineItem} {...(isReadOnly && row.lineItem === 'Authorizer Fee' ? { 'data-tour': 'authorizer-fee' } : {})} className="border-b border-slate-100">
             <td className="px-6 py-3 font-medium text-slate-800">{row.lineItem}</td>
             <td className="px-6 py-3">
               {hasRate ? (

@@ -127,7 +127,7 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
   const opsLines = projections.filter((p) => !p.is_revenue && p.category === 'Operations')
 
   return (
-    <div>
+    <div data-tour="school-detail">
       {/* Back link */}
       <Link href="/portfolio" className="text-sm text-teal-600 hover:text-teal-800 font-medium mb-4 inline-block">
         &larr; Back to Portfolio

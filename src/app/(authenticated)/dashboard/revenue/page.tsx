@@ -246,7 +246,7 @@ export default function RevenuePage() {
         </div>
       )}
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto sl-scroll shadow-sm">
+      <div data-tour="revenue-table" className="bg-white border border-slate-200 rounded-xl overflow-x-auto sl-scroll shadow-sm">
         <table className="sl-table w-full text-sm">
           <thead>
             <tr>
@@ -276,7 +276,7 @@ export default function RevenuePage() {
             })}
 
             {/* Operating Revenue subtotal */}
-            <tr className="border-b border-slate-200 bg-slate-50">
+            <tr data-tour="operating-revenue" className="border-b border-slate-200 bg-slate-50">
               <td className="px-6 py-3 font-bold text-slate-800" colSpan={2}>Operating Revenue</td>
               <td className="num px-6 py-3 font-bold text-slate-800">{fmt(operatingBase)}</td>
               {isModified && (
@@ -289,7 +289,7 @@ export default function RevenuePage() {
             </tr>
 
             {/* Startup & Other Grants section — full management UI */}
-            <tr className="section-header">
+            <tr data-tour="startup-grants" className="section-header">
               <td colSpan={colSpan} className="px-6 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide">
                 Startup &amp; Other Grants
                 <span className="ml-2 font-normal normal-case text-[10px]">(one-time — not included in sustainability metrics)</span>
@@ -481,7 +481,7 @@ export default function RevenuePage() {
             </tr>
           </tbody>
           <tfoot>
-            <tr className="border-t-2 border-slate-300">
+            <tr data-tour="total-revenue" className="border-t-2 border-slate-300">
               <td className="px-6 py-3 font-bold text-slate-800" colSpan={2}>
                 Total Revenue {grantRows.length > 0 ? '(incl. Grants)' : ''}
               </td>
