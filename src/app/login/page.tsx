@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-type View = 'login' | 'forgot' | 'reset' | 'reset-success'
+type View = 'login' | 'forgot' | 'reset' | 'reset-success' | 'loading'
 
 export default function LoginPage() {
   const [view, setView] = useState<View>('login')
@@ -29,15 +29,41 @@ export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  // Listen for PASSWORD_RECOVERY event — fires when Supabase processes
-  // the recovery token from the email link redirect
+  // Detect PKCE recovery code on mount, with onAuthStateChange as backup
   useEffect(() => {
+    let cancelled = false
+
+    // Backup: listen for PASSWORD_RECOVERY event (handles hash-fragment flow)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
+      if (!cancelled && event === 'PASSWORD_RECOVERY') {
         setView('reset')
       }
     })
-    return () => subscription.unsubscribe()
+
+    // Primary: check for PKCE ?code= param from Supabase recovery redirect
+    async function checkForRecoveryCode() {
+      const params = new URLSearchParams(window.location.search)
+      const code = params.get('code')
+
+      if (code) {
+        setView('loading')
+        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        // Clean the code from URL
+        window.history.replaceState({}, '', '/login')
+
+        if (!cancelled) {
+          if (!error) {
+            setView('reset')
+          } else {
+            setError('Invalid or expired reset link. Please request a new one.')
+            setView('login')
+          }
+        }
+      }
+    }
+
+    checkForRecoveryCode()
+    return () => { cancelled = true; subscription.unsubscribe() }
   }, [supabase])
 
   async function handleLogin(e: React.FormEvent) {
@@ -144,11 +170,19 @@ export default function LoginPage() {
             <h1 className="text-2xl font-bold text-slate-800">SchoolLaunch</h1>
             <p className="text-slate-500 mt-2">
               {view === 'login' && 'Charter School Financial Planning'}
+              {view === 'loading' && 'Charter School Financial Planning'}
               {view === 'forgot' && 'Reset Your Password'}
               {view === 'reset' && 'Choose a New Password'}
               {view === 'reset-success' && 'Password Updated'}
             </p>
           </div>
+
+          {/* ---- LOADING (processing recovery code) ---- */}
+          {view === 'loading' && (
+            <div className="text-center">
+              <p className="text-sm text-slate-500">Processing reset link...</p>
+            </div>
+          )}
 
           {/* ---- LOGIN FORM ---- */}
           {view === 'login' && (
