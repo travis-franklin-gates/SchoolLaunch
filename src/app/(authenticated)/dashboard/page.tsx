@@ -166,7 +166,9 @@ export default function DashboardPage() {
   // Days of Cash: use scorecard Y1 value (matches Multi-Year tab and Commission Scorecard)
   const daysOfCash = scorecard.measures.find(m => m.name === 'Days of Cash')?.values[0] ?? 0
   const rc = reserveColor(daysOfCash)
-  const surplusColor = baseSummary.netPosition >= 0
+  // Net Position: use multiYear Y1 value as single source of truth (matches Multi-Year tab and Trajectory)
+  const y1Net = multiYear.length > 0 ? multiYear[0].net : baseSummary.netPosition
+  const surplusColor = y1Net >= 0
     ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
     : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
   const personnelColor = baseSummary.personnelPctRevenue < 72
@@ -292,9 +294,9 @@ export default function DashboardPage() {
     setCommissionExporting(false)
   }
 
-  // Extract first sentence of briefing for collapsed preview
+  // Extract first paragraph of briefing for collapsed preview
   const briefingPreview = advisory?.briefing
-    ? advisory.briefing.split(/(?<=[.!?])\s/)[0] || advisory.briefing.slice(0, 200)
+    ? (advisory.briefing.split(/\n\n/)[0] || advisory.briefing.slice(0, 400))
     : ''
 
   return (
@@ -325,7 +327,7 @@ export default function DashboardPage() {
         />
         <HealthTile
           label="Year 1 Net"
-          value={fmt(baseSummary.netPosition)}
+          value={fmt(y1Net)}
           colorClass={surplusColor}
         />
         <HealthTile
@@ -447,7 +449,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Preview (first sentence) — always visible */}
+          {/* Preview (first paragraph) — always visible */}
           <div className={`text-sm text-slate-700 leading-relaxed ${advisoryLoading ? 'opacity-50' : ''}`}>
             {briefingExpanded ? (
               <div className="whitespace-pre-line">{advisory.briefing}</div>
@@ -574,7 +576,7 @@ export default function DashboardPage() {
             </tr>
             <tr className="border-b border-slate-200">
               <td className="px-5 py-3 font-semibold text-slate-800">Net Position</td>
-              <td className={`px-5 py-3 text-right font-semibold tabular-nums ${baseSummary.netPosition >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmt(baseSummary.netPosition)}</td>
+              <td className={`px-5 py-3 text-right font-semibold tabular-nums ${y1Net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmt(y1Net)}</td>
             </tr>
             <tr>
               <td className="px-5 py-3 font-semibold text-slate-800">Days of Cash</td>
