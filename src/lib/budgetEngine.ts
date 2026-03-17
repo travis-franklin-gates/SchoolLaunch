@@ -715,7 +715,10 @@ export interface FPFMeasure {
   values: (number | null)[] // one per year (5)
   stage1Target: string
   stage2Target: string
+  stage1Approaching?: string
+  stage2Approaching?: string
   statuses: ('meets' | 'approaches' | 'does_not_meet' | 'na')[]
+  note?: string // measure-specific annotation for the scorecard display
 }
 
 export interface FPFScorecard {
@@ -749,53 +752,55 @@ export function computeFPFScorecard(
 
   const measures: FPFMeasure[] = []
 
-  // 1. Current Ratio: (Starting Cash + Revenue) / Expenses for Y1; cumulative net proxy for Y2+
+  // 1. Current Ratio — FPF: Current Assets / Current Liabilities (balance sheet)
+  // Planning proxy: Ending Cash / (Total Expenses / 12) — months of expenses covered
   const currentRatioValues = multiYear.map((row, i) => {
-    if (i === 0) {
-      const assets = startingCash + row.revenue.total
-      return row.totalExpenses > 0 ? assets / row.totalExpenses : 99
-    }
-    const assets = yearEndCash[i]
-    // Approximate current liabilities as ~1/12 of annual expenses
-    const liabilities = row.totalExpenses / 12
-    return liabilities > 0 ? Math.max(0, assets) / liabilities : 99
+    const monthlyExpenses = row.totalExpenses / 12
+    return monthlyExpenses > 0 ? yearEndCash[i] / monthlyExpenses : 99
   })
   measures.push({
     name: 'Current Ratio',
     formula: 'Current Assets ÷ Current Liabilities',
     values: currentRatioValues.map(v => Math.round(v * 100) / 100),
-    stage1Target: '≥1.0',
-    stage2Target: '≥1.1',
+    stage1Target: '≥ 1.0',
+    stage2Target: '≥ 1.1',
+    stage1Approaching: '0.9–0.99',
+    stage2Approaching: '1.0–1.09',
     statuses: currentRatioValues.map((v, i) =>
       fpfStatus(v, i + 1, (val, stage) =>
         val >= (stage === 1 ? 1.0 : 1.1) ? 'meets'
-          : val >= (stage === 1 ? 0.8 : 0.88) ? 'approaches'
+          : val >= (stage === 1 ? 0.9 : 1.0) ? 'approaches'
           : 'does_not_meet'
       )
     ),
+    note: 'Planning proxy: Ending Cash ÷ (Annual Expenses / 12). The Commission calculates this from audited balance sheet data.',
   })
 
-  // 2. Days of Cash
+  // 2. Unrestricted Days Cash — FPF: Unrestricted Cash / [(Total Expenses - Depreciation) / 365]
+  // Depreciation is $0 in planning mode but formula structured to handle it
+  const depreciation = 0 // no depreciation modeled in planning mode
   const daysOfCash = multiYear.map((row, i) => {
-    const dailyExpense = row.totalExpenses / 365
+    const dailyExpense = (row.totalExpenses - depreciation) / 365
     return dailyExpense > 0 ? Math.round(yearEndCash[i] / dailyExpense) : 0
   })
   measures.push({
     name: 'Days of Cash',
-    formula: 'Unrestricted Cash ÷ (Total Expenses / 365)',
+    formula: 'Unrestricted Cash ÷ ((Expenses − Depreciation) / 365)',
     values: daysOfCash,
-    stage1Target: '≥30',
-    stage2Target: '≥60',
+    stage1Target: '≥ 30 days',
+    stage2Target: '≥ 60 days',
+    stage1Approaching: '21–29',
+    stage2Approaching: '30–59',
     statuses: daysOfCash.map((v, i) =>
       fpfStatus(v, i + 1, (val, stage) =>
         val >= (stage === 1 ? 30 : 60) ? 'meets'
-          : val >= (stage === 1 ? 24 : 48) ? 'approaches'
+          : val >= (stage === 1 ? 21 : 30) ? 'approaches'
           : 'does_not_meet'
       )
     ),
   })
 
-  // 3. Total Margin (uses total revenue including grants — this reflects actual financial position)
+  // 3. Total Margin — FPF: Net Income / Total Revenue
   const totalMargin = multiYear.map(row =>
     row.revenue.total > 0 ? Math.round((row.net / row.revenue.total) * 1000) / 10 : 0
   )
@@ -803,8 +808,10 @@ export function computeFPFScorecard(
     name: 'Total Margin',
     formula: 'Net Income ÷ Total Revenue',
     values: totalMargin,
-    stage1Target: '≥0%',
-    stage2Target: '≥0%',
+    stage1Target: '≥ 0%',
+    stage2Target: '≥ 0%',
+    stage1Approaching: '-2% to 0%',
+    stage2Approaching: '-2% to 0%',
     statuses: totalMargin.map((v, i) =>
       fpfStatus(v, i + 1, (val) =>
         val >= 0 ? 'meets' : val >= -2 ? 'approaches' : 'does_not_meet'
@@ -812,65 +819,84 @@ export function computeFPFScorecard(
     ),
   })
 
-  // 4. 3-Year Total Margin
+  // 4. Aggregated 3-Year Total Margin — FPF: Total 3-Year Net Income / Total 3-Year Revenue
   const threeYearMargin: (number | null)[] = multiYear.map((_, i) => {
-    if (i < 2) return null
+    if (i < 2) return null // N/A for Years 1-2 (need 3 years of data)
     const netSum = multiYear.slice(i - 2, i + 1).reduce((s, r) => s + r.net, 0)
     const revSum = multiYear.slice(i - 2, i + 1).reduce((s, r) => s + r.revenue.total, 0)
     return revSum > 0 ? Math.round((netSum / revSum) * 1000) / 10 : 0
   })
   measures.push({
     name: '3-Year Total Margin',
-    formula: '3-Year Net Income ÷ 3-Year Revenue',
+    formula: '(Y(n-2)+Y(n-1)+Yn Net) ÷ (Y(n-2)+Y(n-1)+Yn Revenue)',
     values: threeYearMargin,
     stage1Target: 'N/A',
-    stage2Target: '>0%',
+    stage2Target: '> 0%',
+    stage2Approaching: '-1.5% to 0%',
     statuses: threeYearMargin.map((v, i) =>
       v === null ? 'na' : fpfStatus(v, i + 1, (val) =>
-        val > 0 ? 'meets' : val >= -1 ? 'approaches' : 'does_not_meet'
+        val > 0 ? 'meets' : val >= -1.5 ? 'approaches' : 'does_not_meet'
       )
     ),
   })
 
-  // 5. Debt-to-Asset (no debt modeling yet, show 0)
+  // 5. Debt-to-Asset — FPF: Total Liabilities / Total Assets
+  // No liabilities modeled in planning mode; ratio is 0.00
   measures.push({
     name: 'Debt-to-Asset',
     formula: 'Total Liabilities ÷ Total Assets',
     values: multiYear.map(() => 0),
-    stage1Target: '<0.90',
-    stage2Target: '<0.90',
+    stage1Target: '< 0.90',
+    stage2Target: '< 0.90',
+    stage1Approaching: '0.90–1.0',
+    stage2Approaching: '0.90–1.0',
     statuses: multiYear.map(() => 'meets'),
+    note: 'No liabilities modeled. The Commission calculates this from audited balance sheet data.',
   })
 
-  // 6. Cash Flow (year-over-year change)
-  const cashFlowValues = multiYear.map((_, i) => {
-    if (i === 0) return yearEndCash[0] - startingCash
+  // 6. Debt Default — FPF: Binary (in default or not)
+  // Pre-opening school with no debt = N/A
+  measures.push({
+    name: 'Debt Default',
+    formula: 'In default of loan covenants?',
+    values: multiYear.map(() => null),
+    stage1Target: 'No default',
+    stage2Target: 'No default',
+    statuses: multiYear.map(() => 'na'),
+    note: 'N/A — No debt modeled in planning mode.',
+  })
+
+  // 7. Cash Flow (one-year) — FPF: Year N Total Cash − Year (N−1) Total Cash
+  // Year 1 is N/A per FPF (no prior operating year)
+  const cashFlowValues: (number | null)[] = multiYear.map((_, i) => {
+    if (i === 0) return null // Year 1: no prior operating year
     return yearEndCash[i] - yearEndCash[i - 1]
   })
   measures.push({
     name: 'Cash Flow',
     formula: 'Year-End Cash − Prior Year-End Cash',
     values: cashFlowValues,
-    stage1Target: '>0',
-    stage2Target: '>0',
+    stage1Target: '> $0',
+    stage2Target: '> $0',
     statuses: cashFlowValues.map((v, i) =>
-      fpfStatus(v, i + 1, (val) =>
+      v === null ? 'na' : fpfStatus(v, i + 1, (val) =>
         val > 0 ? 'meets' : val >= -5000 ? 'approaches' : 'does_not_meet'
       )
     ),
   })
 
-  // 7. 3-Year Cash Flow
+  // 8. Multi-Year Cash Flow — FPF: Year N Total Cash − Year (N−2) Total Cash (3-year span)
+  // N/A for Years 1-2
   const threeYearCashFlow: (number | null)[] = multiYear.map((_, i) => {
-    if (i < 2) return null
-    return yearEndCash[i] - (i >= 3 ? yearEndCash[i - 3] : startingCash)
+    if (i < 2) return null // Need at least 3 years of data
+    return yearEndCash[i] - yearEndCash[i - 2]
   })
   measures.push({
-    name: '3-Year Cash Flow',
-    formula: 'Year-End Cash − (Year-3) End Cash',
+    name: 'Multi-Year Cash Flow',
+    formula: 'Year N Cash − Year (N−2) Cash',
     values: threeYearCashFlow,
     stage1Target: 'N/A',
-    stage2Target: '>0',
+    stage2Target: '> $0',
     statuses: threeYearCashFlow.map((v, i) =>
       v === null ? 'na' : fpfStatus(v, i + 1, (val) =>
         val > 0 ? 'meets' : val >= -5000 ? 'approaches' : 'does_not_meet'
@@ -878,37 +904,33 @@ export function computeFPFScorecard(
     ),
   })
 
-  // 8. Enrollment Variance
+  // 9. Enrollment Variance — FPF: Actual Enrollment / Projected Enrollment
+  // In planning mode, actual = projected = 100%
   const enrollmentVariance = multiYear.map(() =>
     conservativeMode ? 90 : 100
   )
   measures.push({
     name: 'Enrollment Variance',
-    formula: 'Actual ÷ Projected',
+    formula: 'Actual Enrollment ÷ Projected Enrollment',
     values: enrollmentVariance,
-    stage1Target: '≥95%',
-    stage2Target: '≥95%',
+    stage1Target: '≥ 95%',
+    stage2Target: '≥ 95%',
+    stage1Approaching: '85–94%',
+    stage2Approaching: '85–94%',
     statuses: enrollmentVariance.map((v, i) =>
       fpfStatus(v, i + 1, (val) =>
         val >= 95 ? 'meets' : val >= 85 ? 'approaches' : 'does_not_meet'
       )
     ),
+    note: 'Informational — becomes meaningful when operating with actual enrollment data.',
   })
 
-  // 9. DSCR (no debt = N/A)
-  measures.push({
-    name: 'DSCR',
-    formula: '(Net Income + Depreciation + Interest) ÷ Debt Service',
-    values: multiYear.map(() => null),
-    stage1Target: 'N/A (no debt)',
-    stage2Target: '≥1.1',
-    statuses: multiYear.map(() => 'na'),
-  })
-
-  // Overall assessment
+  // Overall assessment — skip purely informational/N/A measures
+  const skipForOverall = new Set(['Debt Default', 'Enrollment Variance'])
   const stage1Issues: string[] = []
   const stage2Issues: string[] = []
   for (const m of measures) {
+    if (skipForOverall.has(m.name)) continue
     for (let i = 0; i < Math.min(2, m.statuses.length); i++) {
       if (m.statuses[i] === 'does_not_meet') {
         if (!stage1Issues.includes(m.name)) stage1Issues.push(m.name)

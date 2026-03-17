@@ -1,13 +1,14 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward } from '@/lib/budgetEngine'
 
-function fmt(n: number) {
-  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
-  if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(0)}K`
-  return `$${n.toLocaleString()}`
+const STATUS_LABELS: Record<string, string> = {
+  meets: 'Meets',
+  approaches: 'Approaching',
+  does_not_meet: 'Does Not Meet',
+  na: 'N/A',
 }
 
 export default function ScorecardPage() {
@@ -15,6 +16,8 @@ export default function ScorecardPage() {
     schoolData: { profile, positions, allPositions, projections, gradeExpansionPlan, loading },
     assumptions,
   } = useScenario()
+
+  const [notesOpen, setNotesOpen] = useState(false)
 
   const preOpenCash = useMemo(() => computeCarryForward(profile), [profile])
 
@@ -61,19 +64,20 @@ export default function ScorecardPage() {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-slate-200">
-                <th className="text-left py-2 pr-3 font-medium text-slate-400 uppercase tracking-wide text-[11px] min-w-[160px]">Measure</th>
+                <th className="text-left py-2 pr-3 font-medium text-slate-400 uppercase tracking-wide text-[11px] min-w-[180px]">Measure</th>
                 {[1, 2, 3, 4, 5].map((y) => (
-                  <th key={y} className="text-center px-3 py-2 font-medium text-slate-400 uppercase tracking-wide text-[11px] min-w-[70px]">Year {y}</th>
+                  <th key={y} className="text-center px-3 py-2 font-medium text-slate-400 uppercase tracking-wide text-[11px] min-w-[85px]">Year {y}</th>
                 ))}
-                <th className="text-center px-3 py-2 font-medium text-slate-400 uppercase tracking-wide text-[11px]">Target</th>
+                <th className="text-center px-3 py-2 font-medium text-slate-400 uppercase tracking-wide text-[11px] min-w-[140px]">Target</th>
               </tr>
             </thead>
             <tbody>
-              {scorecard.measures.filter(m => m.name !== 'DSCR').map((m) => (
+              {scorecard.measures.map((m) => (
                 <tr key={m.name} className="border-b border-slate-100">
                   <td className="py-2.5 pr-3 text-slate-600 font-medium text-[13px]">
                     {m.name}
                     <div className="text-[10px] text-slate-400 font-normal mt-0.5">{m.formula}</div>
+                    {m.note && <div className="text-[9px] text-slate-400/70 font-normal mt-0.5 italic">{m.note}</div>}
                   </td>
                   {[0, 1, 2, 3, 4].map((idx) => {
                     const v = m.values[idx]
@@ -82,19 +86,48 @@ export default function ScorecardPage() {
                       : s === 'approaches' ? 'bg-amber-50 text-amber-600'
                       : s === 'does_not_meet' ? 'bg-rose-50 text-rose-600'
                       : 'bg-slate-50 text-slate-400'
-                    const display = v === null ? 'N/A'
-                      : m.name.includes('Margin') || m.name === 'Enrollment Variance' ? `${v}%`
-                      : m.name === 'Cash Flow' || m.name === '3-Year Cash Flow' ? `$${Math.round(v as number / 1000)}K`
-                      : m.name === 'Days of Cash' ? `${v}`
-                      : typeof v === 'number' ? v.toFixed(2) : String(v)
+                    const display = v === null
+                      ? 'N/A'
+                      : m.name.includes('Margin') || m.name === 'Enrollment Variance'
+                        ? `${v}%`
+                      : m.name === 'Cash Flow' || m.name === 'Multi-Year Cash Flow'
+                        ? `$${Math.round(v as number / 1000)}K`
+                      : m.name === 'Days of Cash'
+                        ? `${v}`
+                      : m.name === 'Debt Default'
+                        ? 'N/A'
+                      : typeof v === 'number'
+                        ? v.toFixed(2)
+                        : String(v)
                     return (
                       <td key={idx} className="px-3 py-2.5 text-center">
-                        <span className={`inline-block px-2.5 py-1 rounded text-xs font-medium tabular-nums ${color}`}>{display}</span>
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium tabular-nums ${color}`}>{display}</span>
+                        {s !== 'na' && (
+                          <div className={`text-[9px] mt-0.5 ${
+                            s === 'meets' ? 'text-emerald-500' : s === 'approaches' ? 'text-amber-500' : 'text-rose-500'
+                          }`}>
+                            {STATUS_LABELS[s]}
+                          </div>
+                        )}
                       </td>
                     )
                   })}
-                  <td className="px-3 py-2.5 text-center text-slate-400 text-[11px]">
-                    {m.stage1Target === m.stage2Target ? m.stage1Target : `${m.stage1Target} / ${m.stage2Target}`}
+                  <td className="px-3 py-2.5 text-center text-[10px] leading-snug">
+                    {m.stage1Target === m.stage2Target ? (
+                      <div className="text-slate-500">{m.stage1Target}</div>
+                    ) : (
+                      <>
+                        <div className="text-slate-500"><span className="text-slate-400">S1:</span> {m.stage1Target}</div>
+                        <div className="text-slate-500"><span className="text-slate-400">S2:</span> {m.stage2Target}</div>
+                      </>
+                    )}
+                    {(m.stage1Approaching || m.stage2Approaching) && (
+                      <div className="text-[9px] text-slate-400 mt-0.5">
+                        Approaching: {m.stage1Approaching === m.stage2Approaching
+                          ? m.stage1Approaching
+                          : `${m.stage1Approaching || 'N/A'} / ${m.stage2Approaching || 'N/A'}`}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -104,20 +137,51 @@ export default function ScorecardPage() {
 
         {/* Legend */}
         <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-4 text-[11px]">
-          <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-100 border border-emerald-300" /> Meets standard</span>
-          <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-100 border border-amber-300" /> Approaches standard</span>
-          <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-100 border border-rose-300" /> Does not meet standard</span>
-          <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-slate-100 border border-slate-300" /> Not applicable</span>
+          <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-100 border border-emerald-300" /> Meets Standard</span>
+          <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-100 border border-amber-300" /> Approaching Standard</span>
+          <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-100 border border-rose-300" /> Does Not Meet Standard</span>
+          <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-slate-100 border border-slate-300" /> Not Applicable</span>
         </div>
       </div>
 
-      {/* Explanatory note */}
-      <p className="mt-4 text-xs text-slate-400 italic leading-relaxed">
-        The WA Charter School Commission evaluates charter school financial health using the Financial Performance Framework (FPF).
-        Stage 1 applies lower thresholds appropriate for startup schools in Years 1-2.
-        Stage 2 applies mature school standards beginning in Year 3.
-        Schools that consistently fail to meet standards may face increased oversight or intervention.
-      </p>
+      {/* Collapsible "About This Scorecard" section */}
+      <div className="mt-4 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <button
+          onClick={() => setNotesOpen(!notesOpen)}
+          className="w-full px-5 py-3 flex items-center justify-between text-left text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+        >
+          About This Scorecard
+          <svg className={`w-4 h-4 text-slate-400 transition-transform ${notesOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {notesOpen && (
+          <div className="px-5 pb-4 space-y-3 text-xs text-slate-500 leading-relaxed border-t border-slate-100 pt-3">
+            <p>
+              This scorecard projects your school&apos;s performance against the WA Charter School Commission&apos;s Financial Performance
+              Framework (FPF). During operations, the Commission calculates these measures from your audited financial statements and
+              balance sheet. In planning mode, SchoolLaunch uses projected values as proxies.
+            </p>
+            <p>
+              <strong className="text-slate-600">Current Ratio</strong> and <strong className="text-slate-600">Debt-to-Asset Ratio</strong> are
+              balance sheet measures. In planning mode, Current Ratio is approximated as Ending Cash &divide; (Annual Expenses / 12).
+              The Commission will calculate these differently once your school has audited financials.
+            </p>
+            <p>
+              <strong className="text-slate-600">Cash Flow</strong> shows the year-over-year change in your ending cash balance &mdash;
+              a key indicator of whether your school is building or depleting reserves over time. Multi-Year Cash Flow compares
+              the current year to two years prior, capturing the 3-year trend.
+            </p>
+            <p>
+              <strong className="text-slate-600">Days of Cash</strong> uses the FPF formula: Unrestricted Cash &divide; ((Total Expenses &minus; Depreciation) / 365).
+              Depreciation is $0 in planning mode but the formula is structured to accommodate it.
+            </p>
+            <p className="text-slate-400 italic">
+              Based on the Commission&apos;s Financial Performance Framework &amp; Guidance, Updated August 8, 2024.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
