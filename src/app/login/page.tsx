@@ -9,8 +9,22 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showReset, setShowReset] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetLoading, setResetLoading] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+
+  async function handleResetPassword(e: React.FormEvent) {
+    e.preventDefault()
+    setResetLoading(true)
+    await supabase.auth.resetPasswordForEmail(resetEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
+    setResetSent(true)
+    setResetLoading(false)
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -101,9 +115,18 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="password" className="block text-sm font-medium text-slate-700">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => { setShowReset(true); setResetEmail(email); setResetSent(false) }}
+                  className="text-xs text-teal-600 hover:text-teal-800 transition-colors"
+                >
+                  Forgot password?
+                </button>
+              </div>
               <input
                 id="password"
                 type="password"
@@ -129,6 +152,53 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
+
+          {/* Forgot password inline form */}
+          {showReset && (
+            <div className="mt-6 pt-6 border-t border-slate-200">
+              {resetSent ? (
+                <div className="text-center">
+                  <p className="text-sm text-slate-600">
+                    If an account exists with that email, you&apos;ll receive a reset link shortly.
+                  </p>
+                  <button
+                    onClick={() => setShowReset(false)}
+                    className="mt-3 text-sm text-teal-600 hover:text-teal-800 transition-colors"
+                  >
+                    Back to sign in
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  <p className="text-sm text-slate-600">Enter your email to receive a password reset link.</p>
+                  <input
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
+                    placeholder="you@example.com"
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      type="submit"
+                      disabled={resetLoading}
+                      className="flex-1 bg-teal-600 text-white py-2.5 rounded-lg font-medium hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      {resetLoading ? 'Sending...' : 'Send Reset Link'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowReset(false)}
+                      className="px-4 py-2.5 text-slate-500 hover:text-slate-700 text-sm transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
