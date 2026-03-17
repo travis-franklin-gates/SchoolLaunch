@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-type View = 'login' | 'forgot' | 'reset' | 'reset-success'
+type View = 'login' | 'forgot' | 'verify' | 'reset'
 
 export default function LoginPage() {
   const [view, setView] = useState<View>('login')
@@ -17,38 +17,32 @@ export default function LoginPage() {
 
   // Forgot password state
   const [resetEmail, setResetEmail] = useState('')
-  const [resetLoading, setResetLoading] = useState(false)
-  const [resetSent, setResetSent] = useState(false)
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotMessage, setForgotMessage] = useState('')
 
-  // Reset password state (shown after recovery link click)
+  // OTP verify state
+  const [digits, setDigits] = useState<string[]>(['', '', '', '', '', ''])
+  const [verifyLoading, setVerifyLoading] = useState(false)
+  const [verifyError, setVerifyError] = useState('')
+  const [resendCooldown, setResendCooldown] = useState(0)
+  const digitRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  // Reset password state
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [resetError, setResetError] = useState('')
   const [resetSubmitting, setResetSubmitting] = useState(false)
+  const [resetSuccess, setResetSuccess] = useState(false)
 
   const router = useRouter()
   const supabase = createClient()
 
-  // Detect recovery session on mount (redirected from /auth/callback?recovery=true)
-  // Also listen for PASSWORD_RECOVERY event as backup for hash-fragment flows
+  // Resend cooldown timer
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-
-    if (params.get('recovery') === 'true') {
-      setView('reset')
-      window.history.replaceState({}, '', '/login')
-    } else if (params.get('error') === 'reset_failed') {
-      setError('Reset link expired or invalid. Please request a new one.')
-      window.history.replaceState({}, '', '/login')
-    }
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setView('reset')
-      }
-    })
-    return () => subscription.unsubscribe()
-  }, [supabase])
+    if (resendCooldown <= 0) return
+    const t = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000)
+    return () => clearTimeout(t)
+  }, [resendCooldown])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -111,14 +105,112 @@ export default function LoginPage() {
     }
   }
 
-  async function handleSendResetLink(e: React.FormEvent) {
-    e.preventDefault()
-    setResetLoading(true)
-    await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/login`,
+  async function handleSendOtp(e?: React.FormEvent) {
+    e?.preventDefault()
+    setForgotLoading(true)
+    setForgotMessage('')
+
+    await supabase.auth.signInWithOtp({
+      email: resetEmail,
+      options: { shouldCreateUser: false },
     })
-    setResetSent(true)
-    setResetLoading(false)
+
+    // Always show success message — don't reveal if account exists
+    setForgotLoading(false)
+    setForgotMessage('A 6-digit code has been sent to your email.')
+    setDigits(['', '', '', '', '', ''])
+    setVerifyError('')
+    setTimeout(() => {
+      setView('verify')
+      setForgotMessage('')
+    }, 1500)
+  }
+
+  async function handleResendCode() {
+    if (resendCooldown > 0) return
+    setVerifyError('')
+    await supabase.auth.signInWithOtp({
+      email: resetEmail,
+      options: { shouldCreateUser: false },
+    })
+    setResendCooldown(30)
+  }
+
+  const handleVerify = useCallback(async (code: string) => {
+    setVerifyError('')
+    setVerifyLoading(true)
+
+    const { error } = await supabase.auth.verifyOtp({
+      email: resetEmail,
+      token: code,
+      type: 'email',
+    })
+
+    setVerifyLoading(false)
+
+    if (error) {
+      setVerifyError('Invalid or expired code. Please try again.')
+    } else {
+      setNewPassword('')
+      setConfirmPassword('')
+      setResetError('')
+      setResetSuccess(false)
+      setView('reset')
+    }
+  }, [supabase, resetEmail])
+
+  function handleDigitChange(index: number, value: string) {
+    // Handle paste of full code
+    if (value.length > 1) {
+      const pasted = value.replace(/\D/g, '').slice(0, 6)
+      if (pasted.length > 0) {
+        const newDigits = [...digits]
+        for (let i = 0; i < 6; i++) {
+          newDigits[i] = pasted[i] || ''
+        }
+        setDigits(newDigits)
+        // Focus last filled digit or submit
+        const lastIndex = Math.min(pasted.length - 1, 5)
+        digitRefs.current[lastIndex]?.focus()
+        if (pasted.length === 6) {
+          handleVerify(pasted)
+        }
+        return
+      }
+    }
+
+    const digit = value.replace(/\D/g, '').slice(-1)
+    const newDigits = [...digits]
+    newDigits[index] = digit
+    setDigits(newDigits)
+
+    if (digit && index < 5) {
+      digitRefs.current[index + 1]?.focus()
+    }
+
+    // Auto-submit when all 6 digits entered
+    if (digit && index === 5) {
+      const code = newDigits.join('')
+      if (code.length === 6) {
+        handleVerify(code)
+      }
+    }
+  }
+
+  function handleDigitKeyDown(index: number, e: React.KeyboardEvent) {
+    if (e.key === 'Backspace' && !digits[index] && index > 0) {
+      digitRefs.current[index - 1]?.focus()
+    }
+  }
+
+  function handleVerifySubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const code = digits.join('')
+    if (code.length !== 6) {
+      setVerifyError('Please enter all 6 digits.')
+      return
+    }
+    handleVerify(code)
   }
 
   async function handleUpdatePassword(e: React.FormEvent) {
@@ -142,7 +234,7 @@ export default function LoginPage() {
       setResetError(error.message)
     } else {
       await supabase.auth.signOut()
-      setView('reset-success')
+      setResetSuccess(true)
     }
   }
 
@@ -155,8 +247,8 @@ export default function LoginPage() {
             <p className="text-slate-500 mt-2">
               {view === 'login' && 'Charter School Financial Planning'}
               {view === 'forgot' && 'Reset Your Password'}
-              {view === 'reset' && 'Choose a New Password'}
-              {view === 'reset-success' && 'Password Updated'}
+              {view === 'verify' && 'Enter Verification Code'}
+              {view === 'reset' && (resetSuccess ? 'Password Updated' : 'Choose a New Password')}
             </p>
           </div>
 
@@ -185,7 +277,7 @@ export default function LoginPage() {
                   </label>
                   <button
                     type="button"
-                    onClick={() => { setView('forgot'); setResetEmail(email); setResetSent(false) }}
+                    onClick={() => { setView('forgot'); setResetEmail(email); setForgotMessage('') }}
                     className="text-xs text-teal-600 hover:text-teal-800 transition-colors"
                   >
                     Forgot password?
@@ -218,62 +310,114 @@ export default function LoginPage() {
             </form>
           )}
 
-          {/* ---- FORGOT PASSWORD (send reset email) ---- */}
+          {/* ---- FORGOT PASSWORD (send OTP) ---- */}
           {view === 'forgot' && (
-            resetSent ? (
-              <div className="text-center space-y-4">
+            <form onSubmit={handleSendOtp} className="space-y-5">
+              <p className="text-sm text-slate-600">
+                Enter your email address and we&apos;ll send you a verification code.
+              </p>
+              <div>
+                <label htmlFor="reset-email" className="block text-sm font-medium text-slate-700 mb-1">
+                  Email
+                </label>
+                <input
+                  id="reset-email"
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  required
+                  autoFocus
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
+                  placeholder="you@example.com"
+                />
+              </div>
+
+              {forgotMessage && (
                 <div className="bg-emerald-50 text-emerald-700 text-sm px-4 py-3 rounded-lg">
-                  If an account exists with that email, you&apos;ll receive a reset link shortly.
+                  {forgotMessage}
                 </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={forgotLoading}
+                className="w-full bg-teal-600 text-white py-2.5 rounded-lg font-medium hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {forgotLoading ? 'Sending...' : 'Send Verification Code'}
+              </button>
+              <div className="text-center">
                 <button
-                  onClick={() => { setView('login'); setResetSent(false) }}
-                  className="text-sm text-teal-600 hover:text-teal-800 font-medium transition-colors"
+                  type="button"
+                  onClick={() => setView('login')}
+                  className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
                 >
                   Back to Sign In
                 </button>
               </div>
-            ) : (
-              <form onSubmit={handleSendResetLink} className="space-y-5">
-                <p className="text-sm text-slate-600">
-                  Enter your email address and we&apos;ll send you a link to reset your password.
-                </p>
-                <div>
-                  <label htmlFor="reset-email" className="block text-sm font-medium text-slate-700 mb-1">
-                    Email
-                  </label>
-                  <input
-                    id="reset-email"
-                    type="email"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    required
-                    autoFocus
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
-                    placeholder="you@example.com"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={resetLoading}
-                  className="w-full bg-teal-600 text-white py-2.5 rounded-lg font-medium hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {resetLoading ? 'Sending...' : 'Send Reset Link'}
-                </button>
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={() => setView('login')}
-                    className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
-                  >
-                    Back to Sign In
-                  </button>
-                </div>
-              </form>
-            )
+            </form>
           )}
 
-          {/* ---- RESET PASSWORD (new password form) ---- */}
-          {view === 'reset' && (
+          {/* ---- VERIFY OTP CODE ---- */}
+          {view === 'verify' && (
+            <form onSubmit={handleVerifySubmit} className="space-y-5">
+              <p className="text-sm text-slate-600 text-center">
+                Check your email for a 6-digit code
+              </p>
+
+              <div className="flex justify-center gap-2">
+                {digits.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => { digitRefs.current[i] = el }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={digit}
+                    onChange={(e) => handleDigitChange(i, e.target.value)}
+                    onKeyDown={(e) => handleDigitKeyDown(i, e)}
+                    onFocus={(e) => e.target.select()}
+                    autoFocus={i === 0}
+                    className="w-11 h-13 text-2xl text-center font-mono border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
+                  />
+                ))}
+              </div>
+
+              {verifyError && (
+                <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg">
+                  {verifyError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={verifyLoading}
+                className="w-full bg-teal-600 text-white py-2.5 rounded-lg font-medium hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {verifyLoading ? 'Verifying...' : 'Verify'}
+              </button>
+
+              <div className="flex items-center justify-between text-sm">
+                <button
+                  type="button"
+                  onClick={() => setView('login')}
+                  className="text-slate-500 hover:text-slate-700 transition-colors"
+                >
+                  Back to Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResendCode}
+                  disabled={resendCooldown > 0}
+                  className="text-teal-600 hover:text-teal-800 transition-colors disabled:text-slate-400 disabled:cursor-not-allowed"
+                >
+                  {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* ---- RESET PASSWORD ---- */}
+          {view === 'reset' && !resetSuccess && (
             <form onSubmit={handleUpdatePassword} className="space-y-5">
               <div>
                 <label htmlFor="new-password" className="block text-sm font-medium text-slate-700 mb-1">
@@ -325,13 +469,13 @@ export default function LoginPage() {
           )}
 
           {/* ---- RESET SUCCESS ---- */}
-          {view === 'reset-success' && (
+          {view === 'reset' && resetSuccess && (
             <div className="text-center space-y-4">
               <div className="bg-emerald-50 text-emerald-700 text-sm px-4 py-3 rounded-lg">
                 Password updated successfully.
               </div>
               <button
-                onClick={() => setView('login')}
+                onClick={() => { setResetSuccess(false); setView('login') }}
                 className="text-sm text-teal-600 hover:text-teal-800 font-medium transition-colors"
               >
                 Sign in with your new password
