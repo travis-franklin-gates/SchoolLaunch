@@ -1,7 +1,16 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const PUBLIC_ROUTES = ['/login', '/invite', '/reset-password', '/auth/confirm']
+
 export async function updateSession(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+
+  // Public routes — skip auth entirely, no session check needed
+  if (PUBLIC_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'))) {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -26,13 +35,6 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-
-  const pathname = request.nextUrl.pathname
-
-  // Public routes that don't require auth
-  if (pathname === '/login' || pathname === '/invite' || pathname === '/reset-password' || pathname === '/auth/confirm') {
-    return supabaseResponse
-  }
 
   // Redirect unauthenticated users to login
   if (!user) {
