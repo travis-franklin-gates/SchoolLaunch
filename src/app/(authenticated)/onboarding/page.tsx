@@ -77,7 +77,7 @@ const initialWizardData: WizardData = {
   enrollmentMode: 'simple' as EnrollmentMode,
   openingGrades: [],
   buildoutGrades: [],
-  retentionRate: 90,
+  retentionRate: 100,
   expansionPlan: [],
 }
 
@@ -86,7 +86,7 @@ function fmt(n: number) {
 }
 
 export default function OnboardingPage() {
-  const [step, setStep] = useState(0)
+  const [step, setStep] = useState(-1) // -1 = welcome screen
   const [data, setData] = useState<WizardData>(initialWizardData)
   const [schoolId, setSchoolId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -439,6 +439,59 @@ export default function OnboardingPage() {
         >
           Go to Dashboard
         </button>
+      </div>
+    )
+  }
+
+  // Welcome screen (pre-step)
+  if (step === -1) {
+    return (
+      <div>
+        {/* Progress stepper — all inactive */}
+        <div className="mb-8 max-w-xl mx-auto px-2 sm:px-0">
+          <div className="flex items-start">
+            {STEPS.map(({ label, icon }, i) => (
+              <div key={label} className="flex items-start flex-1 last:flex-initial min-w-0">
+                <div className="flex flex-col items-center w-14 sm:w-[72px] flex-shrink-0">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-slate-200 text-slate-400">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
+                    </svg>
+                  </div>
+                  <span className="text-[10px] sm:text-[11px] mt-1 sm:mt-1.5 font-medium text-center leading-tight text-slate-400" style={{ fontFamily: 'var(--font-heading-var)' }}>{label}</span>
+                </div>
+                {i < STEPS.length - 1 && (
+                  <div className="h-0.5 flex-1 mt-4 sm:mt-[18px] bg-slate-200" />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Welcome content */}
+        <div className="max-w-lg mx-auto text-center">
+          <h1 className="text-3xl font-bold text-slate-800 mb-2" style={{ fontFamily: 'var(--font-heading-var)' }}>
+            Welcome to SchoolLaunch
+          </h1>
+          <p className="text-lg text-slate-500 mb-6">
+            Let&apos;s build your school&apos;s financial model
+          </p>
+          <p className="text-sm text-slate-600 leading-relaxed mb-4">
+            In the next few minutes, you&apos;ll set up the foundation of your charter school&apos;s financial plan.
+            We&apos;ll walk you through five steps: your school identity, enrollment plan, student demographics,
+            staffing, and operations. Every answer you provide generates a Commission-aligned financial model
+            that you can refine on your dashboard.
+          </p>
+          <p className="text-xs text-slate-400 mb-8">
+            You can change any of these answers later in Settings.
+          </p>
+          <button
+            onClick={() => setStep(0)}
+            className="bg-teal-600 text-white px-10 py-3 rounded-lg font-semibold hover:bg-teal-700 transition-colors text-lg"
+          >
+            Get Started
+          </button>
+        </div>
       </div>
     )
   }

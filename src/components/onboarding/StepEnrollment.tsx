@@ -99,12 +99,6 @@ export default function StepEnrollment({
     return { baseRevenue, totalGrants, total: rev.total }
   }, [effectiveY1, pctFrl, pctIep, pctEll, pctHicap])
 
-  const enrollmentWarning = effectiveY1 < 80
-    ? 'Below 80 students may not generate sufficient revenue to cover fixed costs.'
-    : effectiveY1 > 500
-    ? 'Large initial enrollment is unusual for a new charter. Authorizers may question this.'
-    : null
-
   function handleNext(e: React.FormEvent) {
     e.preventDefault()
 
@@ -174,18 +168,6 @@ export default function StepEnrollment({
             Grade expansion produces cohort-based projections that authorizers find more credible than flat growth rates.
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Max Class Size</label>
-            <input
-              type="number"
-              value={maxClassSize}
-              onChange={(e) => setMaxClassSize(Number(e.target.value))}
-              min={10}
-              max={35}
-              className="w-32 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
-            />
-          </div>
-
           <GradeExpansionEditor
             gradeConfig={gradeConfig}
             maxClassSize={maxClassSize}
@@ -223,28 +205,7 @@ export default function StepEnrollment({
               No enrollment data yet. Switch to the Grade Expansion Plan tab to configure your grade rollout.
             </div>
           )}
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Max Class Size</label>
-            <input
-              type="number"
-              value={maxClassSize}
-              onChange={(e) => setMaxClassSize(Number(e.target.value))}
-              min={10}
-              max={35}
-              className="w-32 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
-            />
-          </div>
         </>
-      )}
-
-      {enrollmentWarning && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex items-start gap-2">
-          <svg className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <p className="text-sm text-amber-700">{enrollmentWarning}</p>
-        </div>
       )}
 
       {/* Revenue preview */}

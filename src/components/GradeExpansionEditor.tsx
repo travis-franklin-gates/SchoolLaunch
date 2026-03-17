@@ -48,7 +48,7 @@ export default function GradeExpansionEditor({
       ? initialBuildoutGrades
       : configGrades
   )
-  const [retentionRate, setRetentionRate] = useState(initialRetentionRate ?? 90)
+  const retentionRate = 100
   const [sectionsPerGrade, setSectionsPerGrade] = useState(
     initialPlan && initialPlan.length > 0 ? (initialPlan[0].sections || 2) : 2
   )
@@ -230,7 +230,7 @@ export default function GradeExpansionEditor({
       </div>
 
       {/* Global defaults */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-medium text-slate-500 mb-1">Sections per Grade</label>
           <input
@@ -252,24 +252,6 @@ export default function GradeExpansionEditor({
             onChange={(e) => setStudentsPerSection(Number(e.target.value))}
             className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
           />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">
-            Retention Rate: {retentionRate}%
-          </label>
-          <input
-            type="range"
-            min={70}
-            max={100}
-            value={retentionRate}
-            onChange={(e) => setRetentionRate(Number(e.target.value))}
-            className="w-full accent-teal-600 mt-2"
-          />
-          <div className="flex justify-between text-[10px] text-slate-400">
-            <span>70%</span>
-            <span>WA average: 85–92%</span>
-            <span>100%</span>
-          </div>
         </div>
       </div>
 
