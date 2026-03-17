@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-type View = 'login' | 'forgot' | 'reset' | 'reset-success' | 'loading'
+type View = 'login' | 'forgot' | 'reset' | 'reset-success'
 
 export default function LoginPage() {
   const [view, setView] = useState<View>('login')
@@ -29,41 +29,25 @@ export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  // Detect PKCE recovery code on mount, with onAuthStateChange as backup
+  // Detect recovery session on mount (redirected from /auth/callback?recovery=true)
+  // Also listen for PASSWORD_RECOVERY event as backup for hash-fragment flows
   useEffect(() => {
-    let cancelled = false
+    const params = new URLSearchParams(window.location.search)
 
-    // Backup: listen for PASSWORD_RECOVERY event (handles hash-fragment flow)
+    if (params.get('recovery') === 'true') {
+      setView('reset')
+      window.history.replaceState({}, '', '/login')
+    } else if (params.get('error') === 'reset_failed') {
+      setError('Reset link expired or invalid. Please request a new one.')
+      window.history.replaceState({}, '', '/login')
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (!cancelled && event === 'PASSWORD_RECOVERY') {
+      if (event === 'PASSWORD_RECOVERY') {
         setView('reset')
       }
     })
-
-    // Primary: check for PKCE ?code= param from Supabase recovery redirect
-    async function checkForRecoveryCode() {
-      const params = new URLSearchParams(window.location.search)
-      const code = params.get('code')
-
-      if (code) {
-        setView('loading')
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
-        // Clean the code from URL
-        window.history.replaceState({}, '', '/login')
-
-        if (!cancelled) {
-          if (!error) {
-            setView('reset')
-          } else {
-            setError('Invalid or expired reset link. Please request a new one.')
-            setView('login')
-          }
-        }
-      }
-    }
-
-    checkForRecoveryCode()
-    return () => { cancelled = true; subscription.unsubscribe() }
+    return () => subscription.unsubscribe()
   }, [supabase])
 
   async function handleLogin(e: React.FormEvent) {
@@ -131,7 +115,7 @@ export default function LoginPage() {
     e.preventDefault()
     setResetLoading(true)
     await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: `${window.location.origin}/login`,
+      redirectTo: `${window.location.origin}/auth/callback?next=/login`,
     })
     setResetSent(true)
     setResetLoading(false)
@@ -170,19 +154,11 @@ export default function LoginPage() {
             <h1 className="text-2xl font-bold text-slate-800">SchoolLaunch</h1>
             <p className="text-slate-500 mt-2">
               {view === 'login' && 'Charter School Financial Planning'}
-              {view === 'loading' && 'Charter School Financial Planning'}
               {view === 'forgot' && 'Reset Your Password'}
               {view === 'reset' && 'Choose a New Password'}
               {view === 'reset-success' && 'Password Updated'}
             </p>
           </div>
-
-          {/* ---- LOADING (processing recovery code) ---- */}
-          {view === 'loading' && (
-            <div className="text-center">
-              <p className="text-sm text-slate-500">Processing reset link...</p>
-            </div>
-          )}
 
           {/* ---- LOGIN FORM ---- */}
           {view === 'login' && (
