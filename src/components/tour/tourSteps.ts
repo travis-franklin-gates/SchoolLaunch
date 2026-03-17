@@ -27,13 +27,8 @@ const overviewCeo: Step[] = [
     title: 'Financial Health Tiles',
   },
   {
-    target: '[data-tour="scenario-controls"]',
-    content: 'Use these controls to stress-test your model. Slide enrollment down to see what happens at 90% of target. Toggle on an extra teacher. Every change updates all numbers in real time \u2014 nothing is saved until you choose to save.',
-    title: 'Scenario Controls',
-  },
-  {
     target: '[data-tour="budget-summary"]',
-    content: 'This table compares your base case to whatever scenario you\u2019re modeling above. The delta column shows the impact of your changes.',
+    content: 'This table shows your Year 1 base case budget \u2014 revenue, expenses, and bottom line. Above it, the 5-year trajectory shows how enrollment, net position, and reserve days evolve over time.',
     title: 'Budget Summary',
   },
   {

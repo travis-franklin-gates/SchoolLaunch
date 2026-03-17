@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
-import { computeMultiYearDetailed, computeCashFlow, computeFPFScorecard, type FPFScorecard } from '@/lib/budgetEngine'
+import { computeMultiYearDetailed, computeCashFlow, computeFPFScorecard, computeCarryForward, type FPFScorecard } from '@/lib/budgetEngine'
 import { buildSchoolContextString } from '@/lib/buildSchoolContext'
 import { createClient } from '@/lib/supabase/client'
 import type { AdvisoryCache } from '@/lib/types'
@@ -68,21 +68,13 @@ export default function DashboardPage() {
     schoolData: { schoolId, schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, loading },
     assumptions,
     baseSummary,
-    scenario,
-    scenarioInputs,
-    scenarioSummary,
-    isModified,
-    currentSummary: current,
     baseApportionment,
-    conservativeMode,
     conservativeSummary,
-    setConservativeMode,
-    updateScenario,
-    resetScenario,
   } = useScenario()
 
   const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
 
+  const [briefingExpanded, setBriefingExpanded] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [commissionExporting, setCommissionExporting] = useState(false)
   const [advisory, setAdvisory] = useState<AdvisoryData | null>(null)
@@ -91,8 +83,8 @@ export default function DashboardPage() {
   const advisoryInitRef = useRef(false)
   const supabase = createClient()
 
-  const startupFunding = profile.startup_funding?.reduce((s: number, f: { amount: number }) => s + f.amount, 0) || 0
-  const preOpenCash = Math.round(startupFunding * 0.6)
+  // Carry-forward from Year 0 — same computation as Multi-Year tab
+  const preOpenCash = useMemo(() => computeCarryForward(profile), [profile])
 
   const multiYear = useMemo(
     () => computeMultiYearDetailed(profile, positions, projections, assumptions, preOpenCash, gradeExpansionPlan, allPositions, profile.startup_funding),
@@ -104,8 +96,8 @@ export default function DashboardPage() {
   )
 
   const scorecard = useMemo(
-    () => computeFPFScorecard(multiYear, preOpenCash, conservativeMode),
-    [multiYear, preOpenCash, conservativeMode]
+    () => computeFPFScorecard(multiYear, preOpenCash, false),
+    [multiYear, preOpenCash]
   )
 
   // Compute current data hash for change detection
@@ -171,34 +163,44 @@ export default function DashboardPage() {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
   }
 
-  // Days of Cash = (starting cash + Y1 net) / daily expense — matches scorecard methodology
-  const dailyExpense = current.totalExpenses / 365
-  const daysOfCash = dailyExpense > 0 ? Math.round((preOpenCash + current.netPosition) / dailyExpense) : 0
-  const baseDaysOfCash = baseSummary.totalExpenses > 0 ? Math.round((preOpenCash + baseSummary.netPosition) / (baseSummary.totalExpenses / 365)) : 0
+  // Days of Cash: use scorecard Y1 value (matches Multi-Year tab and Commission Scorecard)
+  const daysOfCash = scorecard.measures.find(m => m.name === 'Days of Cash')?.values[0] ?? 0
   const rc = reserveColor(daysOfCash)
-  const surplusColor = current.netPosition >= 0
+  const surplusColor = baseSummary.netPosition >= 0
     ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
     : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
-  const personnelColor = current.personnelPctRevenue < 72
+  const personnelColor = baseSummary.personnelPctRevenue < 72
     ? { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
-    : current.personnelPctRevenue <= 78
+    : baseSummary.personnelPctRevenue <= 78
     ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
-    : current.personnelPctRevenue <= 80
+    : baseSummary.personnelPctRevenue <= 80
     ? { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-l-amber-500' }
     : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
 
   const facilityCost = projections.find((p) => p.subcategory === 'Facilities' && !p.is_revenue)?.amount || 0
-  const fc = facilityColor(current.facilityPct)
+  const fc = facilityColor(baseSummary.facilityPct)
+
+  // Break-even color coding
+  const breakEvenColor = baseSummary.breakEvenEnrollment > profile.target_enrollment_y1
+    ? { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
+    : baseSummary.breakEvenEnrollment >= profile.target_enrollment_y1 * 0.9
+    ? { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-l-amber-500' }
+    : { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
+
+  const breakEvenSubtitle = baseSummary.breakEvenEnrollment > profile.target_enrollment_y1
+    ? `Above target (${profile.target_enrollment_y1}) | Operating only`
+    : `Target: ${profile.target_enrollment_y1} | Operating only`
 
   const conservativeEnrollment = Math.floor(profile.target_enrollment_y1 * 0.9)
 
-  const delta = (base: number, curr: number, unit: string, invert = false) => {
-    if (!isModified && !conservativeMode) return null
-    const diff = curr - base
-    if (diff === 0) return null
-    const arrow = (invert ? -diff : diff) > 0 ? '\u2191' : '\u2193'
-    return `${arrow}${Math.abs(Math.round(diff))} ${unit} from base`
-  }
+  // School identity info
+  const openingGrades = profile.opening_grades?.join(', ') || profile.grade_config?.split('-')[0] || ''
+  const buildoutGrades = profile.buildout_grades?.length
+    ? `${profile.buildout_grades[0]}-${profile.buildout_grades[profile.buildout_grades.length - 1]}`
+    : profile.grade_config || ''
+
+  // 5-year trajectory data from budget engine (same as Multi-Year tab and Scorecard)
+  const daysOfCashAllYears = scorecard.measures.find(m => m.name === 'Days of Cash')?.values || []
 
   async function handleExport() {
     setExporting(true)
@@ -290,11 +292,95 @@ export default function DashboardPage() {
     setCommissionExporting(false)
   }
 
+  // Extract first sentence of briefing for collapsed preview
+  const briefingPreview = advisory?.briefing
+    ? advisory.briefing.split(/(?<=[.!?])\s/)[0] || advisory.briefing.slice(0, 200)
+    : ''
+
   return (
     <div className="animate-fade-in">
-      <h1 className="text-[28px] font-semibold text-slate-900 mb-6">Overview</h1>
+      {/* 1. School Identity Header */}
+      <div className="mb-6">
+        <h1 className="text-[28px] font-semibold text-slate-900">{schoolName || 'Overview'}</h1>
+        <p className="text-sm text-slate-500 mt-1">
+          {openingGrades && `${openingGrades} Opening ${profile.planned_open_year || ''}`}
+          {buildoutGrades && ` \u2192 ${buildoutGrades} at Full Build-Out`}
+          {profile.target_enrollment_y1 > 0 && ` | ${profile.target_enrollment_y1} Students Year 1`}
+          {profile.region && ` | ${profile.region}`}
+        </p>
+      </div>
 
-      {/* AI Briefing */}
+      {/* 2. Health tiles */}
+      <div data-tour="health-tiles" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+        <HealthTile
+          label="Days of Cash"
+          value={`${daysOfCash} days`}
+          subtitle={daysOfCash >= 60 ? 'Meets Stage 2' : daysOfCash >= 30 ? 'Meets Stage 1' : daysOfCash >= 21 ? 'Approaches Stage 1' : 'Below Stage 1 minimum'}
+          colorClass={rc}
+        />
+        <HealthTile
+          label="Personnel % Revenue"
+          value={`${baseSummary.personnelPctRevenue.toFixed(1)}%`}
+          colorClass={personnelColor}
+        />
+        <HealthTile
+          label="Year 1 Net"
+          value={fmt(baseSummary.netPosition)}
+          colorClass={surplusColor}
+        />
+        <HealthTile
+          label="Break-Even"
+          value={`${baseSummary.breakEvenEnrollment}`}
+          subtitle={breakEvenSubtitle}
+          colorClass={breakEvenColor}
+        />
+        <HealthTile
+          label="Facility % Revenue"
+          value={`${baseSummary.facilityPct.toFixed(1)}%`}
+          subtitle={facilityCost > 0 ? `${fmt(facilityCost)}/yr` : undefined}
+          colorClass={fc}
+        />
+      </div>
+
+      {/* 3. Commission Scorecard summary banner */}
+      <div className={`mb-4 px-5 py-3 rounded-xl text-sm font-medium ${
+        scorecard.overallStatus === 'green' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+          : scorecard.overallStatus === 'yellow' ? 'bg-amber-50 text-amber-700 border border-amber-200'
+          : 'bg-red-50 text-red-700 border border-red-200'
+      }`}>
+        {scorecard.overallMessage}
+      </div>
+
+      {/* 4. 90% enrollment sensitivity */}
+      {(() => {
+        const conservativeDaysOfCash = conservativeSummary.totalExpenses > 0
+          ? Math.round((preOpenCash + conservativeSummary.netPosition) / (conservativeSummary.totalExpenses / 365))
+          : 0
+        return daysOfCash !== conservativeDaysOfCash ? (
+          <div className="mb-4 bg-slate-50 border border-slate-200 rounded-xl px-5 py-3 text-sm text-slate-600">
+            <strong>90% enrollment sensitivity:</strong> At {conservativeEnrollment} students,
+            days of cash drop from {daysOfCash} to{' '}
+            <span className={conservativeDaysOfCash < 21 ? 'text-red-600 font-semibold' : conservativeDaysOfCash < 30 ? 'text-amber-600 font-semibold' : 'text-emerald-600 font-semibold'}>
+              {conservativeDaysOfCash} days
+            </span>.
+          </div>
+        ) : null
+      })()}
+
+      {/* 5. Facility cost warning */}
+      {baseSummary.facilityPct > 15 && (
+        <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-5 py-3 text-sm text-red-700">
+          <strong>Warning:</strong> Facility costs exceed 15% of projected revenue. Most lenders require
+          facility costs below 15% for financing. The Charter School Commission may flag this during application review.
+        </div>
+      )}
+      {baseSummary.facilityPct > 12 && baseSummary.facilityPct <= 15 && (
+        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-5 py-3 text-sm text-amber-700">
+          Facility costs at {baseSummary.facilityPct.toFixed(1)}% of revenue — approaching the 15% maximum lenders and authorizers look for.
+        </div>
+      )}
+
+      {/* 6. Financial Advisor Briefing — collapsed by default */}
       {advisoryLoading && !advisory ? (
         <div data-tour="ai-briefing" className="bg-white border-l-[3px] border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
@@ -305,29 +391,47 @@ export default function DashboardPage() {
             <div className="h-3 rounded w-full animate-shimmer" />
             <div className="h-3 rounded w-full animate-shimmer" />
             <div className="h-3 rounded w-5/6 animate-shimmer" />
-            <div className="h-3 rounded w-full mt-3 animate-shimmer" />
-            <div className="h-3 rounded w-4/6 animate-shimmer" />
           </div>
         </div>
       ) : advisory ? (
-        <div data-tour="ai-briefing" className="bg-white border-l-[3px] border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-6 shadow-sm animate-fade-in-up">
+        <div data-tour="ai-briefing" className="bg-white border-l-[3px] border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
+          {/* Header row with agent pills, refresh, timestamp */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
               <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Financial Advisor Briefing</span>
+              {/* Agent status pills — always visible */}
+              <div className="hidden sm:flex items-center gap-1.5 ml-3">
+                {advisory.agents.map((agent) => {
+                  const sc = STATUS_COLORS[agent.status] || STATUS_COLORS.needs_attention
+                  return (
+                    <span key={agent.id} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${sc.bg} ${sc.text}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
+                      {agent.name.split(' ')[0]}
+                    </span>
+                  )
+                })}
+              </div>
             </div>
-            <button
-              onClick={fetchAdvisory}
-              disabled={advisoryLoading}
-              className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors disabled:opacity-50"
-            >
-              <svg className={`w-3.5 h-3.5 ${advisoryLoading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              {advisoryLoading ? 'Generating...' : 'Refresh'}
-            </button>
+            <div className="flex items-center gap-3">
+              {advisory.generatedAt && (
+                <span className="text-[11px] text-slate-400 hidden sm:inline">
+                  {new Date(advisory.generatedAt).toLocaleString()}
+                </span>
+              )}
+              <button
+                onClick={fetchAdvisory}
+                disabled={advisoryLoading}
+                className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors disabled:opacity-50"
+              >
+                <svg className={`w-3.5 h-3.5 ${advisoryLoading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {advisoryLoading ? 'Generating...' : 'Refresh'}
+              </button>
+            </div>
           </div>
 
           {/* Model changed banner */}
@@ -340,38 +444,38 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <div className={`text-[15px] text-slate-700 leading-[1.7] whitespace-pre-line mb-4 ${advisoryLoading ? 'opacity-50' : ''}`}>
-            {advisory.briefing}
+          {/* Preview (first sentence) — always visible */}
+          <div className={`text-sm text-slate-700 leading-relaxed ${advisoryLoading ? 'opacity-50' : ''}`}>
+            {briefingExpanded ? (
+              <div className="whitespace-pre-line">{advisory.briefing}</div>
+            ) : (
+              <p>{briefingPreview}</p>
+            )}
           </div>
 
-          {/* Agent status pills */}
-          <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
-            {advisory.agents.map((agent) => {
-              const sc = STATUS_COLORS[agent.status] || STATUS_COLORS.needs_attention
-              return (
-                <span key={agent.id} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${sc.bg} ${sc.text}`}>
-                  <span className={`w-2 h-2 rounded-full ${sc.dot}`} />
-                  {agent.name.split(' ')[0]}
-                </span>
-              )
-            })}
+          {/* Expand/collapse toggle */}
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+            <button
+              onClick={() => setBriefingExpanded(!briefingExpanded)}
+              className="text-xs font-medium text-teal-600 hover:text-teal-800 transition-colors flex items-center gap-1"
+            >
+              {briefingExpanded ? 'Collapse Briefing' : 'Read Full Briefing'}
+              <svg className={`w-3.5 h-3.5 transition-transform ${briefingExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
             <Link
               href="/dashboard/advisory"
-              className="ml-auto text-xs font-medium text-teal-600 hover:text-teal-800 transition-colors"
+              className="text-xs font-medium text-teal-600 hover:text-teal-800 transition-colors"
             >
               View Full Advisory Panel &rarr;
             </Link>
           </div>
-          {advisory.generatedAt && (
-            <div className="text-[11px] text-slate-400 mt-2">
-              Last updated: {new Date(advisory.generatedAt).toLocaleString()}
-            </div>
-          )}
         </div>
       ) : null}
 
-      {/* Commission FPF Scorecard */}
-      <div data-tour="scorecard" className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm animate-fade-in-up stagger-1">
+      {/* 7. Commission FPF Scorecard (full table) */}
+      <div data-tour="scorecard" className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide">Commission Scorecard</h2>
           <div className="flex gap-4 text-[10px] text-slate-400">
@@ -420,243 +524,116 @@ export default function DashboardPage() {
             </tbody>
           </table>
         </div>
-        <div className={`mt-3 px-4 py-2.5 rounded-lg text-xs font-medium ${
-          scorecard.overallStatus === 'green' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-            : scorecard.overallStatus === 'yellow' ? 'bg-amber-50 text-amber-700 border border-amber-200'
-            : 'bg-red-50 text-red-700 border border-red-200'
-        }`}>
-          {scorecard.overallMessage}
-        </div>
       </div>
 
-      {/* Conservative mode banner */}
-      {conservativeMode && (
-        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 text-sm text-amber-800">
-          <strong>Conservative mode:</strong> Revenue calculated at 90% enrollment ({conservativeEnrollment} students).
-          Expenses unchanged ({profile.target_enrollment_y1} students). This reflects the industry-recommended planning
-          approach — budget for the revenue you&apos;re likely to receive, not the revenue you hope to receive.
-        </div>
-      )}
-
-      {/* Health tiles */}
-      <div data-tour="health-tiles" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-        <HealthTile
-          label="Days of Cash"
-          value={`${daysOfCash} days`}
-          subtitle={delta(baseDaysOfCash, daysOfCash, 'days') || (daysOfCash >= 60 ? 'Meets Stage 2' : daysOfCash >= 30 ? 'Meets Stage 1' : daysOfCash >= 21 ? 'Approaches Stage 1' : 'Below Stage 1 minimum')}
-          colorClass={rc}
-        />
-        <HealthTile
-          label="Personnel % Revenue"
-          value={`${current.personnelPctRevenue.toFixed(1)}%`}
-          subtitle={delta(baseSummary.personnelPctRevenue, current.personnelPctRevenue, '%', true) || undefined}
-          colorClass={personnelColor}
-        />
-        <HealthTile
-          label="Year 1 Net"
-          value={fmt(current.netPosition)}
-          subtitle={delta(baseSummary.netPosition, current.netPosition, '') || undefined}
-          colorClass={surplusColor}
-        />
-        <HealthTile
-          label="Break-Even"
-          value={`${current.breakEvenEnrollment}`}
-          subtitle={delta(baseSummary.breakEvenEnrollment, current.breakEvenEnrollment, 'students', true) || `Target: ${profile.target_enrollment_y1}`}
-        />
-        <HealthTile
-          label="Facility % Revenue"
-          value={`${current.facilityPct.toFixed(1)}%`}
-          subtitle={facilityCost > 0 ? `${fmt(facilityCost)}/yr` : undefined}
-          colorClass={fc}
-        />
-      </div>
-
-      {/* 90% enrollment sensitivity */}
-      {!conservativeMode && (() => {
-        const conservativeDaysOfCash = conservativeSummary.totalExpenses > 0 ? Math.round((preOpenCash + conservativeSummary.netPosition) / (conservativeSummary.totalExpenses / 365)) : 0
-        return baseDaysOfCash !== conservativeDaysOfCash ? (
-          <div className="mb-8 bg-slate-50 border border-slate-200 rounded-xl px-5 py-3 text-sm text-slate-600">
-            <strong>90% enrollment sensitivity:</strong> At {conservativeEnrollment} students,
-            days of cash drop from {baseDaysOfCash} to{' '}
-            <span className={conservativeDaysOfCash < 21 ? 'text-red-600 font-semibold' : conservativeDaysOfCash < 30 ? 'text-amber-600 font-semibold' : 'text-emerald-600 font-semibold'}>
-              {conservativeDaysOfCash} days
-            </span>.
-            {conservativeDaysOfCash < 30 && ' Toggle conservative mode below to plan for this scenario.'}
-          </div>
-        ) : null
-      })()}
-
-      {/* Facility cost alert */}
-      {current.facilityPct > 15 && (
-        <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-5 py-3 text-sm text-red-700">
-          <strong>Warning:</strong> Facility costs exceed 15% of projected revenue. Most lenders require
-          facility costs below 15% for financing. The Charter School Commission may flag this during application review.
-        </div>
-      )}
-      {current.facilityPct > 12 && current.facilityPct <= 15 && (
-        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-5 py-3 text-sm text-amber-700">
-          Facility costs at {current.facilityPct.toFixed(1)}% of revenue — approaching the 15% maximum lenders and authorizers look for.
-        </div>
-      )}
-
-      {/* Scenario panel */}
-      <div data-tour="scenario-controls" className="bg-white border border-slate-200 rounded-xl p-6 mb-8 shadow-sm">
-        <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Scenario Controls</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-5">
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">
-              Opening Enrollment: <span className="tabular-nums">{scenarioInputs.enrollment}</span>
-            </label>
-            <input
-              type="range"
-              min={Math.round(profile.target_enrollment_y1 * 0.5)}
-              max={Math.round(profile.target_enrollment_y1 * 1.5)}
-              step={1}
-              value={scenarioInputs.enrollment}
-              onChange={(e) => updateScenario({ enrollment: Number(e.target.value) })}
-              className="w-full"
-              disabled={conservativeMode}
-            />
-            <div className="flex justify-between text-[10px] text-slate-400 tabular-nums">
-              <span>{Math.round(profile.target_enrollment_y1 * 0.5)}</span>
-              <span>{Math.round(profile.target_enrollment_y1 * 1.5)}</span>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Class Size Cap</label>
-            <input
-              type="number"
-              min={15}
-              max={30}
-              value={scenarioInputs.classSize}
-              onChange={(e) => updateScenario({ classSize: Number(e.target.value) })}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Lead Teacher Salary</label>
-            <input
-              type="number"
-              step={1000}
-              value={scenarioInputs.leadTeacherSalary}
-              onChange={(e) => updateScenario({ leadTeacherSalary: Number(e.target.value) })}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Monthly Lease</label>
-            <input
-              type="number"
-              step={500}
-              value={scenarioInputs.monthlyLease}
-              onChange={(e) => updateScenario({ monthlyLease: Number(e.target.value) })}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">+1 FTE Teacher</label>
-            <button
-              onClick={() => updateScenario({ extraTeacher: !scenarioInputs.extraTeacher })}
-              className={`mt-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                scenarioInputs.extraTeacher
-                  ? 'bg-teal-600 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {scenarioInputs.extraTeacher ? 'On' : 'Off'}
-            </button>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Budget at 90%</label>
-            <button
-              onClick={() => {
-                setConservativeMode(!conservativeMode)
-                if (!conservativeMode) resetScenario()
-              }}
-              className={`mt-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                conservativeMode
-                  ? 'bg-amber-500 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {conservativeMode ? 'On' : 'Off'}
-            </button>
-          </div>
-        </div>
-
-        {(isModified || conservativeMode) && (
-          <button
-            onClick={() => { resetScenario(); setConservativeMode(false) }}
-            className="mt-4 text-xs text-teal-600 hover:text-teal-800 font-medium transition-colors"
-          >
-            Reset to Base Case
-          </button>
-        )}
-      </div>
-
-      {/* Budget summary table */}
-      <div data-tour="budget-summary" className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-6 shadow-sm">
-        <table className="sl-table">
+      {/* 8. 5-Year Trajectory */}
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-6 shadow-sm">
+        <table className="w-full text-sm">
           <thead>
-            <tr>
-              <th></th>
-              <th className="num">Base Case</th>
-              {(isModified || conservativeMode) && <th className="num text-teal-600">{conservativeMode ? 'Conservative (90%)' : 'Scenario'}</th>}
-              {(isModified || conservativeMode) && <th className="num">Delta</th>}
+            <tr className="bg-slate-50 border-b border-slate-200">
+              <th className="text-left px-5 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">5-Year Trajectory</th>
+              {multiYear.map((y) => (
+                <th key={y.year} className={`text-center px-4 py-2.5 font-semibold text-slate-600 text-xs min-w-[90px] ${y.year === 1 ? 'bg-teal-50/60' : ''}`}>
+                  Year {y.year}
+                  {y.year === 1 && <span className="block text-[9px] font-medium text-teal-600 mt-0.5">Current</span>}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {[
-              { label: 'Operating Revenue', base: baseSummary.operatingRevenue, curr: current.operatingRevenue },
-              ...(baseSummary.grantRevenue > 0 ? [
-                { label: 'Startup Grants (Year 1)', base: baseSummary.grantRevenue, curr: current.grantRevenue },
-                { label: 'Total Revenue', base: baseSummary.totalRevenue, curr: current.totalRevenue },
-              ] : [
-                { label: 'Total Revenue', base: baseSummary.totalRevenue, curr: current.totalRevenue },
-              ]),
-              { label: 'Total Personnel', base: baseSummary.totalPersonnel, curr: current.totalPersonnel },
-              { label: 'Total Operations', base: baseSummary.totalOperations, curr: current.totalOperations },
-              { label: 'Net Position', base: baseSummary.netPosition, curr: current.netPosition, bold: true },
-              { label: 'Days of Cash', base: baseDaysOfCash, curr: daysOfCash, bold: true, isDays: true },
-            ].map((row) => {
-              const diff = row.curr - row.base
-              return (
-                <tr key={row.label}>
-                  <td className={row.bold ? 'font-semibold text-slate-800' : ''}>
-                    {row.label}
-                  </td>
-                  <td className={`num ${row.bold ? 'font-semibold text-slate-800' : ''}`}>
-                    {row.isDays ? `${row.base} days` : fmt(row.base)}
-                  </td>
-                  {(isModified || conservativeMode) && (
-                    <td className={`num ${row.bold ? 'font-semibold' : ''} ${
-                      row.isDays
-                        ? (row.curr >= 30 ? 'text-emerald-600' : row.curr >= 21 ? 'text-amber-600' : 'text-red-600')
-                        : row.label === 'Net Position'
-                        ? (row.curr >= 0 ? 'text-emerald-600' : 'text-red-600')
-                        : 'text-teal-600'
-                    }`}>
-                      {row.isDays ? `${row.curr} days` : fmt(row.curr)}
+            <tr className="border-b border-slate-100">
+              <td className="px-5 py-2.5 text-slate-600">Enrollment</td>
+              {multiYear.map((y) => (
+                <td key={y.year} className={`px-4 py-2.5 text-center tabular-nums text-slate-700 font-medium ${y.year === 1 ? 'bg-teal-50/30' : ''}`}>
+                  {y.enrollment}
+                </td>
+              ))}
+            </tr>
+            {hasExpansion && (
+              <tr className="border-b border-slate-100">
+                <td className="px-5 py-2.5 text-slate-600">Grades Served</td>
+                {multiYear.map((y) => {
+                  const grades = y.expansionDetail?.grades
+                  const display = grades?.length
+                    ? grades.length === 1 ? grades[0] : `${grades[0]}\u2013${grades[grades.length - 1]}`
+                    : '\u2014'
+                  return (
+                    <td key={y.year} className={`px-4 py-2.5 text-center text-xs text-slate-600 ${y.year === 1 ? 'bg-teal-50/30' : ''}`}>
+                      {display}
                     </td>
-                  )}
-                  {(isModified || conservativeMode) && (
-                    <td className={`num text-sm ${diff >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {diff === 0 ? '—' : row.isDays ? `${diff > 0 ? '+' : ''}${diff}` : `${diff > 0 ? '+' : ''}${fmt(diff)}`}
-                    </td>
-                  )}
-                </tr>
-              )
-            })}
+                  )
+                })}
+              </tr>
+            )}
+            <tr className="border-b border-slate-100">
+              <td className="px-5 py-2.5 text-slate-600">Net Position</td>
+              {multiYear.map((y) => (
+                <td key={y.year} className={`px-4 py-2.5 text-center tabular-nums font-medium ${y.net >= 0 ? 'text-emerald-600' : 'text-red-600'} ${y.year === 1 ? 'bg-teal-50/30' : ''}`}>
+                  {fmt(y.net)}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <td className="px-5 py-2.5 text-slate-600">Reserve Days</td>
+              {multiYear.map((y, i) => {
+                const days = daysOfCashAllYears[i] ?? 0
+                const color = days >= 60 ? 'text-emerald-600' : days >= 30 ? 'text-amber-600' : 'text-red-600'
+                return (
+                  <td key={y.year} className={`px-4 py-2.5 text-center tabular-nums font-medium ${color} ${y.year === 1 ? 'bg-teal-50/30' : ''}`}>
+                    {days}
+                  </td>
+                )
+              })}
+            </tr>
           </tbody>
         </table>
       </div>
 
-      {/* Export buttons */}
+      {/* 9. Base Case table — Year 1 budget summary */}
+      <div data-tour="budget-summary" className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-6 shadow-sm">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 bg-slate-50">
+              <th className="text-left px-5 py-3 font-semibold text-slate-600"></th>
+              <th className="text-right px-5 py-3 font-semibold text-slate-600">Year 1 Base Case</th>
+            </tr>
+          </thead>
+          <tbody>
+            {/* REVENUE section */}
+            <tr className="bg-slate-50/60">
+              <td colSpan={2} className="px-5 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Revenue</td>
+            </tr>
+            <BudgetRow label="Operating Revenue" value={baseSummary.operatingRevenue} />
+            {baseSummary.grantRevenue > 0 && (
+              <BudgetRow label="Startup Grants (Year 1)" value={baseSummary.grantRevenue} />
+            )}
+            <BudgetRow label="Total Revenue" value={baseSummary.totalRevenue} bold borderTop />
+
+            {/* EXPENSES section */}
+            <tr className="bg-slate-50/60">
+              <td colSpan={2} className="px-5 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Expenses</td>
+            </tr>
+            <BudgetRow label="Total Personnel" value={baseSummary.totalPersonnel} />
+            <BudgetRow label="Total Operations" value={baseSummary.totalOperations} />
+            <BudgetRow label="Total Expenses" value={baseSummary.totalExpenses} bold borderTop />
+
+            {/* BOTTOM LINE section */}
+            <tr className="border-t-2 border-slate-300 bg-slate-50/30">
+              <td colSpan={2} className="px-5 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Bottom Line</td>
+            </tr>
+            <tr className="border-b border-slate-200">
+              <td className="px-5 py-3 font-semibold text-slate-800">Net Position</td>
+              <td className={`px-5 py-3 text-right font-semibold tabular-nums ${baseSummary.netPosition >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmt(baseSummary.netPosition)}</td>
+            </tr>
+            <tr>
+              <td className="px-5 py-3 font-semibold text-slate-800">Days of Cash</td>
+              <td className={`px-5 py-3 text-right font-semibold tabular-nums ${daysOfCash >= 60 ? 'text-emerald-600' : daysOfCash >= 30 ? 'text-amber-600' : 'text-red-600'}`}>{daysOfCash} days</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* 10. Export buttons */}
       <div data-tour="export-buttons" className="flex flex-col sm:flex-row gap-3">
         <button
           onClick={handleExport}
@@ -680,5 +657,20 @@ export default function DashboardPage() {
         </button>
       </div>
     </div>
+  )
+}
+
+/** Reusable row for the sectioned budget table */
+function BudgetRow({ label, value, bold, borderTop }: {
+  label: string
+  value: number
+  bold?: boolean
+  borderTop?: boolean
+}) {
+  return (
+    <tr className={`border-b border-slate-100 ${borderTop ? 'border-t border-t-slate-200' : ''}`}>
+      <td className={`px-5 py-2.5 ${bold ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>{label}</td>
+      <td className={`px-5 py-2.5 text-right tabular-nums ${bold ? 'font-semibold text-slate-800' : 'text-slate-700'}`}>{fmt(value)}</td>
+    </tr>
   )
 }

@@ -62,6 +62,35 @@ export function getGrantAllocationsForYear(
 }
 import { expansionToEnrollmentArray, computeExpansionEnrollments, teachersPerNewGrade } from './gradeExpansion'
 
+// --- Year 0 Carry-Forward ---
+
+/** Compute carry-forward from Year 0 into Year 1, matching the Multi-Year tab logic.
+ *  Year 0 total = sum of Y0 allocations (or full amount for sources with no year selection).
+ *  Pre-opening spend = actual transactions if any, else budgeted amounts.
+ *  Carry-forward = year0Total - preOpeningSpend.
+ */
+export function computeCarryForward(profile: SchoolProfile): number {
+  const sources: StartupFundingSource[] = profile.startup_funding || []
+  const totalFunding = sources.reduce((s, f) => s + f.amount, 0)
+
+  let year0Total = 0
+  for (const src of sources) {
+    if (src.selectedYears?.includes(0) && src.yearAllocations?.[0]) {
+      year0Total += src.yearAllocations[0]
+    } else if (!src.selectedYears || src.selectedYears.length === 0) {
+      year0Total += src.amount
+    }
+  }
+  if (year0Total === 0) year0Total = totalFunding
+
+  const preOpenTransactions: { amount: number }[] = profile.pre_opening_transactions || []
+  const preOpenActualSpend = preOpenTransactions.reduce((s, tx) => s + tx.amount, 0)
+  const preOpenBudget = (profile.pre_opening_expenses || []).reduce((s, e: { budgeted: number }) => s + e.budgeted, 0)
+  const preOpenExpenses = preOpenActualSpend > 0 ? preOpenActualSpend : preOpenBudget
+
+  return year0Total - preOpenExpenses
+}
+
 export interface BudgetSummary {
   operatingRevenue: number
   grantRevenue: number
@@ -122,9 +151,10 @@ export function computeSummaryFromProjections(
   // Personnel % uses operating revenue (excludes one-time grants) for sustainability assessment
   const personnelPctRevenue = operatingRevenue > 0 ? (totalPersonnel / operatingRevenue) * 100 : 0
 
-  // Break-even uses Commission revenue per pupil (AAFTE-adjusted)
-  const aaftePct = a.aafte_pct / 100
-  const perPupilRevenue = (a.regular_ed_per_pupil + a.levy_equity_per_student) * aaftePct
+  // Break-even: how many students needed to cover expenses from operating revenue alone
+  // Uses actual per-pupil operating revenue (all sources), not just base apportionment rates
+  const enrollment = revenueProfile?.target_enrollment_y1 || 0
+  const perPupilRevenue = enrollment > 0 ? operatingRevenue / enrollment : 0
   const breakEvenEnrollment = perPupilRevenue > 0
     ? Math.ceil(totalExpenses / perPupilRevenue)
     : 0
@@ -220,8 +250,8 @@ export function computeScenario(
   const reserveDays = dailyExpense > 0 ? Math.round(netPosition / dailyExpense) : 0
   // Personnel % uses operating revenue (excludes one-time grants)
   const personnelPctRevenue = operatingRevenue > 0 ? (totalPersonnel / operatingRevenue) * 100 : 0
-  const aaftePct = a.aafte_pct / 100
-  const perPupilRevenue = (a.regular_ed_per_pupil + a.levy_equity_per_student) * aaftePct
+  // Break-even: how many students needed to cover expenses from operating revenue alone
+  const perPupilRevenue = enrollment > 0 ? operatingRevenue / enrollment : 0
   const breakEvenEnrollment = perPupilRevenue > 0 ? Math.ceil(totalExpenses / perPupilRevenue) : 0
   const facilityPct = operatingRevenue > 0 ? ((monthlyLease * 12) / operatingRevenue) * 100 : 0
 

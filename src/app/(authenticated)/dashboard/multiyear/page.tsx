@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
-import { computeMultiYearDetailed, getGrantRevenueForYear } from '@/lib/budgetEngine'
+import { computeMultiYearDetailed, getGrantRevenueForYear, computeCarryForward } from '@/lib/budgetEngine'
 import type { StartupFundingSource, PreOpeningTransaction } from '@/lib/types'
 import Link from 'next/link'
 
@@ -25,7 +25,10 @@ export default function MultiYearPage() {
     .filter((f) => f.status === 'received' || f.status === 'pledged')
     .reduce((s, f) => s + f.amount, 0)
 
-  // Year 0 funding: use explicit Y0 allocations, or fall back to full amount for sources with no year selection
+  // Year 0 carry-forward — shared computation with Overview
+  const carryForward = useMemo(() => computeCarryForward(profile), [profile])
+
+  // Year 0 display values (for the funding sources summary)
   const year0Total = useMemo(() => {
     let y0 = 0
     for (const src of fundingSources) {
@@ -40,9 +43,7 @@ export default function MultiYearPage() {
   const preOpenTransactions: PreOpeningTransaction[] = profile.pre_opening_transactions || []
   const preOpenActualSpend = preOpenTransactions.reduce((s, tx) => s + tx.amount, 0)
   const preOpenBudget = (profile.pre_opening_expenses || []).reduce((s, e) => s + e.budgeted, 0)
-  // Use actual spend when transactions exist, otherwise fall back to budgeted
   const preOpenExpenses = preOpenActualSpend > 0 ? preOpenActualSpend : preOpenBudget
-  const carryForward = year0Total - preOpenExpenses
 
   const yearsWithStartup = useMemo(
     () => computeMultiYearDetailed(profile, positions, projections, assumptions, carryForward, gradeExpansionPlan, allPositions, fundingSources),
