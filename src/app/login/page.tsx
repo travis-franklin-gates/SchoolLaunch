@@ -1,10 +1,18 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50"><p className="text-slate-500 text-sm">Loading...</p></div>}>
+      <LoginForm />
+    </Suspense>
+  )
+}
+
+function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -13,8 +21,27 @@ export default function LoginPage() {
   const [resetEmail, setResetEmail] = useState('')
   const [resetLoading, setResetLoading] = useState(false)
   const [resetSent, setResetSent] = useState(false)
+  const [redirecting, setRedirecting] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+
+  // Detect recovery codes — Supabase PKCE always redirects to Site URL (login page)
+  // regardless of redirectTo. Intercept and forward to /reset-password.
+  useEffect(() => {
+    const code = searchParams.get('code')
+    if (code) {
+      setRedirecting(true)
+      router.replace(`/reset-password?code=${code}`)
+      return
+    }
+    // Also check hash fragment for non-PKCE flow
+    const hash = window.location.hash
+    if (hash && hash.includes('type=recovery')) {
+      setRedirecting(true)
+      router.replace(`/reset-password${hash}`)
+    }
+  }, [searchParams, router])
 
   async function handleResetPassword(e: React.FormEvent) {
     e.preventDefault()
@@ -87,6 +114,15 @@ export default function LoginPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Don't flash login form while redirecting to reset-password
+  if (redirecting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <p className="text-slate-500 text-sm">Redirecting...</p>
+      </div>
+    )
   }
 
   return (
