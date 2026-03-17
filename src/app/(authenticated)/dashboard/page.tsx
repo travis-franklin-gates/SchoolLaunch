@@ -166,8 +166,12 @@ export default function DashboardPage() {
   // Days of Cash: use scorecard Y1 value (matches Multi-Year tab and Commission Scorecard)
   const daysOfCash = scorecard.measures.find(m => m.name === 'Days of Cash')?.values[0] ?? 0
   const rc = reserveColor(daysOfCash)
-  // Net Position: use multiYear Y1 value as single source of truth (matches Multi-Year tab and Trajectory)
+  // Use multiYear Y1 as single source of truth (matches Multi-Year tab and Trajectory)
   const y1Net = multiYear.length > 0 ? multiYear[0].net : baseSummary.netPosition
+  const y1Revenue = multiYear.length > 0 ? multiYear[0].revenue.total : baseSummary.totalRevenue
+  const y1Personnel = multiYear.length > 0 ? multiYear[0].personnel.total : baseSummary.totalPersonnel
+  const y1Operations = multiYear.length > 0 ? multiYear[0].operations.total : baseSummary.totalOperations
+  const y1Expenses = multiYear.length > 0 ? multiYear[0].totalExpenses : baseSummary.totalExpenses
   const surplusColor = y1Net >= 0
     ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
     : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
@@ -556,19 +560,19 @@ export default function DashboardPage() {
             <tr className="bg-slate-50/60">
               <td colSpan={2} className="px-5 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Revenue</td>
             </tr>
-            <BudgetRow label="Operating Revenue" value={baseSummary.operatingRevenue} />
-            {baseSummary.grantRevenue > 0 && (
-              <BudgetRow label="Startup Grants (Year 1)" value={baseSummary.grantRevenue} />
+            <BudgetRow label="Operating Revenue" value={multiYear.length > 0 ? multiYear[0].revenue.operatingRevenue : baseSummary.operatingRevenue} />
+            {(multiYear.length > 0 ? multiYear[0].revenue.grantRevenue : baseSummary.grantRevenue) > 0 && (
+              <BudgetRow label="Startup Grants (Year 1)" value={multiYear.length > 0 ? multiYear[0].revenue.grantRevenue : baseSummary.grantRevenue} />
             )}
-            <BudgetRow label="Total Revenue" value={baseSummary.totalRevenue} bold borderTop />
+            <BudgetRow label="Total Revenue" value={y1Revenue} bold borderTop />
 
             {/* EXPENSES section */}
             <tr className="bg-slate-50/60">
               <td colSpan={2} className="px-5 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Expenses</td>
             </tr>
-            <BudgetRow label="Total Personnel" value={baseSummary.totalPersonnel} />
-            <BudgetRow label="Total Operations" value={baseSummary.totalOperations} />
-            <BudgetRow label="Total Expenses" value={baseSummary.totalExpenses} bold borderTop />
+            <BudgetRow label="Total Personnel" value={y1Personnel} />
+            <BudgetRow label="Total Operations" value={y1Operations} />
+            <BudgetRow label="Total Expenses" value={y1Expenses} bold borderTop />
 
             {/* BOTTOM LINE section */}
             <tr className="border-t-2 border-slate-300 bg-slate-50/30">
