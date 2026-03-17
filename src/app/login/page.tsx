@@ -21,7 +21,7 @@ export default function LoginPage() {
   const [forgotMessage, setForgotMessage] = useState('')
 
   // OTP verify state
-  const [digits, setDigits] = useState<string[]>(['', '', '', '', '', ''])
+  const [digits, setDigits] = useState<string[]>(['', '', '', '', '', '', '', ''])
   const [verifyLoading, setVerifyLoading] = useState(false)
   const [verifyError, setVerifyError] = useState('')
   const [resendCooldown, setResendCooldown] = useState(0)
@@ -117,8 +117,8 @@ export default function LoginPage() {
 
     // Always show success message — don't reveal if account exists
     setForgotLoading(false)
-    setForgotMessage('A 6-digit code has been sent to your email.')
-    setDigits(['', '', '', '', '', ''])
+    setForgotMessage('An 8-digit code has been sent to your email.')
+    setDigits(['', '', '', '', '', '', '', ''])
     setVerifyError('')
     setTimeout(() => {
       setView('verify')
@@ -162,17 +162,17 @@ export default function LoginPage() {
   function handleDigitChange(index: number, value: string) {
     // Handle paste of full code
     if (value.length > 1) {
-      const pasted = value.replace(/\D/g, '').slice(0, 6)
+      const pasted = value.replace(/\D/g, '').slice(0, 8)
       if (pasted.length > 0) {
         const newDigits = [...digits]
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 8; i++) {
           newDigits[i] = pasted[i] || ''
         }
         setDigits(newDigits)
         // Focus last filled digit or submit
-        const lastIndex = Math.min(pasted.length - 1, 5)
+        const lastIndex = Math.min(pasted.length - 1, 7)
         digitRefs.current[lastIndex]?.focus()
-        if (pasted.length === 6) {
+        if (pasted.length === 8) {
           handleVerify(pasted)
         }
         return
@@ -184,14 +184,14 @@ export default function LoginPage() {
     newDigits[index] = digit
     setDigits(newDigits)
 
-    if (digit && index < 5) {
+    if (digit && index < 7) {
       digitRefs.current[index + 1]?.focus()
     }
 
-    // Auto-submit when all 6 digits entered
-    if (digit && index === 5) {
+    // Auto-submit when all 8 digits entered
+    if (digit && index === 7) {
       const code = newDigits.join('')
-      if (code.length === 6) {
+      if (code.length === 8) {
         handleVerify(code)
       }
     }
@@ -206,8 +206,8 @@ export default function LoginPage() {
   function handleVerifySubmit(e: React.FormEvent) {
     e.preventDefault()
     const code = digits.join('')
-    if (code.length !== 6) {
-      setVerifyError('Please enter all 6 digits.')
+    if (code.length !== 8) {
+      setVerifyError('Please enter all 8 digits.')
       return
     }
     handleVerify(code)
@@ -361,7 +361,7 @@ export default function LoginPage() {
           {view === 'verify' && (
             <form onSubmit={handleVerifySubmit} className="space-y-5">
               <p className="text-sm text-slate-600 text-center">
-                Check your email for a 6-digit code
+                Check your email for an 8-digit code
               </p>
 
               <div className="flex justify-center gap-2">
@@ -371,13 +371,13 @@ export default function LoginPage() {
                     ref={(el) => { digitRefs.current[i] = el }}
                     type="text"
                     inputMode="numeric"
-                    maxLength={6}
+                    maxLength={8}
                     value={digit}
                     onChange={(e) => handleDigitChange(i, e.target.value)}
                     onKeyDown={(e) => handleDigitKeyDown(i, e)}
                     onFocus={(e) => e.target.select()}
                     autoFocus={i === 0}
-                    className="w-11 h-13 text-2xl text-center font-mono border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
+                    className="w-10 h-12 text-xl text-center font-mono border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
                   />
                 ))}
               </div>
