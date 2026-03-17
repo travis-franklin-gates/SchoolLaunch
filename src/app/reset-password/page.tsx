@@ -11,16 +11,29 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [ready, setReady] = useState(false)
+  const [checked, setChecked] = useState(false)
   const supabase = createClient()
 
-  // Supabase sends the recovery token in the URL hash.
-  // The JS client picks it up automatically via onAuthStateChange.
   useEffect(() => {
+    // The auth/confirm route exchanged the code and set session cookies.
+    // Check if we have an active session from the recovery flow.
+    async function checkSession() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        setReady(true)
+      }
+      setChecked(true)
+    }
+
+    // Also listen for PASSWORD_RECOVERY event in case the hash-based flow is used
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setReady(true)
+        setChecked(true)
       }
     })
+
+    checkSession()
     return () => subscription.unsubscribe()
   }, [supabase])
 
@@ -44,6 +57,8 @@ export default function ResetPasswordPage() {
     if (updateError) {
       setError(updateError.message)
     } else {
+      // Sign out so they log in fresh with the new password
+      await supabase.auth.signOut()
       setSuccess(true)
     }
   }
@@ -69,19 +84,7 @@ export default function ResetPasswordPage() {
                 Sign in with your new password
               </Link>
             </div>
-          ) : !ready ? (
-            <div className="text-center space-y-4">
-              <p className="text-sm text-slate-500">
-                Verifying your reset link...
-              </p>
-              <p className="text-xs text-slate-400">
-                If this page doesn&apos;t update, your link may have expired.{' '}
-                <Link href="/login" className="text-teal-600 hover:text-teal-800 transition-colors">
-                  Request a new one
-                </Link>
-              </p>
-            </div>
-          ) : (
+          ) : ready ? (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label htmlFor="new-password" className="block text-sm font-medium text-slate-700 mb-1">
@@ -138,6 +141,22 @@ export default function ResetPasswordPage() {
                 </Link>
               </div>
             </form>
+          ) : !checked ? (
+            <div className="text-center">
+              <p className="text-sm text-slate-500">Verifying your reset link...</p>
+            </div>
+          ) : (
+            <div className="text-center space-y-4">
+              <div className="bg-amber-50 text-amber-700 text-sm px-4 py-3 rounded-lg">
+                Invalid or expired reset link.
+              </div>
+              <Link
+                href="/login"
+                className="inline-block text-sm text-teal-600 hover:text-teal-800 font-medium transition-colors"
+              >
+                Request a new one
+              </Link>
+            </div>
           )}
         </div>
       </div>
