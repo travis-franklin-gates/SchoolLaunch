@@ -6,6 +6,12 @@ const PUBLIC_ROUTES = ['/login', '/invite', '/reset-password', '/auth/confirm']
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
+  // If login page has a PKCE code param, skip ALL middleware processing —
+  // the code is single-use and must reach the client-side exchangeCodeForSession untouched
+  if (pathname === '/login' && request.nextUrl.searchParams.has('code')) {
+    return NextResponse.next({ request })
+  }
+
   // Public routes — skip auth entirely, no session check needed
   if (PUBLIC_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'))) {
     return NextResponse.next({ request })
