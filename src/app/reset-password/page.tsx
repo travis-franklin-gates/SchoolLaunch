@@ -15,26 +15,63 @@ export default function ResetPasswordPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    // The auth/confirm route exchanged the code and set session cookies.
-    // Check if we have an active session from the recovery flow.
-    async function checkSession() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        setReady(true)
-      }
-      setChecked(true)
-    }
+    let cancelled = false
 
-    // Also listen for PASSWORD_RECOVERY event in case the hash-based flow is used
+    // Listen for auth state changes — handles both PKCE code exchange
+    // (triggers SIGNED_IN) and hash-fragment flow (triggers PASSWORD_RECOVERY)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
+      if (cancelled) return
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
         setReady(true)
         setChecked(true)
       }
     })
 
-    checkSession()
-    return () => subscription.unsubscribe()
+    async function init() {
+      // PKCE flow: Supabase redirects here with ?code=xxx
+      // The client library's createBrowserClient auto-detects the code param
+      // and exchanges it, which triggers onAuthStateChange above.
+      // But if the code is in the URL, we also need to handle it explicitly
+      // in case the auto-detection doesn't fire.
+      const params = new URLSearchParams(window.location.search)
+      const code = params.get('code')
+
+      if (code) {
+        // Exchange the PKCE code for a session
+        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        if (!cancelled) {
+          if (!error) {
+            setReady(true)
+          }
+          setChecked(true)
+          // Clean the code from the URL without triggering navigation
+          window.history.replaceState({}, '', '/reset-password')
+        }
+        return
+      }
+
+      // Hash fragment flow: #access_token=xxx&type=recovery
+      // The Supabase client auto-detects this and fires PASSWORD_RECOVERY
+      // via onAuthStateChange. Give it a moment to process.
+      const hash = window.location.hash
+      if (hash && hash.includes('type=recovery')) {
+        // onAuthStateChange will handle this — just wait
+        return
+      }
+
+      // No code or hash — check for an existing session (e.g., redirected
+      // from /auth/confirm which already exchanged the code)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!cancelled) {
+        if (session) {
+          setReady(true)
+        }
+        setChecked(true)
+      }
+    }
+
+    init()
+    return () => { cancelled = true; subscription.unsubscribe() }
   }, [supabase])
 
   async function handleSubmit(e: React.FormEvent) {
