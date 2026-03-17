@@ -17,11 +17,6 @@ const overviewCeo: Step[] = [
     title: 'AI Financial Advisor',
   },
   {
-    target: '[data-tour="scorecard"]',
-    content: 'This scorecard shows how your financial plan measures against the WA Charter School Commission\u2019s Financial Performance Framework. Green means you meet the threshold. The Commission uses Stage 1 standards for Years 1\u20132 and Stage 2 for Year 3+.',
-    title: 'Commission FPF Scorecard',
-  },
-  {
     target: '[data-tour="health-tiles"]',
     content: 'These five tiles are your financial vital signs. Reserve Days and Personnel % are the two the Commission watches most closely. Click any tile to understand what\u2019s driving the number.',
     title: 'Financial Health Tiles',
@@ -320,6 +315,25 @@ const settingsTour: Step[] = [
   },
 ]
 
+const scorecardTour: Step[] = [
+  {
+    target: '[data-tour="scorecard-stages"]',
+    content: 'The Commission evaluates startup schools in two phases. Stage 1 applies to Years 1\u20132 with lower thresholds appropriate for new schools. Stage 2 applies mature school standards beginning in Year 3.',
+    title: 'Stage 1 & Stage 2',
+    disableBeacon: true,
+  },
+  {
+    target: '[data-tour="scorecard-table"]',
+    content: 'Each row is a Commission Financial Performance Framework measure. Green means you meet the standard, amber means you\u2019re approaching, and red means you don\u2019t meet it. Focus on fixing any red cells in Years 1\u20132 first \u2014 those are the standards the Commission applies during your startup phase.',
+    title: 'Reading the Scorecard',
+  },
+  {
+    target: '[data-tour="scorecard-banner"]',
+    content: 'This summary tells you your overall status at a glance. If any Stage 1 measures show red, the Commission may require a remediation plan before approving your charter. Address those items before submitting your application.',
+    title: 'Overall Assessment',
+  },
+]
+
 const portfolioTour: Step[] = [
   {
     target: '[data-tour="school-cards"]',
@@ -354,6 +368,7 @@ const CEO_TAB_TOURS: Record<string, Step[]> = {
   ask: askTour,
   advisory: advisoryTour,
   alignment: alignmentTour,
+  scorecard: scorecardTour,
   settings: settingsTour,
 }
 
@@ -385,6 +400,7 @@ export function pathToTourName(pathname: string): TourName | null {
   if (pathname === '/dashboard/ask') return 'ask'
   if (pathname === '/dashboard/advisory') return 'advisory'
   if (pathname === '/dashboard/alignment') return 'alignment'
+  if (pathname === '/dashboard/scorecard') return 'scorecard'
   if (pathname === '/dashboard/settings') return 'settings'
   if (pathname === '/portfolio') return 'portfolio'
   if (pathname.startsWith('/portfolio/')) return 'portfolio-school'

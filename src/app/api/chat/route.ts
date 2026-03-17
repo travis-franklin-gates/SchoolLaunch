@@ -188,10 +188,15 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // schoolContext can be a pre-built string (from buildSchoolContextString) or a legacy object
+  const schoolContextSection = typeof schoolContext === 'string'
+    ? `SCHOOL CONTEXT — CURRENT PLANNING SESSION\n\n${schoolContext}`
+    : buildSchoolContextPrompt(schoolContext || {})
+
   const systemPrompt = [
     ROLE_PROMPT,
     WA_KNOWLEDGE,
-    buildSchoolContextPrompt(schoolContext || {}),
+    schoolContextSection,
   ].join('\n\n')
 
   const anthropic = new Anthropic({ apiKey })

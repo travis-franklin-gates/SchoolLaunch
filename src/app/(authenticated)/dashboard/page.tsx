@@ -343,12 +343,15 @@ export default function DashboardPage() {
       </div>
 
       {/* 3. Commission Scorecard summary banner */}
-      <div className={`mb-4 px-5 py-3 rounded-xl text-sm font-medium ${
+      <div className={`mb-4 px-5 py-3 rounded-xl text-sm font-medium flex items-center justify-between ${
         scorecard.overallStatus === 'green' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
           : scorecard.overallStatus === 'yellow' ? 'bg-amber-50 text-amber-700 border border-amber-200'
           : 'bg-red-50 text-red-700 border border-red-200'
       }`}>
-        {scorecard.overallMessage}
+        <span>{scorecard.overallMessage}</span>
+        <Link href="/dashboard/scorecard" className="text-xs font-medium opacity-75 hover:opacity-100 transition-opacity whitespace-nowrap ml-4">
+          View Full Scorecard &rarr;
+        </Link>
       </div>
 
       {/* 4. 90% enrollment sensitivity */}
@@ -474,59 +477,7 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
-      {/* 7. Commission FPF Scorecard (full table) */}
-      <div data-tour="scorecard" className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide">Commission Scorecard</h2>
-          <div className="flex gap-4 text-[10px] text-slate-400">
-            <span className="inline-flex items-center gap-1.5"><span className="px-1.5 py-0.5 rounded text-[9px] font-semibold text-white" style={{ background: 'var(--navy-light)' }}>Stage 1</span> Years 1-2</span>
-            <span className="inline-flex items-center gap-1.5"><span className="px-1.5 py-0.5 rounded text-[9px] font-semibold text-white" style={{ background: 'var(--navy-light)' }}>Stage 2</span> Years 3-5</span>
-          </div>
-        </div>
-        <div className="overflow-x-auto sl-scroll">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-slate-200">
-                <th className="text-left py-2 pr-3 font-medium text-slate-400 uppercase tracking-wide text-[11px] min-w-[160px]">Measure</th>
-                {[1, 3, 5].map((y) => (
-                  <th key={y} className="text-center px-3 py-2 font-medium text-slate-400 uppercase tracking-wide text-[11px] min-w-[70px]">Year {y}</th>
-                ))}
-                <th className="text-center px-3 py-2 font-medium text-slate-400 uppercase tracking-wide text-[11px]">Target</th>
-              </tr>
-            </thead>
-            <tbody>
-              {scorecard.measures.filter(m => m.name !== 'DSCR').map((m) => (
-                <tr key={m.name} className="border-b border-slate-100">
-                  <td className="py-2.5 pr-3 text-slate-600 font-medium text-[13px]">{m.name}</td>
-                  {[0, 2, 4].map((idx) => {
-                    const v = m.values[idx]
-                    const s = m.statuses[idx]
-                    const color = s === 'meets' ? 'bg-emerald-50 text-emerald-700'
-                      : s === 'approaches' ? 'bg-amber-50 text-amber-600'
-                      : s === 'does_not_meet' ? 'bg-rose-50 text-rose-600'
-                      : 'bg-slate-50 text-slate-400'
-                    const display = v === null ? 'N/A'
-                      : m.name.includes('Margin') || m.name === 'Enrollment Variance' ? `${v}%`
-                      : m.name === 'Cash Flow' || m.name === '3-Year Cash Flow' ? `$${Math.round(v as number / 1000)}K`
-                      : m.name === 'Days of Cash' ? `${v}`
-                      : typeof v === 'number' ? v.toFixed(2) : String(v)
-                    return (
-                      <td key={idx} className="px-3 py-2.5 text-center">
-                        <span className={`inline-block px-2.5 py-1 rounded text-xs font-medium tabular-nums ${color}`}>{display}</span>
-                      </td>
-                    )
-                  })}
-                  <td className="px-3 py-2.5 text-center text-slate-400 text-[11px]">
-                    {m.stage1Target === m.stage2Target ? m.stage1Target : `${m.stage1Target} / ${m.stage2Target}`}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* 8. 5-Year Trajectory */}
+      {/* 7. 5-Year Trajectory */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-6 shadow-sm">
         <table className="w-full text-sm">
           <thead>

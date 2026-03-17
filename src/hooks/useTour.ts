@@ -13,6 +13,7 @@ export type TourName =
   | 'ask'
   | 'advisory'
   | 'alignment'
+  | 'scorecard'
   | 'settings'
   | 'portfolio'
   | 'portfolio-school'
