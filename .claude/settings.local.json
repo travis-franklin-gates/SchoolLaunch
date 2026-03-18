@@ -29,7 +29,8 @@
       "Bash(find /c/users/travisfr/schoollaunch -type f -name \"*.ts\" | xargs grep -l \"user_roles\\\\|useAuth\\\\|role.*context\" | head -20)",
       "Bash(find /c/users/travisfr/schoollaunch/src/components -type f -name \"*.tsx\" | xargs ls -la)",
       "Bash(ls \"C:/users/travisfr/schoollaunch/src/app/\\(authenticated\\)/dashboard/\")",
-      "Bash(find /c/users/travisfr/schoollaunch -type f -name \"*onboarding*\" 2>/dev/null | head -20)"
+      "Bash(find /c/users/travisfr/schoollaunch -type f -name \"*onboarding*\" 2>/dev/null | head -20)",
+      "Bash(wc -l /c/users/travisfr/schoollaunch/src/app/api/*/route.ts)"
     ]
   }
 }

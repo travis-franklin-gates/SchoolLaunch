@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { useScenario } from '@/lib/ScenarioContext'
 import { createClient } from '@/lib/supabase/client'
 import { calcTitleI, calcIDEA, calcLAP, calcTBIP, calcHiCap } from '@/lib/calculations'
@@ -33,8 +34,12 @@ export default function SettingsPage() {
 
   const [fa, setFa] = useState<FinancialAssumptions>({ ...assumptions })
 
+  const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [showResetModal, setShowResetModal] = useState(false)
+  const [resetConfirmText, setResetConfirmText] = useState('')
+  const [resetting, setResetting] = useState(false)
 
   // Grade expansion state
   const [expansionData, setExpansionData] = useState<{
@@ -501,6 +506,73 @@ export default function SettingsPage() {
       >
         {saving ? 'Saving...' : 'Save Changes'}
       </button>
+
+      {/* Danger Zone */}
+      <div className="mt-12 border border-red-200 rounded-xl p-6 bg-red-50/50">
+        <h2 className="text-xs font-medium text-red-500 uppercase tracking-wide mb-2">Danger Zone</h2>
+        <p className="text-sm text-slate-600 mb-4">
+          Reset all school planning data and restart the onboarding process from scratch. Your account and school record will be preserved.
+        </p>
+        <button
+          onClick={() => setShowResetModal(true)}
+          className="px-5 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+        >
+          Reset School &amp; Start Over
+        </button>
+      </div>
+
+      {/* Reset confirmation modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Reset School Data</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              This will permanently delete all your school&apos;s financial data and restart the onboarding process. This cannot be undone.
+            </p>
+            <p className="text-sm text-slate-700 mb-2">
+              Type <span className="font-semibold">{schoolName}</span> to confirm:
+            </p>
+            <input
+              type="text"
+              value={resetConfirmText}
+              onChange={(e) => setResetConfirmText(e.target.value)}
+              placeholder="School name"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              autoFocus
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => { setShowResetModal(false); setResetConfirmText('') }}
+                className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={resetConfirmText !== schoolName || resetting}
+                onClick={async () => {
+                  setResetting(true)
+                  try {
+                    const res = await fetch('/api/settings/reset-school', { method: 'POST' })
+                    if (!res.ok) {
+                      const body = await res.json()
+                      throw new Error(body.error || 'Reset failed')
+                    }
+                    router.push('/onboarding')
+                  } catch (err) {
+                    setResetting(false)
+                    setShowResetModal(false)
+                    setResetConfirmText('')
+                    setToast(`Error: ${err instanceof Error ? err.message : 'Reset failed'}`)
+                  }
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {resetting ? 'Resetting...' : 'Permanently Reset'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

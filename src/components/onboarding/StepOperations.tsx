@@ -44,7 +44,7 @@ export const defaultOperationsData: OperationsData = {
   suppliesPerPupil: 200,
   contractedPerPupil: 150,
   technologyPerPupil: 180,
-  foodProgram: false,
+  foodProgram: true,
   insurance: 18000,
   miscPct: 2,
 }
@@ -131,6 +131,7 @@ export default function StepOperations({
   const [facilityCostPerSqft, setFacilityCostPerSqft] = useState(initialData.facilityCostPerSqft)
   const [facilityMonthly, setFacilityMonthly] = useState(initialData.facilityMonthly)
   const [foodProgram, setFoodProgram] = useState(initialData.foodProgram)
+  const [facilityEstimate, setFacilityEstimate] = useState(false)
 
   const [funding, setFunding] = useState<FundingRow[]>(
     (startupFunding.length > 0 ? startupFunding : DEFAULT_STARTUP_SOURCES).map((f) => ({
@@ -145,10 +146,15 @@ export default function StepOperations({
   const authorizerFee = calcAuthorizerFeeCommission(stateApport)
   const totalRevenue = rev.total
 
+  const estimatedFacilityAnnual = Math.round(totalRevenue * 0.15)
+  const estimatedFacilityMonthly = Math.round(estimatedFacilityAnnual / 12)
+
   const costs = useMemo(() => {
-    const facility = facilityMode === 'sqft'
-      ? facilitySqft * facilityCostPerSqft
-      : facilityMonthly * 12
+    const facility = facilityEstimate
+      ? estimatedFacilityAnnual
+      : facilityMode === 'sqft'
+        ? facilitySqft * facilityCostPerSqft
+        : facilityMonthly * 12
     const supplies = defaultOperationsData.suppliesPerPupil * enrollment
     const contracted = defaultOperationsData.contractedPerPupil * enrollment
     const technology = defaultOperationsData.technologyPerPupil * enrollment
@@ -156,7 +162,7 @@ export default function StepOperations({
     const subtotal = facility + supplies + contracted + technology + authorizerFee + insurance + totalPersonnelCost
     const misc = Math.round(subtotal * (defaultOperationsData.miscPct / 100))
     return { facility, supplies, contracted, technology, authorizerFee, insurance, misc }
-  }, [facilityMode, facilitySqft, facilityCostPerSqft, facilityMonthly, enrollment, authorizerFee, totalPersonnelCost])
+  }, [facilityMode, facilitySqft, facilityCostPerSqft, facilityMonthly, enrollment, authorizerFee, totalPersonnelCost, facilityEstimate, estimatedFacilityAnnual])
 
   const totalOps = costs.facility + costs.supplies + costs.contracted + costs.technology + costs.authorizerFee + costs.insurance + costs.misc
   const totalExpenses = totalPersonnelCost + totalOps
@@ -293,14 +299,15 @@ export default function StepOperations({
         </div>
 
         {facilityMode === 'sqft' ? (
-          <div className="grid grid-cols-2 gap-4">
+          <div className={`grid grid-cols-2 gap-4 ${facilityEstimate ? 'opacity-50 pointer-events-none' : ''}`}>
             <div>
               <label className="block text-xs text-slate-500 mb-1">Square Footage</label>
               <input
                 type="number"
                 value={facilitySqft}
                 onChange={(e) => setFacilitySqft(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                disabled={facilityEstimate}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:bg-slate-100"
               />
             </div>
             <div>
@@ -310,27 +317,50 @@ export default function StepOperations({
                 value={facilityCostPerSqft}
                 onChange={(e) => setFacilityCostPerSqft(Number(e.target.value))}
                 step={0.5}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                disabled={facilityEstimate}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:bg-slate-100"
               />
             </div>
           </div>
         ) : (
-          <div>
+          <div className={facilityEstimate ? 'opacity-50 pointer-events-none' : ''}>
             <label className="block text-xs text-slate-500 mb-1">Monthly Lease Amount</label>
             <input
               type="number"
               value={facilityMonthly}
               onChange={(e) => setFacilityMonthly(Number(e.target.value))}
               step={500}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
+              disabled={facilityEstimate}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:bg-slate-100"
             />
           </div>
         )}
+
+        {/* Facility estimate checkbox */}
+        <div className="flex items-center gap-2 mt-3">
+          <input
+            type="checkbox"
+            id="facilityEstimate"
+            checked={facilityEstimate}
+            onChange={(e) => setFacilityEstimate(e.target.checked)}
+            className="w-4 h-4 accent-teal-600"
+          />
+          <label htmlFor="facilityEstimate" className="text-xs text-slate-600">
+            I don&apos;t have facility costs yet — estimate for me
+          </label>
+        </div>
+
+        {facilityEstimate && (
+          <p className="text-xs text-teal-600 mt-1">
+            Estimated: {fmt(estimatedFacilityMonthly)}/month (15% of projected operating revenue)
+          </p>
+        )}
+
         <div className="flex items-center justify-between mt-2">
           <p className="text-xs text-slate-400">Annual: {fmt(costs.facility)}</p>
           <p className="text-xs text-slate-400">Facility = {facilityPct}% of revenue</p>
         </div>
-        {Number(facilityPct) > 15 && (
+        {!facilityEstimate && Number(facilityPct) > 15 && (
           <p className="text-xs text-amber-600 mt-1">Above 15% of revenue — consider negotiating terms or exploring co-location.</p>
         )}
       </div>
