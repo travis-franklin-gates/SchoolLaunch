@@ -135,7 +135,9 @@ export default function StepStaffing({ enrollment, maxClassSize, sectionsY1, gra
     }
     const pctOfRevenue = totalRevenue > 0 ? (totalPersonnel / totalRevenue) * 100 : 0
     const studentTeacherRatio = (() => {
-      const teacherFte = positions.filter(p => p.category === 'certificated').reduce((s, p) => s + p.fte, 0)
+      const teacherFte = positions
+        .filter(p => p.positionType === 'teacher_elem' || p.positionType === 'teacher_ms' || p.positionType === 'teacher_hs' || /classroom teacher/i.test(p.title))
+        .reduce((s, p) => s + p.fte, 0)
       return teacherFte > 0 ? Math.round(enrollment / teacherFte) : 0
     })()
     return { totalPersonnel, totalFte, pctOfRevenue, studentTeacherRatio }
