@@ -81,8 +81,8 @@ const POSITION_DRIVER: Record<string, string> = {
   custodian: 'per_pupil',
   food_service: 'per_pupil',
   substitute_pool: 'per_pupil',
-  // Per Pupil - SPED
-  sped_teacher: 'per_pupil_sped',
+  // SPED — fixed by default (1 FTE is sufficient; user can override)
+  sped_teacher: 'fixed',
   // Per Pupil - EL
   el_specialist: 'per_pupil_el',
   // Fallback
@@ -214,7 +214,7 @@ function computeSmartFte(
   // Teacher positions: Y2-Y5 FTE = sections for that year, Y1 stays as provided
   if (isTeacherType(positionType) && sectionsPerYear[0] > 0) {
     fte[0] = y1Fte
-    for (let y = 1; y < 5; y++) {
+    for (let y = 1; y <= 4; y++) {
       const sections = sectionsPerYear[y] || sectionsPerYear[y - 1] || y1Fte
       // If user overrode Y1 relative to sections, scale proportionally
       const y1Sections = sectionsPerYear[0]
@@ -228,7 +228,7 @@ function computeSmartFte(
   }
 
   // Other per-pupil positions: scale proportionally with enrollment ratio from Y1
-  for (let y = 1; y < 5; y++) {
+  for (let y = 1; y <= 4; y++) {
     if (enrollments[y] <= 0) continue
     const ratio = enrollments[y] / enrollments[0]
     fte[y] = Math.round(y1Fte * ratio * 2) / 2

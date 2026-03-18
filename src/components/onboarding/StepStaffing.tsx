@@ -88,7 +88,7 @@ export function buildDefaultPositions(enrollment: number, maxClassSize: number, 
     salary: 62000,
     positionType: 'sped_teacher',
     classification: 'Certificated',
-    driver: 'per_pupil_sped',
+    driver: 'fixed',
   })
 
   // Classified

@@ -8,7 +8,7 @@ const SEED_POSITIONS = [
   { positionType: 'ceo_director', title: 'CEO/Executive Director', category: 'admin', classification: 'Administrative', salary: 120000, benchmarkSalary: 164800, driver: 'fixed', studentsPerPosition: 0, fixedFte: 1 },
   { positionType: 'principal', title: 'Principal/Head of School', category: 'admin', classification: 'Administrative', salary: 95000, benchmarkSalary: 123600, driver: 'fixed', studentsPerPosition: 0, fixedFte: 1 },
   { positionType: 'teacher_elem', title: 'Classroom Teacher - Elementary', category: 'certificated', classification: 'Certificated', salary: 58000, benchmarkSalary: 80340, driver: 'per_pupil', studentsPerPosition: 24, fixedFte: null },
-  { positionType: 'sped_teacher', title: 'Special Education (SPED) Teacher', category: 'certificated', classification: 'Certificated', salary: 62000, benchmarkSalary: 87550, driver: 'per_pupil_sped', studentsPerPosition: 12, fixedFte: 1 },
+  { positionType: 'sped_teacher', title: 'Special Education (SPED) Teacher', category: 'certificated', classification: 'Certificated', salary: 62000, benchmarkSalary: 87550, driver: 'fixed', studentsPerPosition: 12, fixedFte: 1 },
   { positionType: 'office_mgr', title: 'Administrative Assistant/Office Manager', category: 'classified', classification: 'Classified', salary: 52000, benchmarkSalary: 56650, driver: 'fixed', studentsPerPosition: 0, fixedFte: 1 },
   { positionType: 'paraeducator', title: 'Instructional Aides/Paraeducators', category: 'classified', classification: 'Classified', salary: 38000, benchmarkSalary: 41200, driver: 'per_pupil', studentsPerPosition: 48, fixedFte: null },
 ]
