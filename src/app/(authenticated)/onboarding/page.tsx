@@ -29,6 +29,7 @@ interface WizardData {
   enrollmentY2: number
   enrollmentY3: number
   enrollmentY4: number
+  enrollmentY5: number
   maxClassSize: number
   growthPreset: GrowthPreset
   pctFrl: number
@@ -65,6 +66,7 @@ const initialWizardData: WizardData = {
   enrollmentY2: 0,
   enrollmentY3: 0,
   enrollmentY4: 0,
+  enrollmentY5: 0,
   maxClassSize: 24,
   growthPreset: 'moderate',
   pctFrl: 50,
@@ -148,6 +150,7 @@ export default function OnboardingPage() {
           enrollmentY2: profile?.target_enrollment_y2 || prev.enrollmentY2,
           enrollmentY3: profile?.target_enrollment_y3 || prev.enrollmentY3,
           enrollmentY4: profile?.target_enrollment_y4 || prev.enrollmentY4,
+          enrollmentY5: profile?.target_enrollment_y5 || prev.enrollmentY5,
           maxClassSize: profile?.max_class_size || prev.maxClassSize,
           pctFrl: profile?.pct_frl ?? prev.pctFrl,
           pctIep: profile?.pct_iep ?? prev.pctIep,
@@ -215,7 +218,7 @@ export default function OnboardingPage() {
 
   const saveStep2 = useCallback(async (stepData: {
     enrollmentY1: number; maxClassSize: number;
-    enrollmentY2: number; enrollmentY3: number; enrollmentY4: number;
+    enrollmentY2: number; enrollmentY3: number; enrollmentY4: number; enrollmentY5: number;
     growthPreset: GrowthPreset
     enrollmentMode: EnrollmentMode
     openingGrades?: string[]
@@ -240,6 +243,7 @@ export default function OnboardingPage() {
       target_enrollment_y2: stepData.enrollmentY2,
       target_enrollment_y3: stepData.enrollmentY3,
       target_enrollment_y4: stepData.enrollmentY4,
+      target_enrollment_y5: stepData.enrollmentY5,
       max_class_size: stepData.maxClassSize,
     }
 

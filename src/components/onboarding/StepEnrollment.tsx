@@ -42,6 +42,7 @@ interface Props {
     enrollmentY2: number
     enrollmentY3: number
     enrollmentY4: number
+    enrollmentY5: number
     growthPreset: GrowthPreset
     enrollmentMode: EnrollmentMode
     openingGrades?: string[]
@@ -117,6 +118,7 @@ export default function StepEnrollment({
         enrollmentY2: arr[1],
         enrollmentY3: arr[2],
         enrollmentY4: arr[3],
+        enrollmentY5: arr[4] || 0,
         growthPreset: 'moderate',
         enrollmentMode: mode,
         openingGrades: expansionResult.openingGrades,
@@ -131,6 +133,7 @@ export default function StepEnrollment({
         enrollmentY2: expansionEnrollments.y2,
         enrollmentY3: expansionEnrollments.y3,
         enrollmentY4: expansionEnrollments.y4,
+        enrollmentY5: expansionEnrollments.y5,
         growthPreset: 'moderate',
         enrollmentMode: mode,
       })
