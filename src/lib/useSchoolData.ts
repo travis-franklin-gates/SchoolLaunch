@@ -30,7 +30,7 @@ export function useSchoolData(): SchoolData {
     target_enrollment_y3: 0,
     target_enrollment_y4: 0,
     target_enrollment_y5: 0,
-    max_class_size: 22,
+    max_class_size: 24,
     pct_frl: 0,
     pct_iep: 0,
     pct_ell: 0,

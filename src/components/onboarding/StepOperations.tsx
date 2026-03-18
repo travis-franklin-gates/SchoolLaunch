@@ -245,11 +245,14 @@ export default function StepOperations({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    // When facility estimate is checked, override to flat mode with the estimated monthly cost
+    const effectiveFacilityMode = facilityEstimate ? 'flat' as const : facilityMode
+    const effectiveFacilityMonthly = facilityEstimate ? estimatedFacilityMonthly : facilityMonthly
     const fullData: OperationsData = {
-      facilityMode,
+      facilityMode: effectiveFacilityMode,
       facilitySqft,
       facilityCostPerSqft,
-      facilityMonthly,
+      facilityMonthly: effectiveFacilityMonthly,
       suppliesPerPupil: defaultOperationsData.suppliesPerPupil,
       contractedPerPupil: defaultOperationsData.contractedPerPupil,
       technologyPerPupil: defaultOperationsData.technologyPerPupil,

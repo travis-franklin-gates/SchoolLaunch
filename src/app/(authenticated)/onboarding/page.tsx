@@ -65,7 +65,7 @@ const initialWizardData: WizardData = {
   enrollmentY2: 0,
   enrollmentY3: 0,
   enrollmentY4: 0,
-  maxClassSize: 22,
+  maxClassSize: 24,
   growthPreset: 'moderate',
   pctFrl: 50,
   pctIep: 12,

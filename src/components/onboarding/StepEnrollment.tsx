@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import { calcSections, calcCommissionRevenue } from '@/lib/calculations'
+import { calcCommissionRevenue } from '@/lib/calculations'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import type { GrowthPreset, GradeExpansionEntry, EnrollmentMode } from '@/lib/types'
 import { expansionToEnrollmentArray } from '@/lib/gradeExpansion'
 import GradeExpansionEditor from '@/components/GradeExpansionEditor'
 
 const GRADE_ENROLLMENT_DEFAULTS: Record<string, { classSize: number }> = {
-  'K-5': { classSize: 22 },
+  'K-5': { classSize: 24 },
   'K-8': { classSize: 24 },
   '6-8': { classSize: 25 },
   '9-12': { classSize: 28 },
@@ -79,18 +79,24 @@ export default function StepEnrollment({
     enrollments: { year: number; total: number; returning: number; newGrade: number; grades: string[]; newGrades: string[] }[]
   }) => {
     setExpansionResult(data)
+    // Keep maxClassSize in sync with the plan's students_per_section
+    if (data.plan.length > 0) {
+      setMaxClassSize(data.plan[0].students_per_section)
+    }
   }, [])
 
   // Derive enrollment numbers from expansion plan (source of truth)
   const expansionEnrollments = useMemo(() => {
-    if (!expansionResult) return { y1: initialData.enrollmentY1, y2: initialData.enrollmentY2, y3: initialData.enrollmentY3, y4: initialData.enrollmentY4 }
+    if (!expansionResult) return { y1: initialData.enrollmentY1, y2: initialData.enrollmentY2, y3: initialData.enrollmentY3, y4: initialData.enrollmentY4, y5: 0 }
     const find = (yr: number) => expansionResult.enrollments.find(e => e.year === yr)?.total || 0
-    return { y1: find(1), y2: find(2), y3: find(3), y4: find(4) }
+    return { y1: find(1), y2: find(2), y3: find(3), y4: find(4), y5: find(5) }
   }, [expansionResult, initialData])
 
   const effectiveY1 = expansionEnrollments.y1
 
-  const sectionsY1 = calcSections(effectiveY1, maxClassSize)
+  // Derive studentsPerSection from plan (first entry) or fall back to maxClassSize
+  const effectiveStudentsPerSection = expansionResult?.plan?.[0]?.students_per_section || maxClassSize
+  const sectionsY1 = Math.ceil(effectiveY1 / effectiveStudentsPerSection)
 
   const revenuePreview = useMemo(() => {
     const rev = calcCommissionRevenue(effectiveY1, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS)
@@ -184,12 +190,13 @@ export default function StepEnrollment({
             Enrollment targets are calculated from your Grade Expansion Plan. Switch to the Grade Expansion Plan tab to adjust which grades are added each year.
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {[
               { label: 'Year 1', value: expansionEnrollments.y1 },
               { label: 'Year 2', value: expansionEnrollments.y2 },
               { label: 'Year 3', value: expansionEnrollments.y3 },
               { label: 'Year 4', value: expansionEnrollments.y4 },
+              { label: 'Year 5', value: expansionEnrollments.y5 },
             ].map(({ label, value }) => (
               <div key={label}>
                 <label className="block text-xs text-slate-500 mb-1">{label}</label>
