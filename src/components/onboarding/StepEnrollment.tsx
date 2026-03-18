@@ -94,9 +94,10 @@ export default function StepEnrollment({
 
   const effectiveY1 = expansionEnrollments.y1
 
-  // Derive studentsPerSection from plan (first entry) or fall back to maxClassSize
-  const effectiveStudentsPerSection = expansionResult?.plan?.[0]?.students_per_section || maxClassSize
-  const sectionsY1 = Math.ceil(effectiveY1 / effectiveStudentsPerSection)
+  // Total sections for Y1 = sum of sections across all Year 1 plan entries
+  const sectionsY1 = expansionResult
+    ? expansionResult.plan.filter(e => e.year === 1).reduce((sum, e) => sum + e.sections, 0)
+    : Math.ceil(effectiveY1 / maxClassSize)
 
   const revenuePreview = useMemo(() => {
     const rev = calcCommissionRevenue(effectiveY1, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS)

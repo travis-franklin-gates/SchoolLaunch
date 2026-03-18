@@ -18,6 +18,7 @@ interface LocalPosition {
 interface Props {
   enrollment: number
   maxClassSize: number
+  sectionsY1?: number
   gradeConfig: string
   pctFrl: number
   pctIep: number
@@ -37,8 +38,8 @@ function nextKey() {
   return `pos-${++keyCounter}`
 }
 
-export function buildDefaultPositions(enrollment: number, maxClassSize: number, gradeConfig: string, pctIep: number, pctEll: number): LocalPosition[] {
-  const sections = Math.ceil(enrollment / maxClassSize)
+export function buildDefaultPositions(enrollment: number, maxClassSize: number, gradeConfig: string, pctIep: number, pctEll: number, sectionsOverride?: number): LocalPosition[] {
+  const sections = sectionsOverride ?? Math.ceil(enrollment / maxClassSize)
   const paras = Math.max(1, Math.ceil((enrollment * pctIep / 100) / 10))
   const isSecondary = gradeConfig === '6-8' || gradeConfig === '9-12'
 
@@ -116,9 +117,9 @@ export function buildDefaultPositions(enrollment: number, maxClassSize: number, 
   return positions
 }
 
-export default function StepStaffing({ enrollment, maxClassSize, gradeConfig, pctFrl, pctIep, pctEll, pctHicap, initialPositions, onNext, onBack }: Props) {
+export default function StepStaffing({ enrollment, maxClassSize, sectionsY1, gradeConfig, pctFrl, pctIep, pctEll, pctHicap, initialPositions, onNext, onBack }: Props) {
   const [positions, setPositions] = useState<LocalPosition[]>(
-    initialPositions.length > 0 ? initialPositions : buildDefaultPositions(enrollment, maxClassSize, gradeConfig, pctIep, pctEll)
+    initialPositions.length > 0 ? initialPositions : buildDefaultPositions(enrollment, maxClassSize, gradeConfig, pctIep, pctEll, sectionsY1)
   )
 
   const rev = calcCommissionRevenue(enrollment, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS)
@@ -170,7 +171,7 @@ export default function StepStaffing({ enrollment, maxClassSize, gradeConfig, pc
   }
 
   function resetDefaults() {
-    setPositions(buildDefaultPositions(enrollment, maxClassSize, gradeConfig, pctIep, pctEll))
+    setPositions(buildDefaultPositions(enrollment, maxClassSize, gradeConfig, pctIep, pctEll, sectionsY1))
   }
 
   function handleNext(e: React.FormEvent) {

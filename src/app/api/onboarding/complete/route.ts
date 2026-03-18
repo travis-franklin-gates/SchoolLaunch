@@ -62,9 +62,11 @@ export async function POST(request: Request) {
   const stateApport = rev.regularEd + rev.sped + rev.facilitiesRev
 
   // --- Calculate operations costs ---
+  console.log('[onboarding/complete] facility mode:', operations.facilityMode, 'facilityMonthly:', operations.facilityMonthly)
   const facilityCost = operations.facilityMode === 'sqft'
     ? operations.facilitySqft * operations.facilityCostPerSqft
     : operations.facilityMonthly * 12
+  console.log('[onboarding/complete] facilityCost:', facilityCost)
   const supplies = operations.suppliesPerPupil * enrollment
   const contracted = operations.contractedPerPupil * enrollment
   const technology = operations.technologyPerPupil * enrollment

@@ -348,6 +348,11 @@ export default function OnboardingPage() {
     }
   }, [schoolId, data.positions, supabase])
 
+  // Derive Y1 sections from expansion plan (sectionsPerGrade × openingGrades)
+  const sectionsY1 = data.expansionPlan.length > 0
+    ? data.expansionPlan.filter(e => e.year === 1).reduce((sum, e) => sum + e.sections, 0)
+    : Math.ceil(data.enrollmentY1 / data.maxClassSize)
+
   // Calculate total personnel cost for operations step
   const totalPersonnelCost = data.positions.reduce((sum, p) => {
     const sal = p.fte * p.salary
@@ -606,6 +611,7 @@ export default function OnboardingPage() {
         <StepStaffing
           enrollment={data.enrollmentY1}
           maxClassSize={data.maxClassSize}
+          sectionsY1={sectionsY1}
           gradeConfig={data.gradeConfig}
           pctFrl={data.pctFrl}
           pctIep={data.pctIep}
