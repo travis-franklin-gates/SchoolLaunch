@@ -49,6 +49,7 @@ export async function POST(request: Request) {
     .insert({
       school_id: school.id,
       onboarding_complete: false,
+      max_class_size: 24,
     })
 
   if (profileError) {

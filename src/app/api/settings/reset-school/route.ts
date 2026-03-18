@@ -48,6 +48,7 @@ export async function POST() {
   const { error: insertError } = await admin.from('school_profiles').insert({
     school_id: schoolId,
     onboarding_complete: false,
+    max_class_size: 24,
   })
 
   if (insertError) {
