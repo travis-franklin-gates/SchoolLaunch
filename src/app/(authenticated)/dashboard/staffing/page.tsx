@@ -661,6 +661,7 @@ export default function StaffingPage() {
                   classification={group.label as 'Administrative' | 'Certificated' | 'Classified'}
                   color={group.color}
                   positions={group.positions}
+                  benefitsRate={benefitsRate}
                   onSelectType={selectPositionType}
                   onUpdateFte={updateFte}
                   onUpdateSalary={updateSalary}
@@ -741,6 +742,7 @@ function GroupSection({
   classification,
   color,
   positions,
+  benefitsRate,
   onSelectType,
   onUpdateFte,
   onUpdateSalary,
@@ -752,6 +754,7 @@ function GroupSection({
   classification: 'Administrative' | 'Certificated' | 'Classified'
   color: { bg: string; text: string }
   positions: MultiYearPosition[]
+  benefitsRate: number
   onSelectType: (id: string, type: string) => void
   onUpdateFte: (id: string, yearIndex: number, value: number) => void
   onUpdateSalary: (id: string, value: number) => void
@@ -773,6 +776,7 @@ function GroupSection({
           key={pos.id}
           pos={pos}
           classification={classification}
+          benefitsRate={benefitsRate}
           onSelectType={onSelectType}
           onUpdateFte={onUpdateFte}
           onUpdateSalary={onUpdateSalary}
@@ -806,6 +810,7 @@ function getTypesForClassification(cls: 'Administrative' | 'Certificated' | 'Cla
 function PositionRow({
   pos,
   classification,
+  benefitsRate,
   onSelectType,
   onUpdateFte,
   onUpdateSalary,
@@ -814,6 +819,7 @@ function PositionRow({
 }: {
   pos: MultiYearPosition
   classification: 'Administrative' | 'Certificated' | 'Classified'
+  benefitsRate: number
   onSelectType: (id: string, type: string) => void
   onUpdateFte: (id: string, yearIndex: number, value: number) => void
   onUpdateSalary: (id: string, value: number) => void
@@ -827,10 +833,8 @@ function PositionRow({
   const sectionTypes = getTypesForClassification(classification)
   const isCustom = pos.positionType === 'custom'
 
-  // BM: use OSPI benchmark if available, otherwise use salary × 1.30 for custom positions
-  const bmAmount = pos.benchmarkSalary > 0
-    ? Math.round(pos.benchmarkSalary * 1.3)
-    : (isCustom && pos.salary > 0 ? Math.round(pos.salary * 1.3) : 0)
+  // Live total compensation = salary + benefits
+  const totalComp = pos.salary > 0 ? Math.round(pos.salary * (1 + benefitsRate)) : 0
 
   return (
     <tr className="border-b border-slate-100 hover:bg-slate-50/50">
@@ -870,8 +874,8 @@ function PositionRow({
           onChange={(e) => onUpdateSalary(pos.id, Number(e.target.value))}
           className="w-24 text-right border border-slate-200 rounded px-2 py-1 text-sm"
         />
-        {bmAmount > 0 && (
-          <div className="text-[9px] text-slate-400 text-right mt-0.5">BM: {fmt(bmAmount)}</div>
+        {totalComp > 0 && (
+          <div className="text-[9px] text-slate-400 text-right mt-0.5">Total comp: {fmt(totalComp)}</div>
         )}
       </td>
       {[0, 1, 2, 3, 4].map((yi) => (
