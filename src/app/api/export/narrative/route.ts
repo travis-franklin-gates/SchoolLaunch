@@ -300,7 +300,7 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
       case 'State Apportionment': return `${enrollment} students × ${fmtDollars(assumptions.per_pupil_rate)}/student`
       case 'Levy Equity': return `${Math.floor(enrollment * assumptions.aafte_pct / 100)} AAFTE × ${fmtDollars(assumptions.levy_equity_per_student)}`
       case 'Title I': return profile.pct_frl > 40 ? `${enrollment} × ${profile.pct_frl}% FRL × ${fmtDollars(assumptions.title_i_per_pupil || 880)}` : 'Not eligible (FRL < 40%)'
-      case 'IDEA': return `${enrollment} × ${profile.pct_iep}% IEP × ${fmtDollars(assumptions.idea_per_pupil || 2200)}`
+      case 'IDEA': return `${enrollment} × ${profile.pct_iep}% IEP × ${fmtDollars(assumptions.idea_per_pupil || 1500)}`
       case 'LAP': return `${enrollment} × ${profile.pct_frl}% FRL × ${fmtDollars(assumptions.lap_per_pupil || 816)}`
       case 'LAP High Poverty': return `${enrollment} × ${fmtDollars(assumptions.lap_high_poverty_per_pupil || 374)}`
       case 'TBIP': return `${enrollment} × ${profile.pct_ell}% ELL × ${fmtDollars(assumptions.tbip_per_pupil || 1600)}`

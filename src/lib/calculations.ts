@@ -55,11 +55,11 @@ export function calcTitleI(enrollment: number, pctFrl: number, rate: number = 88
   return pctFrl > 40 ? Math.round(enrollment * (pctFrl / 100) * rate) : 0
 }
 
-export function calcIDEA(enrollment: number, pctIep: number, rate: number = 2200) {
+export function calcIDEA(enrollment: number, pctIep: number, rate: number = 1500) {
   return Math.round(enrollment * (pctIep / 100) * rate)
 }
 
-export function calcLAP(enrollment: number, pctFrl: number, rate: number = 690) {
+export function calcLAP(enrollment: number, pctFrl: number, rate: number = 816) {
   return Math.round(enrollment * (pctFrl / 100) * rate)
 }
 
@@ -67,7 +67,7 @@ export function calcTBIP(enrollment: number, pctEll: number, rate: number = 1600
   return Math.round(enrollment * (pctEll / 100) * rate)
 }
 
-export function calcHiCap(enrollment: number, pctHicap: number, rate: number = 625) {
+export function calcHiCap(enrollment: number, pctHicap: number, rate: number = 730) {
   return Math.round(enrollment * (pctHicap / 100) * rate)
 }
 
