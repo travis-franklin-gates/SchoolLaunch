@@ -44,11 +44,9 @@ export default function StepDemographics({ enrollment, region, initialData, onNe
     [enrollment, pctFrl, pctIep, pctEll, pctHicap]
   )
 
-  const grants = { titleI: rev.titleI, idea: rev.idea, lap: rev.lap, tbip: rev.tbip, hicap: rev.hicap }
-  const totalGrants = grants.titleI + grants.idea + grants.lap + grants.tbip + grants.hicap
-  const baseRevenue = rev.regularEd + rev.sped + rev.facilitiesRev + rev.levyEquity
+  const demographicRevenue = rev.stateSped + rev.sped + rev.idea + rev.titleI + rev.lap + rev.lapHighPoverty + rev.tbip + rev.hicap
   const totalRevenue = rev.total
-  const grantPct = totalRevenue > 0 ? ((totalGrants / totalRevenue) * 100).toFixed(1) : '0'
+  const demoPct = totalRevenue > 0 ? ((demographicRevenue / totalRevenue) * 100).toFixed(1) : '0'
 
   function applyRegionalDefaults() {
     setPctFrl(regionDefaults.frl)
@@ -140,21 +138,30 @@ export default function StepDemographics({ enrollment, region, initialData, onNe
 
         <div>
           <div className="bg-slate-50 rounded-xl p-5 sticky top-4">
-            <h3 className="text-sm font-semibold text-slate-800 mb-4">Estimated Categorical Grant Awards</h3>
+            <h3 className="text-sm font-semibold text-slate-800 mb-4">Demographic-Driven Revenue</h3>
             <p className="text-xs text-slate-400 mb-4">Based on {enrollment} students</p>
-            <div className="space-y-3">
-              <GrantRow label="Title I" value={grants.titleI} note={pctFrl <= 40 ? '(requires >40% FRL)' : undefined} />
-              <GrantRow label="IDEA (Special Education)" value={grants.idea} />
-              <GrantRow label="LAP (Learning Assistance)" value={grants.lap} />
-              <GrantRow label="TBIP (Bilingual)" value={grants.tbip} />
-              <GrantRow label="Highly Capable" value={grants.hicap} />
+            <div className="space-y-2">
+              {/* Special Education group */}
+              <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide pt-1">Special Education</div>
+              <GrantRow label="State Special Education" value={rev.stateSped} />
+              <GrantRow label="SPED Apportionment" value={rev.sped} />
+              <GrantRow label="IDEA (Federal)" value={rev.idea} />
+
+              {/* Other Categorical group */}
+              <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide pt-2">Other Categorical</div>
+              <GrantRow label="Title I" value={rev.titleI} note={pctFrl <= 40 ? '(requires >40% FRL)' : undefined} />
+              <GrantRow label="LAP" value={rev.lap} />
+              <GrantRow label="LAP High Poverty" value={rev.lapHighPoverty} />
+              <GrantRow label="TBIP (Bilingual)" value={rev.tbip} />
+              <GrantRow label="Highly Capable" value={rev.hicap} />
+
               <div className="border-t border-slate-200 pt-3 mt-3">
                 <div className="flex justify-between font-semibold text-slate-800">
-                  <span>Total Estimated Grants</span>
-                  <span>{fmt(totalGrants)}</span>
+                  <span>Total Demographic Revenue</span>
+                  <span>{fmt(demographicRevenue)}</span>
                 </div>
                 <p className="text-xs text-slate-400 mt-1">
-                  Grants = {grantPct}% of total revenue
+                  {demoPct}% of total estimated revenue
                 </p>
               </div>
             </div>
