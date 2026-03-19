@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import type { GradeExpansionEntry } from '@/lib/types'
 import {
+  ALL_GRADES,
   gradesForConfig,
   defaultOpeningGrades,
   sortGrades,
@@ -37,6 +38,16 @@ export default function GradeExpansionEditor({
   onChange,
 }: Props) {
   const configGrades = gradesForConfig(gradeConfig)
+
+  // Available grades = union of config range + any grades already selected as buildout
+  // This ensures grades selected in Step 1 (e.g., Grade 6 beyond K-5 config) are visible
+  const availableGrades = sortGrades(
+    ALL_GRADES.filter((g) =>
+      configGrades.includes(g) ||
+      (initialBuildoutGrades && initialBuildoutGrades.includes(g)) ||
+      (initialOpeningGrades && initialOpeningGrades.includes(g))
+    )
+  )
 
   const [openingGrades, setOpeningGrades] = useState<string[]>(
     initialOpeningGrades && initialOpeningGrades.length > 0
@@ -193,7 +204,7 @@ export default function GradeExpansionEditor({
         </label>
         <p className="text-xs text-slate-400 mb-2">Which grade levels will you serve in your first year?</p>
         <div className="flex flex-wrap gap-1.5">
-          {configGrades.map((g) => (
+          {availableGrades.map((g) => (
             <button
               key={g}
               type="button"
@@ -217,7 +228,7 @@ export default function GradeExpansionEditor({
         </label>
         <p className="text-xs text-slate-400 mb-2">Which grade levels will you serve when fully grown?</p>
         <div className="flex flex-wrap gap-1.5">
-          {configGrades.map((g) => (
+          {availableGrades.map((g) => (
             <button
               key={g}
               type="button"
