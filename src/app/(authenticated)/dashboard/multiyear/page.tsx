@@ -227,11 +227,13 @@ export default function MultiYearPage() {
             <SectionHeader label="Revenue" cols={5} />
             <Row label="Regular Ed Apportionment" values={yearsWithStartup.map((y) => y.revenue.regularEd)} />
             <Row label="SPED Apportionment" values={yearsWithStartup.map((y) => y.revenue.sped)} />
+            <Row label="State Special Education" values={yearsWithStartup.map((y) => y.revenue.stateSped)} />
             <Row label="Facilities Revenue" values={yearsWithStartup.map((y) => y.revenue.facilitiesRev)} />
             <Row label="Levy Equity" values={yearsWithStartup.map((y) => y.revenue.levyEquity)} />
             <Row label="Title I" values={yearsWithStartup.map((y) => y.revenue.titleI)} />
-            <Row label="IDEA" values={yearsWithStartup.map((y) => y.revenue.idea)} />
+            <Row label="IDEA (Federal Special Ed)" values={yearsWithStartup.map((y) => y.revenue.idea)} />
             <Row label="LAP" values={yearsWithStartup.map((y) => y.revenue.lap)} />
+            <Row label="LAP High Poverty" values={yearsWithStartup.map((y) => y.revenue.lapHighPoverty)} />
             <Row label="TBIP" values={yearsWithStartup.map((y) => y.revenue.tbip)} />
             <Row label="HiCap" values={yearsWithStartup.map((y) => y.revenue.hicap)} />
             <Row label="Interest & Other Income" values={yearsWithStartup.map((y) => y.revenue.interestIncome)} />
