@@ -66,6 +66,16 @@ export default function GradeExpansionEditor({
     initialPlan && initialPlan.length > 0 ? (initialPlan[0].students_per_section || maxClassSize) : maxClassSize
   )
 
+  // Consistent class size toggle — when checked, all grades use the same students/section
+  const [consistentClassSize, setConsistentClassSize] = useState(() => {
+    if (!initialPlan || initialPlan.length === 0) return true
+    const values = new Set(initialPlan.map((e) => e.students_per_section))
+    return values.size <= 1 // consistent if all rows have the same value
+  })
+  const [consistentValue, setConsistentValue] = useState(
+    initialPlan && initialPlan.length > 0 ? (initialPlan[0].students_per_section || maxClassSize) : maxClassSize
+  )
+
   // Per-year new grade assignments (editable by user)
   const [yearNewGrades, setYearNewGrades] = useState<Map<number, string[]>>(() => {
     if (initialPlan && initialPlan.length > 0) {
@@ -174,6 +184,25 @@ export default function GradeExpansionEditor({
     })
   }
 
+  function applyConsistentClassSize(value: number) {
+    setConsistentValue(value)
+    setDefaultStudentsPerSection(value)
+    // Push to all existing plan overrides
+    setPlanOverrides((prev) => {
+      const next = new Map(prev)
+      for (const entry of plan) {
+        const key = `${entry.year}-${entry.grade_level}`
+        const existing = next.get(key)
+        if (existing) {
+          next.set(key, { ...existing, students_per_section: value })
+        } else {
+          next.set(key, { sections: entry.sections, students_per_section: value })
+        }
+      }
+      return next
+    })
+  }
+
   function updatePlanEntry(year: number, grade: string, field: 'sections' | 'students_per_section', value: number) {
     setPlanOverrides((prev) => {
       const next = new Map(prev)
@@ -252,6 +281,35 @@ export default function GradeExpansionEditor({
         <div>
           <h3 className="text-sm font-semibold text-slate-700 mb-1">Year 1 Grade Configuration</h3>
           <p className="text-xs text-slate-400 mb-3">Set sections and class size for each founding grade.</p>
+
+          {/* Consistent class size toggle */}
+          <div className="flex items-center gap-3 mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={consistentClassSize}
+                onChange={(e) => {
+                  const checked = e.target.checked
+                  setConsistentClassSize(checked)
+                  if (checked) {
+                    applyConsistentClassSize(consistentValue)
+                  }
+                }}
+                className="w-4 h-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+              />
+              Use consistent class size across all grades
+            </label>
+            {consistentClassSize && (
+              <input
+                type="number"
+                min={10}
+                max={35}
+                value={consistentValue}
+                onChange={(e) => applyConsistentClassSize(Number(e.target.value))}
+                className="w-16 text-center border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              />
+            )}
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -286,7 +344,11 @@ export default function GradeExpansionEditor({
                         max={35}
                         value={entry.students_per_section}
                         onChange={(e) => updatePlanEntry(1, entry.grade_level, 'students_per_section', Number(e.target.value))}
-                        className="w-16 text-center border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        readOnly={consistentClassSize}
+                        tabIndex={consistentClassSize ? -1 : undefined}
+                        className={`w-16 text-center border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
+                          consistentClassSize ? 'bg-slate-100 text-slate-500 cursor-default' : ''
+                        }`}
                       />
                     </td>
                     <td className="px-3 py-2.5 text-right font-semibold text-slate-800">
@@ -395,7 +457,11 @@ export default function GradeExpansionEditor({
                             max={35}
                             value={entry.students_per_section}
                             onChange={(e) => updatePlanEntry(year, entry.grade_level, 'students_per_section', Number(e.target.value))}
-                            className="w-14 text-center border border-slate-200 rounded px-1.5 py-1 text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                            readOnly={consistentClassSize}
+                            tabIndex={consistentClassSize ? -1 : undefined}
+                            className={`w-14 text-center border border-slate-200 rounded px-1.5 py-1 text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
+                              consistentClassSize ? 'bg-slate-100 text-slate-500 cursor-default' : ''
+                            }`}
                           />
                         </td>
                         <td className="px-3 py-2 text-right text-slate-700 font-medium">
