@@ -117,7 +117,7 @@ export default function StepDemographics({ enrollment, region, initialData, onNe
             value={pctIep}
             onChange={setPctIep}
             min={0}
-            max={30}
+            max={100}
             regional={regionDefaults.iep}
           />
           <SliderField
@@ -125,7 +125,7 @@ export default function StepDemographics({ enrollment, region, initialData, onNe
             value={pctEll}
             onChange={setPctEll}
             min={0}
-            max={40}
+            max={60}
             regional={regionDefaults.ell}
           />
           <SliderField
