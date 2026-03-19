@@ -23,13 +23,19 @@ export interface FinancialAssumptions {
   regular_ed_per_pupil: number
   sped_per_pupil: number
   facilities_per_pupil: number
+  lap_per_pupil: number
+  tbip_per_pupil: number
+  hicap_per_pupil: number
+  title_i_per_pupil: number
+  idea_per_pupil: number
   revenue_cola_pct: number
   aafte_pct: number
   interest_rate_on_cash: number
+  regionalization_factor: number
 }
 
 export const DEFAULT_ASSUMPTIONS: FinancialAssumptions = {
-  per_pupil_rate: 12000, // Now defaults to regular_ed rate (legacy field)
+  per_pupil_rate: 11000, // Now defaults to regular_ed rate (legacy field)
   levy_equity_per_student: 0,
   benefits_load_pct: 30,
   authorizer_fee_pct: 3,
@@ -49,12 +55,18 @@ export const DEFAULT_ASSUMPTIONS: FinancialAssumptions = {
   food_service_offered: false,
   transportation_offered: false,
   // Commission-aligned
-  regular_ed_per_pupil: 12000,
-  sped_per_pupil: 4500,
+  regular_ed_per_pupil: 11000,
+  sped_per_pupil: 10900,
   facilities_per_pupil: 0,
+  lap_per_pupil: 690,
+  tbip_per_pupil: 1600,
+  hicap_per_pupil: 625,
+  title_i_per_pupil: 880,
+  idea_per_pupil: 2200,
   revenue_cola_pct: 3,
   aafte_pct: 95,
   interest_rate_on_cash: 3,
+  regionalization_factor: 1.0,
 }
 
 export function getAssumptions(raw: Partial<FinancialAssumptions> | null | undefined): FinancialAssumptions {
@@ -62,13 +74,24 @@ export function getAssumptions(raw: Partial<FinancialAssumptions> | null | undef
   const merged = { ...DEFAULT_ASSUMPTIONS, ...raw }
   // Migrate old per_pupil_rate: if regular_ed_per_pupil wasn't set but old per_pupil_rate was high
   if (!raw.regular_ed_per_pupil && raw.per_pupil_rate && raw.per_pupil_rate > 13000) {
-    merged.regular_ed_per_pupil = 12000
-    merged.sped_per_pupil = 4500
+    merged.regular_ed_per_pupil = 11000
+    merged.sped_per_pupil = 10900
+  }
+  // Migrate old sped_per_pupil from 4500 to new validated rate
+  if (raw.sped_per_pupil === 4500) {
+    merged.sped_per_pupil = 10900
   }
   // Migrate old levy_equity_per_student: legislature has not reinstated, default is $0
   if (raw.levy_equity_per_student === 1500) {
     merged.levy_equity_per_student = 0
   }
+  // Ensure new fields have defaults for existing schools
+  if (!raw.regionalization_factor) merged.regionalization_factor = 1.0
+  if (!raw.lap_per_pupil) merged.lap_per_pupil = 690
+  if (!raw.tbip_per_pupil) merged.tbip_per_pupil = 1600
+  if (!raw.hicap_per_pupil) merged.hicap_per_pupil = 625
+  if (!raw.title_i_per_pupil) merged.title_i_per_pupil = 880
+  if (!raw.idea_per_pupil) merged.idea_per_pupil = 2200
   // Keep per_pupil_rate in sync for legacy code paths
   merged.per_pupil_rate = merged.regular_ed_per_pupil
   return merged

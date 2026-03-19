@@ -7,13 +7,14 @@ import { createClient } from '@/lib/supabase/client'
 import { calcTitleI, calcIDEA, calcLAP, calcTBIP, calcHiCap } from '@/lib/calculations'
 import type { FinancialAssumptions, GradeExpansionEntry } from '@/lib/types'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
+import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
 import GradeExpansionEditor from '@/components/GradeExpansionEditor'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 }
 
-const REGIONS = ['Puget Sound', 'Eastern WA', 'Southwest WA', 'Olympic Peninsula', 'Central WA']
+const COUNTY_KEYS = Object.keys(REGIONALIZATION_FACTORS)
 const GRADE_CONFIGS = ['K-5', 'K-8', '6-8', '6-12', '9-12', 'K-12']
 
 export default function SettingsPage() {
@@ -82,13 +83,14 @@ export default function SettingsPage() {
     setInitialized(true)
   }
 
+  const regionFactor = fa.regionalization_factor || 1.0
   const grantPreview = useMemo(() => ({
-    titleI: calcTitleI(enrollY1, pctFrl),
-    idea: calcIDEA(enrollY1, pctIep),
-    lap: calcLAP(enrollY1, pctFrl),
-    tbip: calcTBIP(enrollY1, pctEll),
-    hicap: calcHiCap(enrollY1, pctHicap),
-  }), [enrollY1, pctFrl, pctIep, pctEll, pctHicap])
+    titleI: calcTitleI(enrollY1, pctFrl, fa.title_i_per_pupil),
+    idea: calcIDEA(enrollY1, pctIep, fa.idea_per_pupil),
+    lap: calcLAP(enrollY1, pctFrl, Math.round(fa.lap_per_pupil * regionFactor)),
+    tbip: calcTBIP(enrollY1, pctEll, Math.round(fa.tbip_per_pupil * regionFactor)),
+    hicap: calcHiCap(enrollY1, pctHicap, Math.round(fa.hicap_per_pupil * regionFactor)),
+  }), [enrollY1, pctFrl, pctIep, pctEll, pctHicap, fa, regionFactor])
 
   const totalGrants = grantPreview.titleI + grantPreview.idea + grantPreview.lap + grantPreview.tbip + grantPreview.hicap
 
@@ -183,14 +185,18 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">WA Region</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">WA County / Region</label>
             <select
               value={region}
-              onChange={(e) => setRegion(e.target.value)}
+              onChange={(e) => {
+                setRegion(e.target.value)
+                const factor = REGIONALIZATION_FACTORS[e.target.value]?.factor ?? 1.0
+                updateFa('regionalization_factor', factor)
+              }}
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             >
-              <option value="">Select region...</option>
-              {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+              <option value="">Select county...</option>
+              {COUNTY_KEYS.map((key) => <option key={key} value={key}>{REGIONALIZATION_FACTORS[key].label}</option>)}
             </select>
           </div>
           <div>
@@ -384,6 +390,16 @@ export default function SettingsPage() {
               onChange={(e) => updateFa('aafte_pct', Number(e.target.value))}
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
             <p className="text-[10px] text-slate-400 mt-0.5">Typical: 95%. State revenue uses AAFTE, not headcount.</p>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Regionalization Factor</label>
+            <input type="number" step={0.001} min={1.0} max={1.3} value={fa.regionalization_factor}
+              onChange={(e) => updateFa('regionalization_factor', Number(e.target.value))}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              Set automatically from your county but can be overridden if you know your district&apos;s exact factor.
+              Multiplies state per-pupil rates (Regular Ed, SPED, LAP, TBIP, HiCap).
+            </p>
           </div>
         </div>
       </div>

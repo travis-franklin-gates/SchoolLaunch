@@ -85,9 +85,12 @@ ${expansionLines}
 - Growth Y2→Y3: ${profile.target_enrollment_y2 > 0 ? (((profile.target_enrollment_y3 - profile.target_enrollment_y2) / profile.target_enrollment_y2) * 100).toFixed(0) : 0}%`
   }
 
+  const regionFactor = assumptions.regionalization_factor || 1.0
+
   return `School: ${schoolName}
 Grade configuration: ${profile.grade_config}
 Region: ${profile.region}
+Regionalization factor: ${regionFactor}${regionFactor !== 1.0 ? ` (multiplies state per-pupil rates: Regular Ed, SPED, LAP, TBIP, HiCap)` : ''}
 Planned opening year: ${profile.planned_open_year}
 Max class size: ${profile.max_class_size}
 

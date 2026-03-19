@@ -111,6 +111,7 @@ export default function RevenuePage() {
   const baseEnrollment = profile.target_enrollment_y1
   const scenarioEnrollment = scenarioInputs.enrollment
   const aaftePct = assumptions.aafte_pct
+  const regionFactor = assumptions.regionalization_factor || 1.0
   const baseAAFTE = calcAAFTE(baseEnrollment, aaftePct)
   const scenarioAAFTE = calcAAFTE(scenarioEnrollment, aaftePct)
 
@@ -130,12 +131,19 @@ export default function RevenuePage() {
     }))
   }, [fundingSources, overrides])
 
+  // Helper: show "base × factor = regionalized" when factor > 1
+  function rateStr(base: number, regionalized: boolean = true): string {
+    if (!regionalized || regionFactor === 1.0) return `$${base.toLocaleString()}`
+    const effective = Math.round(base * regionFactor)
+    return `$${base.toLocaleString()} × ${regionFactor} = $${effective.toLocaleString()}`
+  }
+
   const rows: RevenueRow[] = useMemo(() => [
     // State & Local
     {
       label: 'Regular Ed Apportionment',
       group: 'State & Local',
-      formula: `${baseAAFTE} AAFTE × $${assumptions.regular_ed_per_pupil.toLocaleString()}`,
+      formula: `${baseAAFTE} AAFTE × ${rateStr(assumptions.regular_ed_per_pupil)}`,
       calculated: baseRev.regularEd,
       scenarioCalc: scenarioRev.regularEd,
       override: overrides['Regular Ed Apportionment'] ?? null,
@@ -143,7 +151,7 @@ export default function RevenuePage() {
     {
       label: 'SPED Apportionment',
       group: 'State & Local',
-      formula: `${baseAAFTE} × ${profile.pct_iep}% IEP × $${assumptions.sped_per_pupil.toLocaleString()}`,
+      formula: `${baseAAFTE} × ${profile.pct_iep}% IEP × ${rateStr(assumptions.sped_per_pupil)}`,
       calculated: baseRev.sped,
       scenarioCalc: scenarioRev.sped,
       override: overrides['SPED Apportionment'] ?? null,
@@ -165,12 +173,12 @@ export default function RevenuePage() {
       scenarioCalc: scenarioRev.facilitiesRev,
       override: overrides['Facilities Revenue'] ?? null,
     },
-    // Federal
+    // Federal (not regionalized)
     {
       label: 'Title I',
       group: 'Federal',
       formula: profile.pct_frl > 40
-        ? `${baseEnrollment} × ${profile.pct_frl}% FRL × $880`
+        ? `${baseEnrollment} × ${profile.pct_frl}% FRL × $${(assumptions.title_i_per_pupil || 880).toLocaleString()}`
         : 'FRL must exceed 40% to qualify',
       calculated: baseRev.titleI,
       scenarioCalc: scenarioRev.titleI,
@@ -179,16 +187,16 @@ export default function RevenuePage() {
     {
       label: 'IDEA (Special Education)',
       group: 'Federal',
-      formula: `${baseEnrollment} × ${profile.pct_iep}% IEP × $2,200`,
+      formula: `${baseEnrollment} × ${profile.pct_iep}% IEP × $${(assumptions.idea_per_pupil || 2200).toLocaleString()}`,
       calculated: baseRev.idea,
       scenarioCalc: scenarioRev.idea,
       override: overrides['IDEA'] ?? null,
     },
-    // State Categorical
+    // State Categorical (regionalized)
     {
       label: 'LAP (Learning Assistance)',
       group: 'State Categorical',
-      formula: `${baseEnrollment} × ${profile.pct_frl}% FRL × $400`,
+      formula: `${baseEnrollment} × ${profile.pct_frl}% FRL × ${rateStr(assumptions.lap_per_pupil || 690)}`,
       calculated: baseRev.lap,
       scenarioCalc: scenarioRev.lap,
       override: overrides['LAP'] ?? null,
@@ -196,7 +204,7 @@ export default function RevenuePage() {
     {
       label: 'TBIP (Bilingual)',
       group: 'State Categorical',
-      formula: `${baseEnrollment} × ${profile.pct_ell}% ELL × $1,800`,
+      formula: `${baseEnrollment} × ${profile.pct_ell}% ELL × ${rateStr(assumptions.tbip_per_pupil || 1600)}`,
       calculated: baseRev.tbip,
       scenarioCalc: scenarioRev.tbip,
       override: overrides['TBIP'] ?? null,
@@ -204,12 +212,12 @@ export default function RevenuePage() {
     {
       label: 'Highly Capable',
       group: 'State Categorical',
-      formula: `${baseEnrollment} × ${profile.pct_hicap}% HiCap × $500`,
+      formula: `${baseEnrollment} × ${profile.pct_hicap}% HiCap × ${rateStr(assumptions.hicap_per_pupil || 625)}`,
       calculated: baseRev.hicap,
       scenarioCalc: scenarioRev.hicap,
       override: overrides['HiCap'] ?? null,
     },
-  ], [baseEnrollment, scenarioEnrollment, baseAAFTE, profile, overrides, assumptions, baseRev, scenarioRev])
+  ], [baseEnrollment, scenarioEnrollment, baseAAFTE, profile, overrides, assumptions, baseRev, scenarioRev, regionFactor]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Operating revenue = all recurring state/local + federal + state categorical
   const operatingBase = rows.reduce((sum, r) => sum + (r.override ?? r.calculated), 0)
@@ -237,6 +245,7 @@ export default function RevenuePage() {
       <p className="text-sm text-slate-500 mb-2">Commission-aligned revenue breakdown for Year 1. Override any line by entering a custom amount.</p>
       <div className="text-xs text-slate-400 mb-6">
         Headcount: <strong className="text-slate-600">{baseEnrollment} students</strong> | AAFTE: <strong className="text-slate-600">{baseAAFTE} students ({aaftePct}%)</strong>
+        {regionFactor !== 1.0 && <> | Regionalization: <strong className="text-slate-600">{regionFactor}×</strong></>}
         <span className="ml-2 italic">State apportionment uses AAFTE. Federal programs use headcount.</span>
       </div>
 

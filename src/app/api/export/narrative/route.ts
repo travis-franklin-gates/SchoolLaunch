@@ -72,9 +72,15 @@ interface NarrativePayload {
     regular_ed_per_pupil: number
     sped_per_pupil: number
     facilities_per_pupil: number
+    lap_per_pupil: number
+    tbip_per_pupil: number
+    hicap_per_pupil: number
+    title_i_per_pupil: number
+    idea_per_pupil: number
     revenue_cola_pct: number
     aafte_pct: number
     interest_rate_on_cash: number
+    regionalization_factor: number
   }
   positions: Position[]
   projections: Projection[]
@@ -272,19 +278,25 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
      <text x="${50 + (i + 1) * xStep}" y="${yScale(y.reserveDays) - 12}" text-anchor="middle" font-size="11" font-weight="600" fill="${color}">${y.reserveDays}d</text>`
   }).join('\n')
 
-  // Revenue formula strings
+  // Revenue formula strings — show regionalized rates
+  const regionFactor = assumptions.regionalization_factor || 1.0
+  function rateWithRegion(base: number, regionalized: boolean = true): string {
+    if (!regionalized || regionFactor === 1.0) return fmtDollars(base)
+    return `${fmtDollars(base)} × ${regionFactor} = ${fmtDollars(Math.round(base * regionFactor))}`
+  }
+
   function revenueFormula(sub: string): string {
     switch (sub) {
-      case 'Regular Ed Apportionment': return `${Math.floor(enrollment * assumptions.aafte_pct / 100)} AAFTE × ${fmtDollars(assumptions.regular_ed_per_pupil)}`
-      case 'SPED Apportionment': return `${Math.floor(enrollment * assumptions.aafte_pct / 100)} AAFTE × ${profile.pct_iep}% IEP × ${fmtDollars(assumptions.sped_per_pupil)}`
+      case 'Regular Ed Apportionment': return `${Math.floor(enrollment * assumptions.aafte_pct / 100)} AAFTE × ${rateWithRegion(assumptions.regular_ed_per_pupil)}`
+      case 'SPED Apportionment': return `${Math.floor(enrollment * assumptions.aafte_pct / 100)} AAFTE × ${profile.pct_iep}% IEP × ${rateWithRegion(assumptions.sped_per_pupil)}`
       case 'Facilities Revenue': return `${Math.floor(enrollment * assumptions.aafte_pct / 100)} AAFTE × ${fmtDollars(assumptions.facilities_per_pupil)}`
       case 'State Apportionment': return `${enrollment} students × ${fmtDollars(assumptions.per_pupil_rate)}/student`
       case 'Levy Equity': return `${Math.floor(enrollment * assumptions.aafte_pct / 100)} AAFTE × ${fmtDollars(assumptions.levy_equity_per_student)}`
-      case 'Title I': return profile.pct_frl > 40 ? `${enrollment} × ${profile.pct_frl}% FRL × $880` : 'Not eligible (FRL < 40%)'
-      case 'IDEA': return `${enrollment} × ${profile.pct_iep}% IEP × $2,200`
-      case 'LAP': return `${enrollment} × ${profile.pct_frl}% FRL × $400`
-      case 'TBIP': return `${enrollment} × ${profile.pct_ell}% ELL × $1,800`
-      case 'HiCap': return `${enrollment} × ${profile.pct_hicap}% HiCap × $500`
+      case 'Title I': return profile.pct_frl > 40 ? `${enrollment} × ${profile.pct_frl}% FRL × ${fmtDollars(assumptions.title_i_per_pupil || 880)}` : 'Not eligible (FRL < 40%)'
+      case 'IDEA': return `${enrollment} × ${profile.pct_iep}% IEP × ${fmtDollars(assumptions.idea_per_pupil || 2200)}`
+      case 'LAP': return `${enrollment} × ${profile.pct_frl}% FRL × ${rateWithRegion(assumptions.lap_per_pupil || 690)}`
+      case 'TBIP': return `${enrollment} × ${profile.pct_ell}% ELL × ${rateWithRegion(assumptions.tbip_per_pupil || 1600)}`
+      case 'HiCap': return `${enrollment} × ${profile.pct_hicap}% HiCap × ${rateWithRegion(assumptions.hicap_per_pupil || 625)}`
       default: return ''
     }
   }
@@ -526,6 +538,7 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
   <div style="margin-top:8px;">${barLegend}</div>
 </div>
 
+${regionFactor !== 1.0 ? `<div class="callout" style="margin-bottom:12px;">Per-pupil rates are adjusted by a regionalization factor of <strong>${regionFactor}</strong> (${profile.region}) reflecting the state&rsquo;s location-based funding adjustment per LEAP Document C3.</div>` : ''}
 ${profile.pct_frl > 40 ? `<div class="callout">Title I Schoolwide program eligible &mdash; FRL rate of ${profile.pct_frl}% exceeds the 40% federal threshold.</div>` : `<div class="callout caution">Title I Schoolwide program not eligible &mdash; FRL rate of ${profile.pct_frl}% is below the 40% federal threshold.</div>`}
 
 <div class="page-footer">SchoolLaunch Financial Plan &bull; ${schoolName} &bull; Generated ${dateStr}</div>

@@ -2,15 +2,9 @@
 
 import { useState, useMemo } from 'react'
 import { ALL_GRADES, sortGrades, gradeIndex, deriveGradeConfig } from '@/lib/gradeExpansion'
+import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
 
-const REGIONS = [
-  'King County',
-  'Pierce County',
-  'Snohomish County',
-  'Spokane County',
-  'Clark County',
-  'Other',
-]
+const COUNTY_KEYS = Object.keys(REGIONALIZATION_FACTORS)
 
 const currentYear = new Date().getFullYear()
 const YEARS = Array.from({ length: 4 }, (_, i) => currentYear + i)
@@ -30,12 +24,17 @@ interface Props {
     foundingGrades: string[]
     buildoutGrades: string[]
     gradeConfig: string
+    regionalizationFactor: number
   }) => void
 }
 
 export default function StepIdentity({ initialData, onNext }: Props) {
   const [schoolName, setSchoolName] = useState(initialData.schoolName)
-  const [region, setRegion] = useState(initialData.region || REGIONS[0])
+  // Map old region labels to county keys for backward compat
+  const initialCountyKey = COUNTY_KEYS.includes(initialData.region)
+    ? initialData.region
+    : COUNTY_KEYS.find((k) => REGIONALIZATION_FACTORS[k].label === initialData.region) || 'king_county'
+  const [region, setRegion] = useState(initialCountyKey)
   const [plannedOpenYear, setPlannedOpenYear] = useState(initialData.plannedOpenYear || YEARS[0])
   const [foundingGrades, setFoundingGrades] = useState<string[]>(
     initialData.foundingGrades.length > 0 ? initialData.foundingGrades : []
@@ -103,6 +102,7 @@ export default function StepIdentity({ initialData, onNext }: Props) {
       foundingGrades,
       buildoutGrades,
       gradeConfig: deriveGradeConfig(buildoutGrades),
+      regionalizationFactor: REGIONALIZATION_FACTORS[region]?.factor ?? 1.0,
     })
   }
 
@@ -127,17 +127,19 @@ export default function StepIdentity({ initialData, onNext }: Props) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">WA Region</label>
+        <label className="block text-sm font-medium text-slate-700 mb-1">WA County / Region</label>
         <select
           value={region}
           onChange={(e) => setRegion(e.target.value)}
           className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 bg-white"
         >
-          {REGIONS.map((r) => (
-            <option key={r} value={r}>{r}</option>
+          {COUNTY_KEYS.map((key) => (
+            <option key={key} value={key}>{REGIONALIZATION_FACTORS[key].label}</option>
           ))}
         </select>
-        <p className="text-xs text-slate-400 mt-1">Region affects facility costs and demographic benchmarks</p>
+        <p className="text-xs text-slate-400 mt-1">
+          County sets the regionalization factor ({REGIONALIZATION_FACTORS[region]?.factor.toFixed(3) ?? '1.000'}×) which adjusts state funding rates based on your school&apos;s location.
+        </p>
       </div>
 
       <div>

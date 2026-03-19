@@ -189,7 +189,8 @@ export default function OnboardingPage() {
 
   const saveStep1 = useCallback(async (stepData: {
     schoolName: string; region: string; plannedOpenYear: number;
-    foundingGrades: string[]; buildoutGrades: string[]; gradeConfig: string
+    foundingGrades: string[]; buildoutGrades: string[]; gradeConfig: string;
+    regionalizationFactor: number
   }) => {
     if (!schoolId) return
     setData((prev) => ({
@@ -204,6 +205,16 @@ export default function OnboardingPage() {
 
     await supabase.from('schools').update({ name: stepData.schoolName }).eq('id', schoolId)
 
+    // Read existing financial_assumptions to merge regionalization_factor
+    const { data: existingProfile } = await supabase
+      .from('school_profiles')
+      .select('financial_assumptions')
+      .eq('school_id', schoolId)
+      .single()
+
+    const existingFa = existingProfile?.financial_assumptions || {}
+    const updatedFa = { ...existingFa, regionalization_factor: stepData.regionalizationFactor }
+
     await supabase.from('school_profiles').upsert({
       school_id: schoolId,
       region: stepData.region,
@@ -211,6 +222,7 @@ export default function OnboardingPage() {
       grade_config: stepData.gradeConfig,
       opening_grades: stepData.foundingGrades,
       buildout_grades: stepData.buildoutGrades,
+      financial_assumptions: updatedFa,
     }, { onConflict: 'school_id' })
 
     setStep(1)
