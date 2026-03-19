@@ -73,13 +73,13 @@ export function calcHiCap(enrollment: number, pctHicap: number, rate: number = 6
 
 export function calcAllGrants(enrollment: number, pctFrl: number, pctIep: number, pctEll: number, pctHicap: number, assumptions?: FinancialAssumptions) {
   const a = assumptions || DEFAULT_ASSUMPTIONS
-  const regionFactor = a.regionalization_factor || 1.0
   return {
     titleI: calcTitleI(enrollment, pctFrl, a.title_i_per_pupil),
     idea: calcIDEA(enrollment, pctIep, a.idea_per_pupil),
-    lap: calcLAP(enrollment, pctFrl, Math.round(a.lap_per_pupil * regionFactor)),
-    tbip: calcTBIP(enrollment, pctEll, Math.round(a.tbip_per_pupil * regionFactor)),
-    hicap: calcHiCap(enrollment, pctHicap, Math.round(a.hicap_per_pupil * regionFactor)),
+    lap: calcLAP(enrollment, pctFrl, a.lap_per_pupil),
+    lapHighPoverty: Math.round(enrollment * (a.lap_high_poverty_per_pupil || 374)),
+    tbip: calcTBIP(enrollment, pctEll, a.tbip_per_pupil),
+    hicap: calcHiCap(enrollment, pctHicap, a.hicap_per_pupil),
   }
 }
 
@@ -88,11 +88,13 @@ export function calcAllGrants(enrollment: number, pctFrl: number, pctIep: number
 export interface CommissionRevenue {
   regularEd: number
   sped: number
+  stateSped: number
   facilitiesRev: number
   levyEquity: number
   titleI: number
   idea: number
   lap: number
+  lapHighPoverty: number
   tbip: number
   hicap: number
   total: number
@@ -112,38 +114,43 @@ export function calcCommissionRevenue(
   const colaMult = Math.pow(1 + assumptions.revenue_cola_pct / 100, colaYear - 1)
   const regionFactor = assumptions.regionalization_factor || 1.0
 
-  // State rates: base × regionalization × COLA
+  // State apportionment rates: base × regionalization × COLA
   const regRate = Math.round(assumptions.regular_ed_per_pupil * regionFactor * colaMult)
   const spedRate = Math.round(assumptions.sped_per_pupil * regionFactor * colaMult)
-  const facRate = Math.round(assumptions.facilities_per_pupil * colaMult) // facilities not regionalized
-  const levyRate = Math.round(assumptions.levy_equity_per_student * colaMult) // levy not regionalized
+  const stateSpedRate = Math.round((assumptions.state_sped_per_pupil || 13556) * regionFactor * colaMult)
+  const facRate = Math.round(assumptions.facilities_per_pupil * colaMult) // not regionalized
+  const levyRate = Math.round(assumptions.levy_equity_per_student * colaMult) // not regionalized
   const aaftePct = assumptions.aafte_pct
 
   const aafte = calcAAFTE(headcount, aaftePct)
+  const spedStudents = Math.round(headcount * (pctIep / 100))
 
   // State & Local (AAFTE-based)
   const regularEd = aafte * regRate
   const sped = Math.round(aafte * (pctIep / 100) * spedRate)
+  const stateSped = spedStudents * stateSpedRate
   const facilitiesRev = aafte * facRate
   const levyEquity = aafte * levyRate
 
-  // State categorical (headcount-based) — regionalized + COLA
-  const lapRate = Math.round((assumptions.lap_per_pupil || 690) * regionFactor * colaMult)
-  const tbipRate = Math.round((assumptions.tbip_per_pupil || 1600) * regionFactor * colaMult)
-  const hicapRate = Math.round((assumptions.hicap_per_pupil || 625) * regionFactor * colaMult)
+  // State categorical (headcount-based) — NOT regionalized per Spectrum validation, COLA only
+  const lapRate = Math.round((assumptions.lap_per_pupil || 816) * colaMult)
+  const lapHighPovertyRate = Math.round((assumptions.lap_high_poverty_per_pupil || 374) * colaMult)
+  const tbipRate = Math.round((assumptions.tbip_per_pupil || 1600) * colaMult)
+  const hicapRate = Math.round((assumptions.hicap_per_pupil || 730) * colaMult)
   const lap = Math.round(headcount * (pctFrl / 100) * lapRate)
+  const lapHighPoverty = Math.round(headcount * lapHighPovertyRate)
   const tbip = Math.round(headcount * (pctEll / 100) * tbipRate)
   const hicap = Math.round(headcount * (pctHicap / 100) * hicapRate)
 
-  // Federal (headcount-based) — NOT regionalized, just COLA
+  // Federal (headcount-based) — NOT regionalized, COLA only
   const titleIRate = Math.round((assumptions.title_i_per_pupil || 880) * colaMult)
-  const ideaRate = Math.round((assumptions.idea_per_pupil || 2200) * colaMult)
+  const ideaRate = Math.round((assumptions.idea_per_pupil || 1500) * colaMult)
   const titleI = pctFrl > 40 ? Math.round(headcount * (pctFrl / 100) * titleIRate) : 0
   const idea = Math.round(headcount * (pctIep / 100) * ideaRate)
 
-  const total = regularEd + sped + facilitiesRev + levyEquity + titleI + idea + lap + tbip + hicap
+  const total = regularEd + sped + stateSped + facilitiesRev + levyEquity + titleI + idea + lap + lapHighPoverty + tbip + hicap
 
-  return { regularEd, sped, facilitiesRev, levyEquity, titleI, idea, lap, tbip, hicap, total, aafte, headcount }
+  return { regularEd, sped, stateSped, facilitiesRev, levyEquity, titleI, idea, lap, lapHighPoverty, tbip, hicap, total, aafte, headcount }
 }
 
 // --- Benefits ---

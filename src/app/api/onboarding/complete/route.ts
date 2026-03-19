@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 
   // --- Calculate revenue (Commission-aligned) ---
   const rev = calcCommissionRevenue(enrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
-  const stateApport = rev.regularEd + rev.sped + rev.facilitiesRev
+  const stateApport = rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev
 
   // --- Calculate operations costs ---
   console.log('[onboarding/complete] facility mode:', operations.facilityMode, 'facilityMonthly:', operations.facilityMonthly)
@@ -174,11 +174,13 @@ export async function POST(request: Request) {
   const projections = [
     { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Regular Ed Apportionment', amount: rev.regularEd, is_revenue: true },
     { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'SPED Apportionment', amount: rev.sped, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'State Special Education', amount: rev.stateSped, is_revenue: true },
     { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Facilities Revenue', amount: rev.facilitiesRev, is_revenue: true },
     { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Levy Equity', amount: rev.levyEquity, is_revenue: true },
     { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Title I', amount: rev.titleI, is_revenue: true },
     { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'IDEA', amount: rev.idea, is_revenue: true },
     { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'LAP', amount: rev.lap, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'LAP High Poverty', amount: rev.lapHighPoverty, is_revenue: true },
     { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'TBIP', amount: rev.tbip, is_revenue: true },
     { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'HiCap', amount: rev.hicap, is_revenue: true },
     { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Facilities', amount: facilityCost, is_revenue: false },

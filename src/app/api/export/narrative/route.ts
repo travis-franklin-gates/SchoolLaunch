@@ -71,8 +71,10 @@ interface NarrativePayload {
     authorizer_fee_pct: number
     regular_ed_per_pupil: number
     sped_per_pupil: number
+    state_sped_per_pupil: number
     facilities_per_pupil: number
     lap_per_pupil: number
+    lap_high_poverty_per_pupil: number
     tbip_per_pupil: number
     hicap_per_pupil: number
     title_i_per_pupil: number
@@ -225,6 +227,7 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
   // Revenue composition bar chart SVG
   const regularEd = revenueProjections.find((p) => p.subcategory === 'Regular Ed Apportionment')?.amount || 0
   const spedApport = revenueProjections.find((p) => p.subcategory === 'SPED Apportionment')?.amount || 0
+  const stateSpedRev = revenueProjections.find((p) => p.subcategory === 'State Special Education')?.amount || 0
   const facilitiesRev = revenueProjections.find((p) => p.subcategory === 'Facilities Revenue')?.amount || 0
   // Fallback: old "State Apportionment" subcategory for schools onboarded before migration
   const legacyApport = revenueProjections.find((p) => p.subcategory === 'State Apportionment')?.amount || 0
@@ -233,18 +236,21 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
   const titleI = revenueProjections.find((p) => p.subcategory === 'Title I')?.amount || 0
   const idea = revenueProjections.find((p) => p.subcategory === 'IDEA')?.amount || 0
   const lap = revenueProjections.find((p) => p.subcategory === 'LAP')?.amount || 0
+  const lapHighPov = revenueProjections.find((p) => p.subcategory === 'LAP High Poverty')?.amount || 0
   const tbip = revenueProjections.find((p) => p.subcategory === 'TBIP')?.amount || 0
   const hicap = revenueProjections.find((p) => p.subcategory === 'HiCap')?.amount || 0
   const totalRev = baseSummary.totalRevenue || 1
 
   const barSegments = [
     { label: 'Regular Ed', amount: effectiveRegularEd, color: '#1B2A4A' },
-    { label: 'SPED', amount: spedApport, color: '#3D5A80' },
+    { label: 'SPED Apport', amount: spedApport, color: '#3D5A80' },
+    { label: 'State SpEd', amount: stateSpedRev, color: '#4A6FA5' },
     { label: 'Facilities', amount: facilitiesRev, color: '#5A7FA0' },
     { label: 'Levy Equity', amount: levyEquity, color: '#2D4A7A' },
     { label: 'Title I', amount: titleI, color: '#0F6E56' },
     { label: 'IDEA', amount: idea, color: '#16A085' },
     { label: 'LAP', amount: lap, color: '#2ECC71' },
+    { label: 'LAP High Pov', amount: lapHighPov, color: '#27AE60' },
     { label: 'TBIP', amount: tbip, color: '#3498DB' },
     { label: 'HiCap', amount: hicap, color: '#9B59B6' },
   ].filter((s) => s.amount > 0)
@@ -289,14 +295,16 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
     switch (sub) {
       case 'Regular Ed Apportionment': return `${Math.floor(enrollment * assumptions.aafte_pct / 100)} AAFTE × ${rateWithRegion(assumptions.regular_ed_per_pupil)}`
       case 'SPED Apportionment': return `${Math.floor(enrollment * assumptions.aafte_pct / 100)} AAFTE × ${profile.pct_iep}% IEP × ${rateWithRegion(assumptions.sped_per_pupil)}`
+      case 'State Special Education': return `${Math.round(enrollment * profile.pct_iep / 100)} SPED students × ${rateWithRegion(assumptions.state_sped_per_pupil || 13556)}`
       case 'Facilities Revenue': return `${Math.floor(enrollment * assumptions.aafte_pct / 100)} AAFTE × ${fmtDollars(assumptions.facilities_per_pupil)}`
       case 'State Apportionment': return `${enrollment} students × ${fmtDollars(assumptions.per_pupil_rate)}/student`
       case 'Levy Equity': return `${Math.floor(enrollment * assumptions.aafte_pct / 100)} AAFTE × ${fmtDollars(assumptions.levy_equity_per_student)}`
       case 'Title I': return profile.pct_frl > 40 ? `${enrollment} × ${profile.pct_frl}% FRL × ${fmtDollars(assumptions.title_i_per_pupil || 880)}` : 'Not eligible (FRL < 40%)'
       case 'IDEA': return `${enrollment} × ${profile.pct_iep}% IEP × ${fmtDollars(assumptions.idea_per_pupil || 2200)}`
-      case 'LAP': return `${enrollment} × ${profile.pct_frl}% FRL × ${rateWithRegion(assumptions.lap_per_pupil || 690)}`
-      case 'TBIP': return `${enrollment} × ${profile.pct_ell}% ELL × ${rateWithRegion(assumptions.tbip_per_pupil || 1600)}`
-      case 'HiCap': return `${enrollment} × ${profile.pct_hicap}% HiCap × ${rateWithRegion(assumptions.hicap_per_pupil || 625)}`
+      case 'LAP': return `${enrollment} × ${profile.pct_frl}% FRL × ${fmtDollars(assumptions.lap_per_pupil || 816)}`
+      case 'LAP High Poverty': return `${enrollment} × ${fmtDollars(assumptions.lap_high_poverty_per_pupil || 374)}`
+      case 'TBIP': return `${enrollment} × ${profile.pct_ell}% ELL × ${fmtDollars(assumptions.tbip_per_pupil || 1600)}`
+      case 'HiCap': return `${enrollment} × ${profile.pct_hicap}% HiCap × ${fmtDollars(assumptions.hicap_per_pupil || 730)}`
       default: return ''
     }
   }

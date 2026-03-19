@@ -87,12 +87,13 @@ export default function SettingsPage() {
   const grantPreview = useMemo(() => ({
     titleI: calcTitleI(enrollY1, pctFrl, fa.title_i_per_pupil),
     idea: calcIDEA(enrollY1, pctIep, fa.idea_per_pupil),
-    lap: calcLAP(enrollY1, pctFrl, Math.round(fa.lap_per_pupil * regionFactor)),
-    tbip: calcTBIP(enrollY1, pctEll, Math.round(fa.tbip_per_pupil * regionFactor)),
-    hicap: calcHiCap(enrollY1, pctHicap, Math.round(fa.hicap_per_pupil * regionFactor)),
-  }), [enrollY1, pctFrl, pctIep, pctEll, pctHicap, fa, regionFactor])
+    lap: calcLAP(enrollY1, pctFrl, fa.lap_per_pupil),
+    lapHighPoverty: Math.round(enrollY1 * (fa.lap_high_poverty_per_pupil || 374)),
+    tbip: calcTBIP(enrollY1, pctEll, fa.tbip_per_pupil),
+    hicap: calcHiCap(enrollY1, pctHicap, fa.hicap_per_pupil),
+  }), [enrollY1, pctFrl, pctIep, pctEll, pctHicap, fa, regionFactor]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const totalGrants = grantPreview.titleI + grantPreview.idea + grantPreview.lap + grantPreview.tbip + grantPreview.hicap
+  const totalGrants = grantPreview.titleI + grantPreview.idea + grantPreview.lap + grantPreview.lapHighPoverty + grantPreview.tbip + grantPreview.hicap
 
   function updateFa(field: keyof FinancialAssumptions, value: number | boolean) {
     setFa((prev) => ({ ...prev, [field]: value }))
@@ -273,6 +274,7 @@ export default function SettingsPage() {
             <div className="flex justify-between"><span className="text-slate-500">Title I</span><span className="font-medium text-slate-700">{fmt(grantPreview.titleI)}</span></div>
             <div className="flex justify-between"><span className="text-slate-500">IDEA</span><span className="font-medium text-slate-700">{fmt(grantPreview.idea)}</span></div>
             <div className="flex justify-between"><span className="text-slate-500">LAP</span><span className="font-medium text-slate-700">{fmt(grantPreview.lap)}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">LAP High Poverty</span><span className="font-medium text-slate-700">{fmt(grantPreview.lapHighPoverty)}</span></div>
             <div className="flex justify-between"><span className="text-slate-500">TBIP</span><span className="font-medium text-slate-700">{fmt(grantPreview.tbip)}</span></div>
             <div className="flex justify-between"><span className="text-slate-500">HiCap</span><span className="font-medium text-slate-700">{fmt(grantPreview.hicap)}</span></div>
             <div className="flex justify-between"><span className="text-slate-600 font-semibold">Total</span><span className="font-bold text-slate-800">{fmt(totalGrants)}</span></div>
@@ -358,10 +360,25 @@ export default function SettingsPage() {
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">SPED per Pupil ($)</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">SPED Apportionment per Pupil ($)</label>
             <input type="number" step={100} value={fa.sped_per_pupil}
               onChange={(e) => updateFa('sped_per_pupil', Number(e.target.value))}
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+            <p className="text-[10px] text-slate-400 mt-0.5">Excess cost allocation per SPED student</p>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">State Special Ed per Pupil ($)</label>
+            <input type="number" step={100} value={fa.state_sped_per_pupil}
+              onChange={(e) => updateFa('state_sped_per_pupil', Number(e.target.value))}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+            <p className="text-[10px] text-slate-400 mt-0.5">State safety net / BEA allocation per SPED student — largest SPED revenue source</p>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">LAP High Poverty per Student ($)</label>
+            <input type="number" step={10} value={fa.lap_high_poverty_per_pupil}
+              onChange={(e) => updateFa('lap_high_poverty_per_pupil', Number(e.target.value))}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+            <p className="text-[10px] text-slate-400 mt-0.5">Flat per-student amount, not FRL-dependent</p>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Facilities per Pupil ($)</label>

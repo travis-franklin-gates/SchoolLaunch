@@ -22,8 +22,10 @@ export interface FinancialAssumptions {
   // Commission-aligned revenue fields
   regular_ed_per_pupil: number
   sped_per_pupil: number
+  state_sped_per_pupil: number
   facilities_per_pupil: number
   lap_per_pupil: number
+  lap_high_poverty_per_pupil: number
   tbip_per_pupil: number
   hicap_per_pupil: number
   title_i_per_pupil: number
@@ -35,7 +37,7 @@ export interface FinancialAssumptions {
 }
 
 export const DEFAULT_ASSUMPTIONS: FinancialAssumptions = {
-  per_pupil_rate: 11000, // Now defaults to regular_ed rate (legacy field)
+  per_pupil_rate: 11812, // Now defaults to regular_ed rate (legacy field)
   levy_equity_per_student: 0,
   benefits_load_pct: 30,
   authorizer_fee_pct: 3,
@@ -54,15 +56,17 @@ export const DEFAULT_ASSUMPTIONS: FinancialAssumptions = {
   fundraising_annual: 15000,
   food_service_offered: false,
   transportation_offered: false,
-  // Commission-aligned
-  regular_ed_per_pupil: 11000,
-  sped_per_pupil: 10900,
+  // Commission-aligned (validated against OSPI apportionment data)
+  regular_ed_per_pupil: 11812,
+  sped_per_pupil: 2548,
+  state_sped_per_pupil: 13556,
   facilities_per_pupil: 0,
-  lap_per_pupil: 690,
+  lap_per_pupil: 816,
+  lap_high_poverty_per_pupil: 374,
   tbip_per_pupil: 1600,
-  hicap_per_pupil: 625,
+  hicap_per_pupil: 730,
   title_i_per_pupil: 880,
-  idea_per_pupil: 2200,
+  idea_per_pupil: 1500,
   revenue_cola_pct: 3,
   aafte_pct: 95,
   interest_rate_on_cash: 3,
@@ -74,12 +78,12 @@ export function getAssumptions(raw: Partial<FinancialAssumptions> | null | undef
   const merged = { ...DEFAULT_ASSUMPTIONS, ...raw }
   // Migrate old per_pupil_rate: if regular_ed_per_pupil wasn't set but old per_pupil_rate was high
   if (!raw.regular_ed_per_pupil && raw.per_pupil_rate && raw.per_pupil_rate > 13000) {
-    merged.regular_ed_per_pupil = 11000
-    merged.sped_per_pupil = 10900
+    merged.regular_ed_per_pupil = 11812
+    merged.sped_per_pupil = 2548
   }
-  // Migrate old sped_per_pupil from 4500 to new validated rate
-  if (raw.sped_per_pupil === 4500) {
-    merged.sped_per_pupil = 10900
+  // Migrate old sped_per_pupil from previous defaults to validated rate
+  if (raw.sped_per_pupil === 4500 || raw.sped_per_pupil === 10900) {
+    merged.sped_per_pupil = 2548
   }
   // Migrate old levy_equity_per_student: legislature has not reinstated, default is $0
   if (raw.levy_equity_per_student === 1500) {
@@ -87,11 +91,17 @@ export function getAssumptions(raw: Partial<FinancialAssumptions> | null | undef
   }
   // Ensure new fields have defaults for existing schools
   if (!raw.regionalization_factor) merged.regionalization_factor = 1.0
-  if (!raw.lap_per_pupil) merged.lap_per_pupil = 690
+  if (!raw.state_sped_per_pupil) merged.state_sped_per_pupil = 13556
+  if (!raw.lap_per_pupil || raw.lap_per_pupil === 690 || raw.lap_per_pupil === 400) merged.lap_per_pupil = 816
+  if (!raw.lap_high_poverty_per_pupil) merged.lap_high_poverty_per_pupil = 374
   if (!raw.tbip_per_pupil) merged.tbip_per_pupil = 1600
-  if (!raw.hicap_per_pupil) merged.hicap_per_pupil = 625
+  if (!raw.hicap_per_pupil || raw.hicap_per_pupil === 625 || raw.hicap_per_pupil === 500) merged.hicap_per_pupil = 730
   if (!raw.title_i_per_pupil) merged.title_i_per_pupil = 880
-  if (!raw.idea_per_pupil) merged.idea_per_pupil = 2200
+  if (!raw.idea_per_pupil || raw.idea_per_pupil === 2200) merged.idea_per_pupil = 1500
+  // Migrate old regular_ed defaults
+  if (raw.regular_ed_per_pupil === 11000 || raw.regular_ed_per_pupil === 12000) {
+    merged.regular_ed_per_pupil = 11812
+  }
   // Keep per_pupil_rate in sync for legacy code paths
   merged.per_pupil_rate = merged.regular_ed_per_pupil
   return merged

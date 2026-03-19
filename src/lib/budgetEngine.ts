@@ -237,7 +237,7 @@ export function computeScenario(
       totalOperations += Math.round(perPupilRate * enrollment)
     } else if (op.subcategory === 'Authorizer Fee') {
       // Fee on state apportionment (regularEd + sped + facilities)
-      const stateApport = rev.regularEd + rev.sped + rev.facilitiesRev
+      const stateApport = rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev
       totalOperations += calcAuthorizerFeeCommission(stateApport, feeRate)
     } else {
       totalOperations += op.amount
@@ -368,11 +368,13 @@ export interface MultiYearDetailedRow {
   revenue: {
     regularEd: number
     sped: number
+    stateSped: number
     facilitiesRev: number
     levyEquity: number
     titleI: number
     idea: number
     lap: number
+    lapHighPoverty: number
     tbip: number
     hicap: number
     interestIncome: number
@@ -471,8 +473,8 @@ export function computeMultiYearDetailed(
     const yearGrantRevenue = getGrantRevenueForYear(startupFunding, y)
     const operatingRevenue = rev.total + interestIncome
     const totalRevenue = operatingRevenue + yearGrantRevenue
-    // State apportionment = regularEd + sped + facilitiesRev (for authorizer fee)
-    const stateApport = rev.regularEd + rev.sped + rev.facilitiesRev
+    // State apportionment = regularEd + sped + stateSped + facilitiesRev (for authorizer fee)
+    const stateApport = rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev
 
     // Personnel — use year-specific positions if available, else auto-scale
     const yearPositions = allPositions?.filter((p) => p.year === y)
@@ -583,18 +585,20 @@ export function computeMultiYearDetailed(
       revenue: {
         regularEd: rev.regularEd,
         sped: rev.sped,
+        stateSped: rev.stateSped,
         facilitiesRev: rev.facilitiesRev,
         levyEquity: rev.levyEquity,
         titleI: rev.titleI,
         idea: rev.idea,
         lap: rev.lap,
+        lapHighPoverty: rev.lapHighPoverty,
         tbip: rev.tbip,
         hicap: rev.hicap,
         interestIncome,
         grantRevenue: yearGrantRevenue,
         operatingRevenue,
         total: totalRevenue,
-        apportionment: rev.regularEd + rev.sped + rev.facilitiesRev,
+        apportionment: rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev,
       },
       personnel: {
         certificated: certCost,

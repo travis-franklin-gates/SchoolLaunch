@@ -105,11 +105,13 @@ DEMOGRAPHICS:
 REVENUE (Year 1, AAFTE: ${aafte} of ${enroll} headcount):
 - Regular Ed Apportionment: $${rev.regularEd.toLocaleString()} (${aafte} AAFTE × $${assumptions.regular_ed_per_pupil.toLocaleString()})
 - SPED Apportionment: $${rev.sped.toLocaleString()} (${aafte} × ${profile.pct_iep}% IEP × $${assumptions.sped_per_pupil.toLocaleString()})
+- State Special Education: $${rev.stateSped.toLocaleString()} (${Math.round(enroll * profile.pct_iep / 100)} SPED students × $${(assumptions.state_sped_per_pupil || 13556).toLocaleString()})
 - Facilities Revenue: $${rev.facilitiesRev.toLocaleString()}
 - Levy Equity: $${rev.levyEquity.toLocaleString()} (${aafte} AAFTE × $${assumptions.levy_equity_per_student.toLocaleString()})
 - Title I: $${rev.titleI.toLocaleString()}${profile.pct_frl >= 40 ? ' (Schoolwide eligible)' : ' (Not eligible, FRL < 40%)'}
 - IDEA: $${rev.idea.toLocaleString()}
 - LAP: $${rev.lap.toLocaleString()}
+- LAP High Poverty: $${rev.lapHighPoverty.toLocaleString()}
 - TBIP: $${rev.tbip.toLocaleString()}
 - HiCap: $${rev.hicap.toLocaleString()}
 - Total Revenue: $${totalRevenue.toLocaleString()}

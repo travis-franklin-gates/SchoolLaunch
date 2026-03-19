@@ -8,11 +8,13 @@ interface MultiYearRow {
   revenue: {
     regularEd: number
     sped: number
+    stateSped: number
     facilitiesRev: number
     levyEquity: number
     titleI: number
     idea: number
     lap: number
+    lapHighPoverty: number
     tbip: number
     hicap: number
     interestIncome: number
@@ -142,15 +144,17 @@ export async function POST(request: Request) {
   const revRows: (string | number)[][] = [
     ['#', 'Source', 'Description', 'Driver', ...yearHeaders],
     ['1.0', 'State & Local', 'Regular Ed Per Pupil', 'Per Pupil (AAFTE)', 0, ...multiYear.map((r) => r.revenue.regularEd)],
-    ['2.0', 'State & Local', 'SPED Per Pupil', 'Per Pupil-SPED', 0, ...multiYear.map((r) => r.revenue.sped)],
-    ['3.0', 'State & Local', 'Facilities Per Pupil', 'Per Pupil', 0, ...multiYear.map((r) => r.revenue.facilitiesRev)],
-    ['4.0', 'State & Local', 'Levy Equity', 'Per Pupil (AAFTE)', 0, ...multiYear.map((r) => r.revenue.levyEquity)],
-    ['5.0', 'Federal', 'Title I', 'Per Pupil-FRL', 0, ...multiYear.map((r) => r.revenue.titleI)],
-    ['6.0', 'Federal', 'IDEA (Special Education)', 'Per Pupil-IEP', 0, ...multiYear.map((r) => r.revenue.idea)],
-    ['7.0', 'State Categorical', 'LAP (Learning Assistance)', 'Per Pupil-FRL', 0, ...multiYear.map((r) => r.revenue.lap)],
-    ['8.0', 'State Categorical', 'TBIP (Bilingual)', 'Per Pupil-ELL', 0, ...multiYear.map((r) => r.revenue.tbip)],
-    ['9.0', 'State Categorical', 'Highly Capable', 'Per Pupil-HiCap', 0, ...multiYear.map((r) => r.revenue.hicap)],
-    ['10.0', 'Other', 'Interest & Other Income', 'Cash Balance', 0, ...multiYear.map((r) => r.revenue.interestIncome)],
+    ['2.0', 'State & Local', 'SPED Apportionment', 'Per Pupil-SPED', 0, ...multiYear.map((r) => r.revenue.sped)],
+    ['3.0', 'State & Local', 'State Special Education', 'Per Pupil-SPED', 0, ...multiYear.map((r) => r.revenue.stateSped)],
+    ['4.0', 'State & Local', 'Facilities Per Pupil', 'Per Pupil', 0, ...multiYear.map((r) => r.revenue.facilitiesRev)],
+    ['5.0', 'State & Local', 'Levy Equity', 'Per Pupil (AAFTE)', 0, ...multiYear.map((r) => r.revenue.levyEquity)],
+    ['6.0', 'Federal', 'Title I', 'Per Pupil-FRL', 0, ...multiYear.map((r) => r.revenue.titleI)],
+    ['7.0', 'Federal', 'IDEA (Federal Special Ed)', 'Per Pupil-IEP', 0, ...multiYear.map((r) => r.revenue.idea)],
+    ['8.0', 'State Categorical', 'LAP (Learning Assistance)', 'Per Pupil-FRL', 0, ...multiYear.map((r) => r.revenue.lap)],
+    ['8.1', 'State Categorical', 'LAP High Poverty', 'Per Pupil', 0, ...multiYear.map((r) => r.revenue.lapHighPoverty)],
+    ['9.0', 'State Categorical', 'TBIP (Bilingual)', 'Per Pupil-ELL', 0, ...multiYear.map((r) => r.revenue.tbip)],
+    ['10.0', 'State Categorical', 'Highly Capable', 'Per Pupil-HiCap', 0, ...multiYear.map((r) => r.revenue.hicap)],
+    ['11.0', 'Other', 'Interest & Other Income', 'Cash Balance', 0, ...multiYear.map((r) => r.revenue.interestIncome)],
     [],
     ['', '', 'Total Revenue', '', 0, ...multiYear.map((r) => r.revenue.total)],
   ]
@@ -190,11 +194,13 @@ export async function POST(request: Request) {
     ['REVENUE'],
     ['Regular Ed Apportionment', 0, ...multiYear.map((r) => r.revenue.regularEd)],
     ['SPED Apportionment', 0, ...multiYear.map((r) => r.revenue.sped)],
+    ['State Special Education', 0, ...multiYear.map((r) => r.revenue.stateSped)],
     ['Facilities Revenue', 0, ...multiYear.map((r) => r.revenue.facilitiesRev)],
     ['Levy Equity', 0, ...multiYear.map((r) => r.revenue.levyEquity)],
     ['Title I', 0, ...multiYear.map((r) => r.revenue.titleI)],
-    ['IDEA', 0, ...multiYear.map((r) => r.revenue.idea)],
+    ['IDEA (Federal Special Ed)', 0, ...multiYear.map((r) => r.revenue.idea)],
     ['LAP', 0, ...multiYear.map((r) => r.revenue.lap)],
+    ['LAP High Poverty', 0, ...multiYear.map((r) => r.revenue.lapHighPoverty)],
     ['TBIP', 0, ...multiYear.map((r) => r.revenue.tbip)],
     ['HiCap', 0, ...multiYear.map((r) => r.revenue.hicap)],
     ['Interest & Other Income', 0, ...multiYear.map((r) => r.revenue.interestIncome)],
