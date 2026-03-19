@@ -115,11 +115,37 @@ export default function GradeExpansionEditor({
     // Default sections = 1 for new plans
     const defaultSections = initialPlan && initialPlan.length > 0 ? (initialPlan[0].sections || 1) : 1
     const base = generateExpansionPlan(openingGrades, buildoutGrades, defaultSections, defaultStudentsPerSection, yearNewGrades)
-    return base.map((entry) => {
+
+    // Two-pass approach: first apply overrides, then propagate overridden values to expansion grades
+    const withOverrides = base.map((entry) => {
       const key = `${entry.year}-${entry.grade_level}`
       const override = planOverrides.get(key)
       if (override) {
         return { ...entry, sections: override.sections, students_per_section: override.students_per_section }
+      }
+      return entry
+    })
+
+    // Second pass: for entries that DON'T have an explicit override, inherit from the same grade
+    // in the prior year (which may have been overridden). This ensures expansion grades pick up
+    // the actual section count from founding grades.
+    return withOverrides.map((entry) => {
+      const key = `${entry.year}-${entry.grade_level}`
+      if (planOverrides.has(key)) return entry // already overridden, keep as-is
+
+      if (entry.is_new_grade) {
+        // New grade: inherit from the most common section count in the prior year's overridden entries
+        const priorYearEntries = withOverrides.filter((e) => e.year === entry.year - 1)
+        if (priorYearEntries.length > 0) {
+          const lastEntry = priorYearEntries[priorYearEntries.length - 1]
+          return { ...entry, sections: lastEntry.sections, students_per_section: lastEntry.students_per_section }
+        }
+      } else if (entry.year > 1) {
+        // Returning grade: inherit from same grade in prior year (with overrides applied)
+        const priorEntry = withOverrides.find((e) => e.year === entry.year - 1 && e.grade_level === entry.grade_level)
+        if (priorEntry) {
+          return { ...entry, sections: priorEntry.sections, students_per_section: priorEntry.students_per_section }
+        }
       }
       return entry
     })

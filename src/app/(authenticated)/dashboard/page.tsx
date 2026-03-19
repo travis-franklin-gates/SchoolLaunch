@@ -6,6 +6,7 @@ import { computeMultiYearDetailed, computeCashFlow, computeFPFScorecard, compute
 import { buildSchoolContextString } from '@/lib/buildSchoolContext'
 import { createClient } from '@/lib/supabase/client'
 import type { AdvisoryCache } from '@/lib/types'
+import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
 import Link from 'next/link'
 
 type AdvisoryData = AdvisoryCache
@@ -312,7 +313,7 @@ export default function DashboardPage() {
           {openingGrades && `${openingGrades} Opening ${profile.planned_open_year || ''}`}
           {buildoutGrades && ` \u2192 ${buildoutGrades} at Full Build-Out`}
           {profile.target_enrollment_y1 > 0 && ` | ${profile.target_enrollment_y1} Students Year 1`}
-          {profile.region && ` | ${profile.region}`}
+          {profile.region && ` | ${REGIONALIZATION_FACTORS[profile.region]?.label?.split('(')[0]?.trim() || profile.region}`}
         </p>
       </div>
 

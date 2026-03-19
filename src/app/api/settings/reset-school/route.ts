@@ -44,6 +44,9 @@ export async function POST() {
     }
   }
 
+  // Reset school name back to default
+  await admin.from('schools').update({ name: 'New School' }).eq('id', schoolId)
+
   // Re-create a blank school_profiles row so onboarding can start fresh
   const { error: insertError } = await admin.from('school_profiles').insert({
     school_id: schoolId,
