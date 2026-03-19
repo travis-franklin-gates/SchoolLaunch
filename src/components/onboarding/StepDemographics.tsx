@@ -3,14 +3,21 @@
 import { useState, useMemo } from 'react'
 import { calcCommissionRevenue } from '@/lib/calculations'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
+import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
 
 const REGIONAL_DEFAULTS: Record<string, { frl: number; iep: number; ell: number; hicap: number }> = {
-  'King County': { frl: 35, iep: 14, ell: 15, hicap: 7 },
-  'Pierce County': { frl: 50, iep: 13, ell: 10, hicap: 5 },
-  'Snohomish County': { frl: 40, iep: 13, ell: 12, hicap: 6 },
-  'Spokane County': { frl: 55, iep: 14, ell: 8, hicap: 4 },
-  'Clark County': { frl: 45, iep: 13, ell: 9, hicap: 5 },
-  'Other': { frl: 50, iep: 13, ell: 10, hicap: 5 },
+  'king_county': { frl: 35, iep: 14, ell: 15, hicap: 7 },
+  'pierce_county': { frl: 50, iep: 13, ell: 10, hicap: 5 },
+  'snohomish_county': { frl: 40, iep: 13, ell: 12, hicap: 6 },
+  'spokane_county': { frl: 55, iep: 14, ell: 8, hicap: 4 },
+  'clark_county': { frl: 45, iep: 13, ell: 9, hicap: 5 },
+  'other': { frl: 50, iep: 13, ell: 10, hicap: 5 },
+}
+
+function formatRegionName(key: string): string {
+  const entry = REGIONALIZATION_FACTORS[key]
+  if (entry) return entry.label.split('(')[0].trim()
+  return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 interface Props {
@@ -37,7 +44,7 @@ export default function StepDemographics({ enrollment, region, initialData, onNe
   const [pctHicap, setPctHicap] = useState(initialData.pctHicap ?? 5)
   const [showRegionalHint, setShowRegionalHint] = useState(false)
 
-  const regionDefaults = REGIONAL_DEFAULTS[region] || REGIONAL_DEFAULTS['Other']
+  const regionDefaults = REGIONAL_DEFAULTS[region] || REGIONAL_DEFAULTS['other']
 
   const rev = useMemo(
     () => calcCommissionRevenue(enrollment, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS),
@@ -75,14 +82,14 @@ export default function StepDemographics({ enrollment, region, initialData, onNe
           onClick={() => setShowRegionalHint(!showRegionalHint)}
           className="text-xs text-teal-600 hover:text-teal-800 font-medium whitespace-nowrap ml-4"
         >
-          Use {region} defaults
+          Use {formatRegionName(region)} defaults
         </button>
       </div>
 
       {showRegionalHint && (
         <div className="bg-teal-50 border border-teal-100 rounded-lg p-4">
           <p className="text-sm text-teal-800 mb-2">
-            Regional averages for <span className="font-medium">{region}</span>:
+            Regional averages for <span className="font-medium">{formatRegionName(region)}</span>:
           </p>
           <div className="grid grid-cols-4 gap-3 text-xs text-teal-700 mb-3">
             <div>FRL: {regionDefaults.frl}%</div>
