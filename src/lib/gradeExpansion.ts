@@ -75,7 +75,7 @@ export function defaultYearNewGrades(
 export function generateExpansionPlan(
   openingGrades: string[],
   buildoutGrades: string[],
-  sectionsPerGrade: number = 2,
+  sectionsPerGrade: number = 1,
   studentsPerSection: number = 24,
   yearNewGrades?: Map<number, string[]>,
 ): GradeExpansionEntry[] {
@@ -110,13 +110,19 @@ export function generateExpansionPlan(
       })
     }
 
+    // New grades inherit sections/students from the most recently added grade
+    const priorYearEntries = entries.filter((e) => e.year === year - 1)
+    const lastAddedEntry = priorYearEntries.length > 0
+      ? priorYearEntries[priorYearEntries.length - 1]
+      : null
+
     const newGrades = mapping.get(year) || []
     for (const g of sortGrades(newGrades)) {
       entries.push({
         year,
         grade_level: g,
-        sections: sectionsPerGrade,
-        students_per_section: studentsPerSection,
+        sections: lastAddedEntry?.sections || sectionsPerGrade,
+        students_per_section: lastAddedEntry?.students_per_section || studentsPerSection,
         is_new_grade: true,
       })
     }

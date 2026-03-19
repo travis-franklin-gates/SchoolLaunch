@@ -80,9 +80,10 @@ export default function StepEnrollment({
     enrollments: { year: number; total: number; returning: number; newGrade: number; grades: string[]; newGrades: string[] }[]
   }) => {
     setExpansionResult(data)
-    // Keep maxClassSize in sync with the plan's students_per_section
-    if (data.plan.length > 0) {
-      setMaxClassSize(data.plan[0].students_per_section)
+    // Keep maxClassSize in sync with the max students_per_section across Year 1 entries
+    const y1Entries = data.plan.filter((e) => e.year === 1)
+    if (y1Entries.length > 0) {
+      setMaxClassSize(Math.max(...y1Entries.map((e) => e.students_per_section)))
     }
   }, [])
 

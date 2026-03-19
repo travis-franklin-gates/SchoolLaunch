@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import type { GradeExpansionEntry } from '@/lib/types'
 import {
   gradesForConfig,
@@ -49,17 +49,15 @@ export default function GradeExpansionEditor({
       : configGrades
   )
   const retentionRate = 100
-  const [sectionsPerGrade, setSectionsPerGrade] = useState(
-    initialPlan && initialPlan.length > 0 ? (initialPlan[0].sections || 2) : 2
-  )
-  const [studentsPerSection, setStudentsPerSection] = useState(
+
+  // Default students per section (used for new grades that have no override)
+  const [defaultStudentsPerSection, setDefaultStudentsPerSection] = useState(
     initialPlan && initialPlan.length > 0 ? (initialPlan[0].students_per_section || maxClassSize) : maxClassSize
   )
 
   // Per-year new grade assignments (editable by user)
   const [yearNewGrades, setYearNewGrades] = useState<Map<number, string[]>>(() => {
     if (initialPlan && initialPlan.length > 0) {
-      // Extract from existing plan
       const map = new Map<number, string[]>()
       for (const entry of initialPlan) {
         if (entry.is_new_grade) {
@@ -93,7 +91,9 @@ export default function GradeExpansionEditor({
   )
 
   const plan = useMemo(() => {
-    const base = generateExpansionPlan(openingGrades, buildoutGrades, sectionsPerGrade, studentsPerSection, yearNewGrades)
+    // Default sections = 1 for new plans
+    const defaultSections = initialPlan && initialPlan.length > 0 ? (initialPlan[0].sections || 1) : 1
+    const base = generateExpansionPlan(openingGrades, buildoutGrades, defaultSections, defaultStudentsPerSection, yearNewGrades)
     return base.map((entry) => {
       const key = `${entry.year}-${entry.grade_level}`
       const override = planOverrides.get(key)
@@ -102,22 +102,20 @@ export default function GradeExpansionEditor({
       }
       return entry
     })
-  }, [openingGrades, buildoutGrades, sectionsPerGrade, studentsPerSection, yearNewGrades, planOverrides])
+  }, [openingGrades, buildoutGrades, defaultStudentsPerSection, yearNewGrades, planOverrides, initialPlan])
 
   const enrollments = useMemo(
     () => computeExpansionEnrollments(plan, retentionRate),
     [plan, retentionRate]
   )
 
-  // For each year, compute which buildout grades are NOT yet served (from opening + prior additions)
+  // For each year, compute which buildout grades are NOT yet served
   const availableByYear = useMemo(() => {
     const map = new Map<number, string[]>()
     const served = new Set(openingGrades)
     for (let year = 2; year <= 5; year++) {
-      // Add grades assigned to prior years into served set
       const priorNew = yearNewGrades.get(year - 1) || []
       for (const g of priorNew) served.add(g)
-      // Available = buildout grades not yet served and not assigned to this year
       const thisYearAssigned = new Set(yearNewGrades.get(year) || [])
       const available = sortGrades(buildoutGrades.filter((g) => !served.has(g) && !thisYearAssigned.has(g)))
       map.set(year, available)
@@ -169,13 +167,22 @@ export default function GradeExpansionEditor({
     setPlanOverrides((prev) => {
       const next = new Map(prev)
       const key = `${year}-${grade}`
-      const existing = next.get(key) || { sections: sectionsPerGrade, students_per_section: studentsPerSection }
+      const entry = plan.find((e) => e.year === year && e.grade_level === grade)
+      const existing = next.get(key) || {
+        sections: entry?.sections || 1,
+        students_per_section: entry?.students_per_section || defaultStudentsPerSection,
+      }
       next.set(key, { ...existing, [field]: value })
       return next
     })
   }
 
   const years = Array.from(new Set(plan.map((e) => e.year))).sort((a, b) => a - b)
+
+  // Founding grades config for the per-grade table
+  const foundingEntries = plan.filter((e) => e.year === 1)
+  const foundingTotal = foundingEntries.reduce((s, e) => s + e.sections * e.students_per_section, 0)
+  const foundingSections = foundingEntries.reduce((s, e) => s + e.sections, 0)
 
   return (
     <div className="space-y-6">
@@ -229,175 +236,172 @@ export default function GradeExpansionEditor({
         </div>
       </div>
 
-      {/* Global defaults */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Per-Grade Founding Configuration */}
+      {foundingEntries.length > 0 && (
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Sections per Grade</label>
-          <input
-            type="number"
-            min={1}
-            max={6}
-            value={sectionsPerGrade}
-            onChange={(e) => setSectionsPerGrade(Number(e.target.value))}
-            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
-          />
+          <h3 className="text-sm font-semibold text-slate-700 mb-1">Year 1 Grade Configuration</h3>
+          <p className="text-xs text-slate-400 mb-3">Set sections and class size for each founding grade.</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="text-left px-3 py-2 font-semibold text-slate-600">Grade</th>
+                  <th className="text-center px-3 py-2 font-semibold text-slate-600">Sections</th>
+                  <th className="text-center px-3 py-2 font-semibold text-slate-600">Students / Section</th>
+                  <th className="text-right px-3 py-2 font-semibold text-slate-600">Students</th>
+                </tr>
+              </thead>
+              <tbody>
+                {foundingEntries.map((entry) => (
+                  <tr key={entry.grade_level} className="border-b border-slate-100">
+                    <td className="px-3 py-2.5 font-medium text-slate-700">
+                      {entry.grade_level === 'K' ? 'Kindergarten' : `Grade ${entry.grade_level}`}
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      <select
+                        value={entry.sections}
+                        onChange={(e) => updatePlanEntry(1, entry.grade_level, 'sections', Number(e.target.value))}
+                        className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      >
+                        {[1, 2, 3, 4].map((n) => (
+                          <option key={n} value={n}>{n}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      <input
+                        type="number"
+                        min={10}
+                        max={35}
+                        value={entry.students_per_section}
+                        onChange={(e) => updatePlanEntry(1, entry.grade_level, 'students_per_section', Number(e.target.value))}
+                        className="w-16 text-center border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      />
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-semibold text-slate-800">
+                      {entry.sections * entry.students_per_section}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-slate-50 border-t border-slate-200">
+                  <td className="px-3 py-2 font-bold text-slate-700">Total Year 1</td>
+                  <td className="px-3 py-2 text-center font-semibold text-slate-600">{foundingSections}</td>
+                  <td className="px-3 py-2"></td>
+                  <td className="px-3 py-2 text-right font-bold text-slate-800">{foundingTotal}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Students per Section</label>
-          <input
-            type="number"
-            min={10}
-            max={35}
-            value={studentsPerSection}
-            onChange={(e) => setStudentsPerSection(Number(e.target.value))}
-            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
-          />
-        </div>
-      </div>
+      )}
 
-      {/* Expansion Timeline Table */}
+      {/* Expansion Timeline — unified per-grade detail */}
       <div>
-        <h3 className="text-sm font-semibold text-slate-700 mb-1">Expansion Timeline</h3>
-        <p className="text-xs text-slate-400 mb-3">Click grade badges in the &ldquo;New Grades&rdquo; column to customize which grades are added each year.</p>
+        <h3 className="text-sm font-semibold text-slate-700 mb-1">Grade Expansion Plan</h3>
+        <p className="text-xs text-slate-400 mb-3">
+          Full plan by year. Click grade badges to customize which grades are added each year. Edit sections and class size per grade.
+        </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="text-left px-3 py-2 font-semibold text-slate-600">Year</th>
-                <th className="text-left px-3 py-2 font-semibold text-slate-600">Grades Served</th>
-                <th className="text-left px-3 py-2 font-semibold text-slate-600">New Grades</th>
-                <th className="text-right px-3 py-2 font-semibold text-slate-600">New Students</th>
-                <th className="text-right px-3 py-2 font-semibold text-slate-600 font-bold">Total Students</th>
+                <th className="text-left px-3 py-2 font-semibold text-slate-600">Grade</th>
+                <th className="text-center px-3 py-2 font-semibold text-slate-600">Sections</th>
+                <th className="text-center px-3 py-2 font-semibold text-slate-600">Students/Section</th>
+                <th className="text-right px-3 py-2 font-semibold text-slate-600">Students</th>
+                <th className="text-left px-3 py-2 font-semibold text-slate-600">Year Added</th>
               </tr>
             </thead>
             <tbody>
-              {enrollments.map((e) => {
-                const yearAssigned = yearNewGrades.get(e.year) || []
+              {years.map((year) => {
+                const yearEntries = plan.filter((e) => e.year === year)
+                const yearTotal = yearEntries.reduce((s, e) => s + e.sections * e.students_per_section, 0)
+                const yearAssigned = yearNewGrades.get(year) || []
+
                 return (
-                  <tr key={e.year} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="px-3 py-2.5 font-medium text-slate-700">Year {e.year}</td>
-                    <td className="px-3 py-2.5 text-slate-600">
-                      {e.grades.map((g) => (
-                        <span
-                          key={g}
-                          className={`inline-block px-1.5 py-0.5 rounded text-xs font-medium mr-1 ${
-                            e.newGrades.includes(g)
-                              ? 'bg-teal-100 text-teal-700'
-                              : 'bg-slate-100 text-slate-600'
-                          }`}
-                        >
-                          {g}
-                        </span>
-                      ))}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      {e.year === 1 ? (
-                        <span className="text-slate-400 text-xs">Opening</span>
-                      ) : (
-                        <div className="flex flex-wrap gap-1">
-                          {/* Grades assigned to this year — teal, clickable to remove */}
-                          {yearAssigned.map((g) => (
-                            <button
-                              key={g}
-                              type="button"
-                              onClick={() => toggleYearGrade(e.year, g)}
-                              className="px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-700 border border-teal-300 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors cursor-pointer"
-                              title={`Remove grade ${g} from Year ${e.year}`}
-                            >
-                              +{g}
-                            </button>
-                          ))}
-                          {/* Available grades — gray outline, clickable to add */}
-                          {(availableByYear.get(e.year) || []).map((g) => (
-                            <button
-                              key={g}
-                              type="button"
-                              onClick={() => toggleYearGrade(e.year, g)}
-                              className="px-2 py-0.5 rounded text-xs font-medium bg-white text-slate-400 border border-dashed border-slate-300 hover:border-teal-400 hover:text-teal-600 hover:bg-teal-50 transition-colors cursor-pointer"
-                              title={`Add grade ${g} to Year ${e.year}`}
-                            >
-                              {g}
-                            </button>
-                          ))}
-                          {yearAssigned.length === 0 && (availableByYear.get(e.year) || []).length === 0 && (
-                            <span className="text-slate-400 text-xs">—</span>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-teal-600 font-medium">
-                      {e.newGrade > 0 ? `+${e.newGrade}` : '—'}
-                    </td>
-                    <td className="px-3 py-2.5 text-right font-bold text-slate-800">
-                      {e.total}
-                    </td>
-                  </tr>
+                  <React.Fragment key={year}>
+                    {/* Year header row */}
+                    <tr className="bg-slate-50/60 border-b border-slate-200">
+                      <td colSpan={3} className="px-3 py-2 font-bold text-slate-700 text-xs uppercase tracking-wide">
+                        Year {year}
+                        {year > 1 && (
+                          <span className="ml-2 font-normal normal-case tracking-normal">
+                            {/* New grade toggle badges */}
+                            {yearAssigned.map((g) => (
+                              <button
+                                key={g}
+                                type="button"
+                                onClick={() => toggleYearGrade(year, g)}
+                                className="px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-700 border border-teal-300 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors cursor-pointer ml-1"
+                                title={`Remove grade ${g} from Year ${year}`}
+                              >
+                                +{g}
+                              </button>
+                            ))}
+                            {(availableByYear.get(year) || []).map((g) => (
+                              <button
+                                key={g}
+                                type="button"
+                                onClick={() => toggleYearGrade(year, g)}
+                                className="px-2 py-0.5 rounded text-xs font-medium bg-white text-slate-400 border border-dashed border-slate-300 hover:border-teal-400 hover:text-teal-600 hover:bg-teal-50 transition-colors cursor-pointer ml-1"
+                                title={`Add grade ${g} to Year ${year}`}
+                              >
+                                {g}
+                              </button>
+                            ))}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-right font-bold text-slate-800 text-xs">{yearTotal} students</td>
+                      <td className="px-3 py-2"></td>
+                    </tr>
+                    {/* Per-grade rows */}
+                    {yearEntries.map((entry) => (
+                      <tr key={`${year}-${entry.grade_level}`} className={`border-b border-slate-100 ${entry.is_new_grade ? 'bg-teal-50/40' : ''}`}>
+                        <td className="px-3 py-2 pl-6">
+                          <span className={entry.is_new_grade ? 'text-teal-700 font-medium' : 'text-slate-600'}>
+                            {entry.grade_level === 'K' ? 'K' : `Grade ${entry.grade_level}`}
+                            {entry.is_new_grade && <span className="text-[10px] ml-1.5 text-teal-500 font-semibold">NEW</span>}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <select
+                            value={entry.sections}
+                            onChange={(e) => updatePlanEntry(year, entry.grade_level, 'sections', Number(e.target.value))}
+                            className="border border-slate-200 rounded px-1.5 py-1 text-xs text-center bg-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          >
+                            {[1, 2, 3, 4].map((n) => (
+                              <option key={n} value={n}>{n}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <input
+                            type="number"
+                            min={10}
+                            max={35}
+                            value={entry.students_per_section}
+                            onChange={(e) => updatePlanEntry(year, entry.grade_level, 'students_per_section', Number(e.target.value))}
+                            className="w-14 text-center border border-slate-200 rounded px-1.5 py-1 text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-right text-slate-700 font-medium">
+                          {entry.sections * entry.students_per_section}
+                        </td>
+                        <td className="px-3 py-2 text-slate-400 text-xs">
+                          {entry.is_new_grade ? `Year ${year}` : 'Year 1'}
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
                 )
               })}
             </tbody>
           </table>
         </div>
       </div>
-
-      {/* Per-year grade detail (expandable) */}
-      <details className="text-sm">
-        <summary className="text-xs font-medium text-teal-600 cursor-pointer hover:text-teal-800">
-          Edit sections per grade by year
-        </summary>
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="text-left px-2 py-1.5 font-medium text-slate-500">Year</th>
-                <th className="text-left px-2 py-1.5 font-medium text-slate-500">Grade</th>
-                <th className="text-center px-2 py-1.5 font-medium text-slate-500">Sections</th>
-                <th className="text-center px-2 py-1.5 font-medium text-slate-500">Students/Section</th>
-                <th className="text-right px-2 py-1.5 font-medium text-slate-500">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              {years.map((year) =>
-                plan
-                  .filter((e) => e.year === year)
-                  .map((entry, idx) => (
-                    <tr key={`${year}-${entry.grade_level}`} className={`border-b border-slate-100 ${entry.is_new_grade ? 'bg-teal-50/50' : ''}`}>
-                      <td className="px-2 py-1.5 text-slate-600">{idx === 0 ? `Year ${year}` : ''}</td>
-                      <td className="px-2 py-1.5">
-                        <span className={`${entry.is_new_grade ? 'text-teal-700 font-medium' : 'text-slate-600'}`}>
-                          {entry.grade_level === 'K' ? 'K' : entry.grade_level}
-                          {entry.is_new_grade && <span className="text-[10px] ml-1 text-teal-500">NEW</span>}
-                        </span>
-                      </td>
-                      <td className="px-2 py-1.5 text-center">
-                        <input
-                          type="number"
-                          min={1}
-                          max={6}
-                          value={entry.sections}
-                          onChange={(ev) => updatePlanEntry(year, entry.grade_level, 'sections', Number(ev.target.value))}
-                          className="w-14 text-center border border-slate-200 rounded px-1 py-0.5"
-                        />
-                      </td>
-                      <td className="px-2 py-1.5 text-center">
-                        <input
-                          type="number"
-                          min={10}
-                          max={35}
-                          value={entry.students_per_section}
-                          onChange={(ev) => updatePlanEntry(year, entry.grade_level, 'students_per_section', Number(ev.target.value))}
-                          className="w-14 text-center border border-slate-200 rounded px-1 py-0.5"
-                        />
-                      </td>
-                      <td className="px-2 py-1.5 text-right text-slate-700 font-medium">
-                        {entry.sections * entry.students_per_section}
-                      </td>
-                    </tr>
-                  ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </details>
     </div>
   )
 }
