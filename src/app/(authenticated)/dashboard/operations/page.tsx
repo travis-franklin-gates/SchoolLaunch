@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
-import { calcAuthorizerFee } from '@/lib/calculations'
 import { createClient } from '@/lib/supabase/client'
 import type { FinancialAssumptions } from '@/lib/types'
 
@@ -106,52 +105,44 @@ export default function OperationsPage() {
     return `$${rate}/${unit} = ${fmt(rate * base)}`
   }
 
+  /** Canonical list of ALL operation categories — always rendered, even at $0 */
+  const ALL_OPS_CATEGORIES = [
+    'Facilities',
+    'Insurance',
+    'Supplies & Materials',
+    'Technology',
+    'Curriculum & Materials',
+    'Professional Development',
+    'Food Service',
+    'Transportation',
+    'Contracted Services',
+    'Marketing & Outreach',
+    'Fundraising',
+    'Authorizer Fee',
+  ]
+
   useEffect(() => {
     const opsProjections = projections.filter((p) => !p.is_revenue && p.category === 'Operations')
-    const existingItems = new Set(opsProjections.map((p) => p.subcategory))
+    const existingByName = new Map(opsProjections.map((p) => [p.subcategory, p.amount]))
 
-    const baseRows: OpsRow[] = opsProjections.map((p) => {
-      const mapping = RATE_MAP[p.subcategory]
-      const base = mapping?.perFte ? totalFte : enrollment
+    // Build rows for every canonical category — use DB amount if present, else compute default or $0
+    const baseRows: OpsRow[] = ALL_OPS_CATEGORIES.map((lineItem) => {
+      const mapping = RATE_MAP[lineItem]
       const effectiveRate = mapping ? (assumptions[mapping.key] as number) : null
+      const base = mapping?.perFte ? totalFte : enrollment
+
+      // Use DB amount if present; otherwise default to $0 (migration backfills existing schools)
+      const amount = existingByName.get(lineItem) ?? 0
+
       return {
-        lineItem: p.subcategory,
-        amount: p.amount,
-        group: getGroup(p.subcategory),
+        lineItem,
+        amount,
+        group: getGroup(lineItem),
         rate: effectiveRate,
         perFte: mapping?.perFte || false,
         rateKey: mapping?.key || null,
       }
     })
-
-    // Add expanded line items if they don't exist in projections
-    const expandedItems: { lineItem: string; amount: number }[] = [
-      { lineItem: 'Curriculum & Materials', amount: assumptions.curriculum_per_student * enrollment },
-      { lineItem: 'Professional Development', amount: assumptions.professional_development_per_fte * totalFte },
-      { lineItem: 'Marketing & Outreach', amount: assumptions.marketing_per_student * enrollment },
-      { lineItem: 'Fundraising', amount: assumptions.fundraising_annual },
-    ]
-
-    if (assumptions.food_service_offered) {
-      expandedItems.push({ lineItem: 'Food Service', amount: assumptions.food_service_per_student * enrollment })
-    }
-    if (assumptions.transportation_offered) {
-      expandedItems.push({ lineItem: 'Transportation', amount: assumptions.transportation_per_student * enrollment })
-    }
-
-    for (const item of expandedItems) {
-      if (!existingItems.has(item.lineItem)) {
-        const mapping = RATE_MAP[item.lineItem]
-        baseRows.push({
-          lineItem: item.lineItem,
-          amount: item.amount,
-          group: getGroup(item.lineItem),
-          rate: mapping ? (assumptions[mapping.key] as number) : null,
-          perFte: mapping?.perFte || false,
-          rateKey: mapping?.key || null,
-        })
-      }
-    }
 
     baseRows.sort((a, b) => GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group))
     setRows(baseRows)

@@ -80,7 +80,16 @@ export async function POST(request: Request) {
     totalPersonnel += sal + calcBenefits(sal)
   }
 
-  const subtotalExpenses = totalPersonnel + facilityCost + supplies + contracted + technology + authorizerFee + insurance
+  // Expanded operations categories
+  const curriculum = assumptions.curriculum_per_student * enrollment
+  const profDev = assumptions.professional_development_per_fte * (positions?.length > 0
+    ? positions.reduce((s: number, p: { fte: number }) => s + p.fte, 0) : 0)
+  const foodService = assumptions.food_service_offered ? assumptions.food_service_per_student * enrollment : 0
+  const transportation = assumptions.transportation_offered ? assumptions.transportation_per_student * enrollment : 0
+  const marketing = assumptions.marketing_per_student * enrollment
+  const fundraising = assumptions.fundraising_annual
+
+  const subtotalExpenses = totalPersonnel + facilityCost + supplies + contracted + technology + authorizerFee + insurance + curriculum + profDev + foodService + transportation + marketing + fundraising
   const misc = Math.round(subtotalExpenses * (operations.miscPct / 100))
 
   // --- Save staffing positions (fixes G4: uses service role) ---
@@ -190,6 +199,12 @@ export async function POST(request: Request) {
     { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Technology', amount: technology, is_revenue: false },
     { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Authorizer Fee', amount: authorizerFee, is_revenue: false },
     { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Insurance', amount: insurance, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Curriculum & Materials', amount: curriculum, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Professional Development', amount: profDev, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Food Service', amount: foodService, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Transportation', amount: transportation, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Marketing & Outreach', amount: marketing, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Fundraising', amount: fundraising, is_revenue: false },
     { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Misc/Contingency', amount: misc, is_revenue: false },
   ]
 
