@@ -46,7 +46,8 @@
       "Bash(rm -rf \"/c/Users/travisfr/AppData/Local/ms-playwright/mcp-chrome-0fcc5e5/SingletonLock\")",
       "mcp__plugin_playwright_playwright__browser_run_code",
       "Bash(node -e \":*)",
-      "Bash(claude mcp:*)"
+      "Bash(claude mcp:*)",
+      "Bash(git rm:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

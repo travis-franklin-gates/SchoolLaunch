@@ -1,1 +1,0 @@
-[   90793ms] [ERROR] Failed to load resource: the server responded with a status of 406 () @ https://nlvlrznhiwuorxlapnej.supabase.co/rest/v1/alignment_reviews?select=overall_alignment%2Csummary%2Cmisalignments&school_id=eq.fec70b44-1550-4015-8cde-1056a5f07521&order=created_at.desc&limit=1:0
