@@ -456,7 +456,11 @@ export default function OnboardingPage() {
         </div>
 
         <button
-          onClick={() => router.push('/dashboard')}
+          onClick={() => {
+            // Set sessionStorage flag as backup (in case query param gets stripped)
+            sessionStorage.setItem('onboarding_just_completed', 'true')
+            router.push('/dashboard?onboarding=complete')
+          }}
           className="bg-teal-600 text-white px-10 py-3 rounded-lg font-semibold hover:bg-teal-700 transition-colors text-lg"
         >
           Go to Dashboard

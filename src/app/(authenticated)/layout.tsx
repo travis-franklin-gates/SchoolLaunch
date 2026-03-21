@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import Sidebar from '@/components/Sidebar'
 import { TourProvider } from '@/components/tour/TourContext'
 import TourRunner from '@/components/tour/TourRunner'
@@ -20,7 +21,9 @@ export default function AuthenticatedLayout({
           {children}
         </main>
         <HelpButton />
-        <TourRunner />
+        <Suspense fallback={null}>
+          <TourRunner />
+        </Suspense>
       </div>
     </TourProvider>
   )

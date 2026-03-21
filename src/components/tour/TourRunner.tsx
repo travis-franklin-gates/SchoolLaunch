@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react'
 import dynamic from 'next/dynamic'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import type { CallBackProps, STATUS, EVENTS, ACTIONS } from 'react-joyride'
 import { useTourContext } from './TourContext'
 import { getOverviewSteps, getTabSteps } from './tourSteps'
@@ -73,9 +73,10 @@ export default function TourRunner() {
     stopTour,
   } = useTourContext()
 
+  const searchParams = useSearchParams()
   const autoStartedRef = useRef(false)
 
-  // Auto-start overview tour on first login (1-second delay)
+  // Auto-start overview tour ONLY when arriving from onboarding completion
   useEffect(() => {
     if (loading || autoStartedRef.current || tourCompleted || activeTour) return
     if (!role) return
@@ -83,12 +84,23 @@ export default function TourRunner() {
     const isHome = pathname === '/dashboard' || pathname === '/portfolio'
     if (!isHome) return
 
+    // Require proof the user just came from onboarding:
+    // either ?onboarding=complete query param or sessionStorage flag
+    const fromOnboarding =
+      searchParams.get('onboarding') === 'complete' ||
+      sessionStorage.getItem('onboarding_just_completed') === 'true'
+
+    if (!fromOnboarding) return
+
+    // Clear the sessionStorage flag so it doesn't trigger again on refresh
+    sessionStorage.removeItem('onboarding_just_completed')
+
     autoStartedRef.current = true
     const timer = setTimeout(() => {
       startOverviewTour()
     }, 1000)
     return () => clearTimeout(timer)
-  }, [loading, tourCompleted, activeTour, role, pathname, startOverviewTour])
+  }, [loading, tourCompleted, activeTour, role, pathname, searchParams, startOverviewTour])
 
   const handleCallback = useCallback((data: CallBackProps) => {
     const { status, action } = data
@@ -99,9 +111,14 @@ export default function TourRunner() {
         markTourComplete(activeTour)
       }
     }
-    // If user closes via overlay click or escape
+    // If user closes via overlay click or escape — also mark overview complete
+    // so it won't auto-start again
     if (action === 'close') {
-      stopTour()
+      if (activeTour === 'overview') {
+        markTourComplete('overview')
+      } else {
+        stopTour()
+      }
     }
   }, [activeTour, markTourComplete, stopTour])
 
