@@ -91,7 +91,9 @@ export default function ScorecardPage() {
                       : m.name.includes('Margin') || m.name === 'Enrollment Variance'
                         ? `${v}%`
                       : m.name === 'Cash Flow' || m.name === 'Multi-Year Cash Flow'
-                        ? `$${Math.round(v as number / 1000)}K`
+                        ? Math.abs(v as number) >= 1_000_000
+                          ? `$${((v as number) / 1_000_000).toFixed(1)}M`
+                          : `$${Math.round(v as number / 1000)}K`
                       : m.name === 'Days of Cash'
                         ? `${v}`
                       : m.name === 'Debt Default'
