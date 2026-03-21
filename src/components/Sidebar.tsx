@@ -6,11 +6,13 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { usePermissions } from '@/hooks/usePermissions'
 import { SELECTED_SCHOOL_KEY } from '@/lib/useSchoolData'
+import SchoolLogo from '@/components/SchoolLogo'
 
 interface SidebarSchool {
   school_id: string
   school_name: string
   role: string
+  logo_url: string | null
 }
 
 const ROLE_BADGE: Record<string, { label: string; className: string }> = {
@@ -82,14 +84,15 @@ export default function Sidebar() {
         .in('role', ['school_ceo', 'school_editor', 'school_viewer'])
       if (!roles || roles.length <= 1) return
       const schoolIds = roles.map((r) => r.school_id).filter(Boolean)
-      const { data: schoolData } = await supabase
-        .from('schools')
-        .select('id, name')
-        .in('id', schoolIds)
+      const [{ data: schoolData }, { data: profiles }] = await Promise.all([
+        supabase.from('schools').select('id, name').in('id', schoolIds),
+        supabase.from('school_profiles').select('school_id, logo_url').in('school_id', schoolIds),
+      ])
       setSchools(roles.map((r) => ({
         school_id: r.school_id,
         school_name: schoolData?.find((s) => s.id === r.school_id)?.name || 'Unnamed School',
         role: r.role,
+        logo_url: profiles?.find((p) => p.school_id === r.school_id)?.logo_url || null,
       })))
     }
     loadSchools()
@@ -164,7 +167,10 @@ export default function Sidebar() {
                       isCurrent ? 'text-teal-400 bg-white/[0.04]' : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
                     }`}
                   >
-                    <span className="truncate">{s.school_name}</span>
+                    <span className="flex items-center gap-2 truncate">
+                      <SchoolLogo name={s.school_name} logoUrl={s.logo_url} size={24} />
+                      <span className="truncate">{s.school_name}</span>
+                    </span>
                     <span className="flex items-center gap-1.5 flex-shrink-0">
                       {badge && <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${badge.className}`}>{badge.label}</span>}
                       {isCurrent && <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />}

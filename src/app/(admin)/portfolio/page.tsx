@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward, type FPFScorecard, type MultiYearDetailedRow } from '@/lib/budgetEngine'
 import type { SchoolProfile, StaffingPosition, BudgetProjection, GradeExpansionEntry, FinancialAssumptions } from '@/lib/types'
 import { getAssumptions } from '@/lib/types'
+import SchoolLogo from '@/components/SchoolLogo'
 
 interface SchoolCard {
   id: string
@@ -23,6 +24,7 @@ interface SchoolCard {
   notes: NoteEntry[]
   onboardingComplete: boolean
   lastUpdated: string | null
+  logoUrl: string | null
 }
 
 interface NoteEntry {
@@ -261,6 +263,7 @@ export default function PortfolioPage() {
         notes: schoolNotes,
         onboardingComplete: profile?.onboarding_complete || false,
         lastUpdated,
+        logoUrl: profile?.logo_url || null,
       }
     })
 
@@ -397,7 +400,10 @@ export default function PortfolioPage() {
                 {/* Card header */}
                 <div className="p-5 border-b border-slate-100">
                   <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-slate-800">{school.name}</h3>
+                    <div className="flex items-center gap-2.5">
+                      <SchoolLogo name={school.name} logoUrl={school.logoUrl} size={32} />
+                      <h3 className="font-semibold text-slate-800">{school.name}</h3>
+                    </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0 ml-2" {...(idx === 0 ? { 'data-tour': 'status-badge' } : {})}>
                       <StatusBadge status={school.status} />
                       {school.onboardingComplete && <ReadinessBadge issues={school.stage1Issues} />}

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { SELECTED_SCHOOL_KEY } from '@/lib/useSchoolData'
 import { Suspense } from 'react'
+import SchoolLogo from '@/components/SchoolLogo'
 
 interface SchoolOption {
   school_id: string
@@ -14,6 +15,7 @@ interface SchoolOption {
   planned_open_year: number
   onboarding_complete: boolean
   created_at: string
+  logo_url: string | null
 }
 
 const ROLE_BADGES: Record<string, { label: string; className: string }> = {
@@ -70,7 +72,7 @@ function SchoolPickerContent() {
 
       const { data: profiles } = await supabase
         .from('school_profiles')
-        .select('school_id, grade_config, planned_open_year, onboarding_complete')
+        .select('school_id, grade_config, planned_open_year, onboarding_complete, logo_url')
         .in('school_id', schoolIds)
 
       const options: SchoolOption[] = roles
@@ -86,6 +88,7 @@ function SchoolPickerContent() {
             planned_open_year: profile?.planned_open_year || 0,
             onboarding_complete: profile?.onboarding_complete ?? false,
             created_at: r.created_at,
+            logo_url: profile?.logo_url || null,
           }
         })
 
@@ -140,7 +143,9 @@ function SchoolPickerContent() {
                 onClick={() => selectSchool(s.school_id)}
                 className="w-full bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:border-teal-300 hover:shadow-md transition-all text-left group"
               >
-                <div className="flex items-start justify-between">
+                <div className="flex items-start gap-4">
+                  <SchoolLogo name={s.school_name} logoUrl={s.logo_url} size={48} />
+                  <div className="flex-1 flex items-start justify-between min-w-0">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-semibold text-slate-800 group-hover:text-teal-700 transition-colors truncate">
@@ -167,6 +172,7 @@ function SchoolPickerContent() {
                   <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 ${badge.className}`}>
                     {badge.label}
                   </span>
+                </div>
                 </div>
               </button>
             )

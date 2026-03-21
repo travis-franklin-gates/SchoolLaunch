@@ -9,6 +9,7 @@ import type { AdvisoryCache } from '@/lib/types'
 import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
 import Link from 'next/link'
 import { usePermissions } from '@/hooks/usePermissions'
+import SchoolLogo from '@/components/SchoolLogo'
 
 type AdvisoryData = AdvisoryCache
 
@@ -336,14 +337,17 @@ export default function DashboardPage() {
   return (
     <div className="animate-fade-in">
       {/* 1. School Identity Header */}
-      <div className="mb-6">
-        <h1 className="text-[28px] font-semibold text-slate-900">{schoolName || 'Overview'}</h1>
+      <div className="mb-6 flex items-start gap-4">
+        <SchoolLogo name={schoolName} logoUrl={profile.logo_url} size={48} />
+        <div>
+        <h1 className="text-[28px] font-semibold text-slate-900 leading-tight">{schoolName || 'Overview'}</h1>
         <p className="text-sm text-slate-500 mt-1">
           {openingGrades && `${openingGrades} Opening ${profile.planned_open_year || ''}`}
           {buildoutGrades && ` \u2192 ${buildoutGrades} at Full Build-Out`}
           {profile.target_enrollment_y1 > 0 && ` | ${profile.target_enrollment_y1} Students Year 1`}
           {profile.region && ` | ${REGIONALIZATION_FACTORS[profile.region]?.label?.split('(')[0]?.trim() || profile.region}`}
         </p>
+        </div>
       </div>
 
       {/* 2. Health tiles */}

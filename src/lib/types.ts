@@ -142,6 +142,7 @@ export interface SchoolProfile {
   pre_opening_expenses?: PreOpeningExpense[] | null
   pre_opening_transactions?: PreOpeningTransaction[] | null
   advisory_cache?: AdvisoryCache | null
+  logo_url?: string | null
 }
 
 export interface AdvisoryCache {

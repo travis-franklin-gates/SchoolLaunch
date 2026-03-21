@@ -49,7 +49,8 @@
       "Bash(claude mcp:*)",
       "Bash(git rm:*)",
       "Skill(telegram:access)",
-      "Bash(ls \"C:/users/travisfr/schoollaunch/src/hooks/usePermissions\"*)"
+      "Bash(ls \"C:/users/travisfr/schoollaunch/src/hooks/usePermissions\"*)",
+      "mcp__supabase__get_project_url"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -10,6 +10,7 @@ import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
 import GradeExpansionEditor from '@/components/GradeExpansionEditor'
 import TeamSection from '@/components/settings/TeamSection'
+import LogoUpload from '@/components/settings/LogoUpload'
 import { usePermissions } from '@/hooks/usePermissions'
 
 function fmt(n: number) {
@@ -36,6 +37,7 @@ export default function SettingsPage() {
   const [pctIep, setPctIep] = useState(profile.pct_iep)
   const [pctEll, setPctEll] = useState(profile.pct_ell)
   const [pctHicap, setPctHicap] = useState(profile.pct_hicap)
+  const [logoUrl, setLogoUrl] = useState<string | null>(profile.logo_url || null)
 
   const [fa, setFa] = useState<FinancialAssumptions>({ ...assumptions })
 
@@ -90,6 +92,7 @@ export default function SettingsPage() {
     setPctIep(profile.pct_iep)
     setPctEll(profile.pct_ell)
     setPctHicap(profile.pct_hicap)
+    setLogoUrl(profile.logo_url || null)
     setFa({ ...DEFAULT_ASSUMPTIONS, ...(profile.financial_assumptions || {}) })
     setInitialized(true)
   }
@@ -192,6 +195,15 @@ export default function SettingsPage() {
       {/* Section 1: School Profile */}
       <div data-tour="school-profile" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">School Profile</h2>
+        {schoolId && (
+          <LogoUpload
+            schoolId={schoolId}
+            schoolName={name}
+            logoUrl={logoUrl}
+            canEdit={canEditIdentity}
+            onUpdate={(url) => setLogoUrl(url)}
+          />
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">School Name</label>
