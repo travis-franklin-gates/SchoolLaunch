@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { TourProvider } from '@/components/tour/TourContext'
@@ -49,7 +50,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {children}
         </main>
         <HelpButton />
-        <TourRunner />
+        <Suspense fallback={null}>
+          <TourRunner />
+        </Suspense>
       </div>
     </TourProvider>
   )
