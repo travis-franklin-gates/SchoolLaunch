@@ -105,13 +105,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to clear staffing positions', detail: delStaffError }, { status: 500 })
   }
 
-  const staffRows = positions.map((p: { title: string; category: string; fte: number; salary: number }) => ({
+  const staffRows = positions.map((p: { title: string; category: string; fte: number; salary: number }, i: number) => ({
     school_id: schoolId,
     year: 1,
     title: p.title,
     category: p.category,
     fte: p.fte,
     annual_salary: p.salary,
+    sort_order: i,
   }))
 
   if (staffRows.length > 0) {

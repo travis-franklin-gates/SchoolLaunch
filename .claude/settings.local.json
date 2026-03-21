@@ -30,7 +30,27 @@
       "Bash(find /c/users/travisfr/schoollaunch/src/components -type f -name \"*.tsx\" | xargs ls -la)",
       "Bash(ls \"C:/users/travisfr/schoollaunch/src/app/\\(authenticated\\)/dashboard/\")",
       "Bash(find /c/users/travisfr/schoollaunch -type f -name \"*onboarding*\" 2>/dev/null | head -20)",
-      "Bash(wc -l /c/users/travisfr/schoollaunch/src/app/api/*/route.ts)"
+      "Bash(wc -l /c/users/travisfr/schoollaunch/src/app/api/*/route.ts)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(npm run:*)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "mcp__plugin_playwright_playwright__browser_type",
+      "mcp__plugin_playwright_playwright__browser_click",
+      "mcp__plugin_playwright_playwright__browser_wait_for",
+      "mcp__plugin_playwright_playwright__browser_snapshot",
+      "mcp__plugin_playwright_playwright__browser_select_option",
+      "mcp__plugin_playwright_playwright__browser_fill_form",
+      "mcp__plugin_playwright_playwright__browser_close",
+      "Bash(taskkill //F //FI \"WINDOWTITLE eq *mcp-chrome*\")",
+      "Bash(rm -rf \"/c/Users/travisfr/AppData/Local/ms-playwright/mcp-chrome-0fcc5e5/SingletonLock\")",
+      "mcp__plugin_playwright_playwright__browser_run_code",
+      "Bash(node -e \":*)",
+      "Bash(claude mcp:*)"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "github"
+  ]
 }

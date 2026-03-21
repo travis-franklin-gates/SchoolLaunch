@@ -116,7 +116,8 @@ export function generateExpansionPlan(
       ? priorYearEntries[priorYearEntries.length - 1]
       : null
 
-    const newGrades = mapping.get(year) || []
+    const priorGradeSet = new Set(priorGrades)
+    const newGrades = (mapping.get(year) || []).filter((g) => !priorGradeSet.has(g))
     for (const g of sortGrades(newGrades)) {
       entries.push({
         year,
@@ -127,6 +128,9 @@ export function generateExpansionPlan(
       })
     }
   }
+
+  // Sort entries within each year by grade order
+  entries.sort((a, b) => a.year - b.year || gradeIndex(a.grade_level) - gradeIndex(b.grade_level))
 
   return entries
 }

@@ -136,10 +136,11 @@ export async function POST(request: Request) {
     school_id: string; year: number; title: string; category: string;
     fte: number; annual_salary: number; position_type: string;
     driver: string; classification: string; benchmark_salary: number;
-    students_per_position: number;
+    students_per_position: number; sort_order: number;
   }> = []
 
-  for (const pos of SEED_POSITIONS) {
+  for (let pi = 0; pi < SEED_POSITIONS.length; pi++) {
+    const pos = SEED_POSITIONS[pi]
     const ftePerYear = computeFtePerYear(pos.fixedFte, pos.driver, pos.positionType, enrollments, sectionsPerYear)
 
     for (let y = 1; y <= 5; y++) {
@@ -155,6 +156,7 @@ export async function POST(request: Request) {
         classification: pos.classification,
         benchmark_salary: pos.benchmarkSalary,
         students_per_position: pos.studentsPerPosition,
+        sort_order: pi,
       })
     }
   }

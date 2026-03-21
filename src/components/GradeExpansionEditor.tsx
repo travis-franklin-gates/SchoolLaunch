@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react'
 import type { GradeExpansionEntry } from '@/lib/types'
 import {
   ALL_GRADES,
+  gradeIndex,
   gradesForConfig,
   defaultOpeningGrades,
   sortGrades,
@@ -206,6 +207,12 @@ export default function GradeExpansionEditor({
       if (current.includes(grade)) {
         next.set(year, current.filter((g) => g !== grade))
       } else {
+        // Guard: don't add a grade that's already served as a returning grade
+        const priorGrades = new Set<string>(openingGrades)
+        for (let y = 2; y < year; y++) {
+          for (const g of (prev.get(y) || [])) priorGrades.add(g)
+        }
+        if (priorGrades.has(grade)) return prev // already present in this year
         next.set(year, sortGrades([...current, grade]))
       }
       return next
@@ -241,14 +248,19 @@ export default function GradeExpansionEditor({
         students_per_section: entry?.students_per_section || defaultStudentsPerSection,
       }
       next.set(key, { ...existing, [field]: value })
+      // Remove overrides for this grade in subsequent years so the
+      // propagation loop inherits the new value (carry-forward fix)
+      for (let y = year + 1; y <= 5; y++) {
+        next.delete(`${y}-${grade}`)
+      }
       return next
     })
   }
 
   const years = Array.from(new Set(plan.map((e) => e.year))).sort((a, b) => a - b)
 
-  // Founding grades config for the per-grade table
-  const foundingEntries = plan.filter((e) => e.year === 1)
+  // Founding grades config for the per-grade table (sorted by grade order)
+  const foundingEntries = plan.filter((e) => e.year === 1).sort((a, b) => gradeIndex(a.grade_level) - gradeIndex(b.grade_level))
   const foundingTotal = foundingEntries.reduce((s, e) => s + e.sections * e.students_per_section, 0)
   const foundingSections = foundingEntries.reduce((s, e) => s + e.sections, 0)
 
@@ -331,7 +343,7 @@ export default function GradeExpansionEditor({
               <input
                 type="number"
                 min={10}
-                max={35}
+                max={50}
                 value={consistentValue}
                 onChange={(e) => applyConsistentClassSize(Number(e.target.value))}
                 className="w-16 text-center border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
@@ -360,7 +372,7 @@ export default function GradeExpansionEditor({
                         onChange={(e) => updatePlanEntry(1, entry.grade_level, 'sections', Number(e.target.value))}
                         className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                       >
-                        {[1, 2, 3, 4].map((n) => (
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                           <option key={n} value={n}>{n}</option>
                         ))}
                       </select>
@@ -369,7 +381,7 @@ export default function GradeExpansionEditor({
                       <input
                         type="number"
                         min={10}
-                        max={35}
+                        max={50}
                         value={entry.students_per_section}
                         onChange={(e) => updatePlanEntry(1, entry.grade_level, 'students_per_section', Number(e.target.value))}
                         readOnly={consistentClassSize}
@@ -417,7 +429,7 @@ export default function GradeExpansionEditor({
             </thead>
             <tbody>
               {years.map((year) => {
-                const yearEntries = plan.filter((e) => e.year === year)
+                const yearEntries = plan.filter((e) => e.year === year).sort((a, b) => gradeIndex(a.grade_level) - gradeIndex(b.grade_level))
                 const yearTotal = yearEntries.reduce((s, e) => s + e.sections * e.students_per_section, 0)
                 const yearAssigned = yearNewGrades.get(year) || []
 
@@ -473,7 +485,7 @@ export default function GradeExpansionEditor({
                             onChange={(e) => updatePlanEntry(year, entry.grade_level, 'sections', Number(e.target.value))}
                             className="border border-slate-200 rounded px-1.5 py-1 text-xs text-center bg-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                           >
-                            {[1, 2, 3, 4].map((n) => (
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                               <option key={n} value={n}>{n}</option>
                             ))}
                           </select>
@@ -482,7 +494,7 @@ export default function GradeExpansionEditor({
                           <input
                             type="number"
                             min={10}
-                            max={35}
+                            max={50}
                             value={entry.students_per_section}
                             onChange={(e) => updatePlanEntry(year, entry.grade_level, 'students_per_section', Number(e.target.value))}
                             readOnly={consistentClassSize}
@@ -495,8 +507,18 @@ export default function GradeExpansionEditor({
                         <td className="px-3 py-2 text-right text-slate-700 font-medium">
                           {entry.sections * entry.students_per_section}
                         </td>
-                        <td className="px-3 py-2 text-slate-400 text-xs">
+                        <td className="px-3 py-2 text-slate-400 text-xs flex items-center gap-1">
                           {entry.is_new_grade ? `Year ${year}` : 'Year 1'}
+                          {entry.is_new_grade && year > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => toggleYearGrade(year, entry.grade_level)}
+                              className="ml-1 w-4 h-4 inline-flex items-center justify-center rounded text-[10px] text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                              title={`Remove grade ${entry.grade_level} from Year ${year}`}
+                            >
+                              ✕
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}

@@ -195,6 +195,7 @@ export interface StaffingPosition {
   students_per_position?: number
   classification?: string
   benchmark_salary?: number
+  sort_order?: number
 }
 
 export interface BudgetProjection {
@@ -255,6 +256,7 @@ export const COMMISSION_POSITIONS: CommissionPositionType[] = [
   { type: 'substitute_pool', name: 'Substitute Teacher Pool', classification: 'Instructional', salary: 30900, driver: 'per_pupil', studentsPerPosition: 200 },
   // Non-Instructional
   { type: 'counselor', name: 'School Counselor', classification: 'Non-Instructional', salary: 77250, driver: 'fixed', studentsPerPosition: 0 },
+  { type: 'social_worker', name: 'School Social Worker', classification: 'Non-Instructional', salary: 68000, driver: 'fixed', studentsPerPosition: 0 },
   { type: 'psychologist', name: 'School Psychologist', classification: 'Non-Instructional', salary: 87550, driver: 'fixed', studentsPerPosition: 0 },
   { type: 'office_mgr', name: 'Administrative Assistant/Office Manager', classification: 'Non-Instructional', salary: 56650, driver: 'fixed', studentsPerPosition: 0 },
   { type: 'hr_specialist', name: 'Human Resources Specialist', classification: 'Non-Instructional', salary: 77250, driver: 'fixed', studentsPerPosition: 0 },

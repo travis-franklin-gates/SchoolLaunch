@@ -36,6 +36,7 @@ const POSITION_CLASSIFICATION: Record<string, 'Administrative' | 'Certificated' 
   instructional_coach: 'Certificated',
   interventionist: 'Certificated',
   counselor: 'Certificated',
+  social_worker: 'Certificated',
   psychologist: 'Certificated',
   substitute_pool: 'Certificated',
   // Classified
@@ -63,6 +64,7 @@ const POSITION_DRIVER: Record<string, string> = {
   cfo: 'fixed',
   office_mgr: 'fixed',
   counselor: 'fixed',
+  social_worker: 'fixed',
   psychologist: 'fixed',
   nutrition_mgr: 'fixed',
   facilities_mgr: 'fixed',
@@ -143,6 +145,7 @@ interface MultiYearPosition {
   driver: string
   studentsPerPosition: number
   fte: [number, number, number, number, number]
+  sortOrder: number
 }
 
 let nextId = 0
@@ -168,6 +171,7 @@ function inferPositionType(title: string): string {
   if (/\bteacher\b/.test(t)) return 'teacher_elem'
   if (/\bparaeducator\b/.test(t) || /\bpara\b/.test(t) || /\binstructional aide\b/.test(t)) return 'paraeducator'
   if (/\bcounselor\b/.test(t)) return 'counselor'
+  if (/\bsocial worker\b/.test(t)) return 'social_worker'
   if (/\bpsychologist\b/.test(t)) return 'psychologist'
   if (/\boffice manager\b/.test(t) || /\badministrative assistant\b/.test(t)) return 'office_mgr'
   if (/\bhuman resources\b/.test(t) || /\bhr\b/.test(t)) return 'hr_specialist'
@@ -339,7 +343,7 @@ export default function StaffingPage() {
     const y1Positions = dbAllPositions.filter((p) => p.year === 1)
     const source = y1Positions.length > 0 ? y1Positions : dbPositions
 
-    const result: MultiYearPosition[] = source.map((p) => {
+    const result: MultiYearPosition[] = source.map((p, idx) => {
       const posType = (p.position_type && p.position_type !== 'custom') ? p.position_type : inferPositionType(p.title)
       const cp = getCommissionPosition(posType)
 
@@ -375,9 +379,11 @@ export default function StaffingPage() {
         driver,
         studentsPerPosition: studentsPerPos,
         fte,
+        sortOrder: p.sort_order ?? idx,
       }
     })
 
+    result.sort((a, b) => a.sortOrder - b.sortOrder)
     setPositions(result)
   }, [dbPositions, dbAllPositions, enrollments, sectionsPerYear, schoolId])
 
@@ -475,25 +481,65 @@ export default function StaffingPage() {
   function addPosition(classification?: 'Administrative' | 'Certificated' | 'Classified') {
     const cls = classification || 'Classified'
     const fte = computeSmartFte(1, 'fixed', 'custom', enrollments, sectionsPerYear)
-    setPositions((prev) => [
-      ...prev,
-      {
-        id: tempId(),
-        positionType: 'custom',
-        title: 'New Position',
-        classification: cls,
-        category: classificationToCategory(cls),
-        salary: 45000,
-        benchmarkSalary: 0,
-        driver: 'fixed',
-        studentsPerPosition: 0,
-        fte,
-      },
-    ])
+    setPositions((prev) => {
+      const maxSort = prev.reduce((m, p) => Math.max(m, p.sortOrder), 0)
+      return [
+        ...prev,
+        {
+          id: tempId(),
+          positionType: 'custom',
+          title: 'New Position',
+          classification: cls,
+          category: classificationToCategory(cls),
+          salary: 45000,
+          benchmarkSalary: 0,
+          driver: 'fixed',
+          studentsPerPosition: 0,
+          fte,
+          sortOrder: maxSort + 1,
+        },
+      ]
+    })
   }
 
   function removePosition(id: string) {
     setPositions((prev) => prev.filter((p) => p.id !== id))
+  }
+
+  // Drag-and-drop reordering within a classification group
+  const dragRef = useRef<{ id: string; classification: string } | null>(null)
+
+  function handleDragStart(id: string, classification: string) {
+    dragRef.current = { id, classification }
+  }
+
+  function handleDrop(targetId: string) {
+    const drag = dragRef.current
+    if (!drag || drag.id === targetId) { dragRef.current = null; return }
+
+    setPositions((prev) => {
+      const dragPos = prev.find((p) => p.id === drag.id)
+      const dropPos = prev.find((p) => p.id === targetId)
+      if (!dragPos || !dropPos) return prev
+      // Only reorder within the same classification
+      if (dragPos.classification !== dropPos.classification) return prev
+
+      const group = prev.filter((p) => p.classification === dragPos.classification)
+      const rest = prev.filter((p) => p.classification !== dragPos.classification)
+      const fromIdx = group.findIndex((p) => p.id === drag.id)
+      const toIdx = group.findIndex((p) => p.id === targetId)
+      const [moved] = group.splice(fromIdx, 1)
+      group.splice(toIdx, 0, moved)
+      // Reassign sort orders within group
+      group.forEach((p, i) => { p.sortOrder = i })
+
+      // Rebuild full array maintaining classification group order
+      const adminGroup = dragPos.classification === 'Administrative' ? group : (rest.filter((p) => p.classification === 'Administrative'))
+      const certGroup = dragPos.classification === 'Certificated' ? group : (rest.filter((p) => p.classification === 'Certificated'))
+      const classGroup = dragPos.classification === 'Classified' ? group : (rest.filter((p) => p.classification === 'Classified'))
+      return [...adminGroup, ...certGroup, ...classGroup]
+    })
+    dragRef.current = null
   }
 
   async function save() {
@@ -525,6 +571,7 @@ export default function StaffingPage() {
       classification: string
       benchmark_salary: number
       students_per_position: number
+      sort_order: number
     }> = []
 
     for (const pos of positions) {
@@ -541,6 +588,7 @@ export default function StaffingPage() {
           classification: pos.classification,
           benchmark_salary: pos.benchmarkSalary,
           students_per_position: pos.studentsPerPosition,
+          sort_order: pos.sortOrder,
         })
       }
     }
@@ -643,6 +691,7 @@ export default function StaffingPage() {
           <table className="sl-table w-full text-sm">
             <thead>
               <tr>
+                <th className="py-3 w-6"></th>
                 <th className="text-left px-3 py-3 min-w-[220px]">Position</th>
                 <th className="text-left px-2 py-3 w-[100px]">Classification</th>
                 <th data-tour="driver-column" className="text-left px-2 py-3 w-[80px]">Driver</th>
@@ -668,12 +717,14 @@ export default function StaffingPage() {
                   onUpdateTitle={updateTitle}
                   onRemove={removePosition}
                   onAdd={addPosition}
+                  onDragStart={handleDragStart}
+                  onDrop={handleDrop}
                 />
               ))}
             </tbody>
             <tfoot>
               <tr className="bg-slate-50 border-t border-slate-200">
-                <td className="px-3 py-2 font-semibold text-slate-700" colSpan={3}>Total FTE</td>
+                <td className="px-3 py-2 font-semibold text-slate-700" colSpan={4}>Total FTE</td>
                 <td className="px-2 py-2"></td>
                 {yearTotals.map((yt, i) => (
                   <td key={i} className="text-right px-2 py-2 font-semibold text-slate-800">{fmtFte(yt.totalFte)}</td>
@@ -681,7 +732,7 @@ export default function StaffingPage() {
                 <td></td>
               </tr>
               <tr className="bg-slate-50">
-                <td className="px-3 py-2 text-slate-600 font-medium" colSpan={3}>Total Salaries</td>
+                <td className="px-3 py-2 text-slate-600 font-medium" colSpan={4}>Total Salaries</td>
                 <td className="px-2 py-2"></td>
                 {yearTotals.map((yt, i) => (
                   <td key={i} className="text-right px-2 py-2 font-medium text-slate-700 text-xs">{fmt(yt.totalSalaries)}</td>
@@ -689,7 +740,7 @@ export default function StaffingPage() {
                 <td></td>
               </tr>
               <tr className="bg-slate-50">
-                <td className="px-3 py-2 text-slate-600 font-medium" colSpan={3}>
+                <td className="px-3 py-2 text-slate-600 font-medium" colSpan={4}>
                   Benefits ({assumptions.benefits_load_pct}%)
                 </td>
                 <td className="px-2 py-2"></td>
@@ -699,7 +750,7 @@ export default function StaffingPage() {
                 <td></td>
               </tr>
               <tr className="bg-slate-100 border-t border-slate-300">
-                <td className="px-3 py-3 font-bold text-slate-800" colSpan={3}>Total Personnel Cost</td>
+                <td className="px-3 py-3 font-bold text-slate-800" colSpan={4}>Total Personnel Cost</td>
                 <td className="px-2 py-3"></td>
                 {yearTotals.map((yt, i) => (
                   <td key={i} className="text-right px-2 py-3 font-bold text-slate-800 text-xs">{fmt(yt.totalPersonnel)}</td>
@@ -707,7 +758,7 @@ export default function StaffingPage() {
                 <td></td>
               </tr>
               <tr className="bg-slate-50 text-xs text-slate-500">
-                <td className="px-3 py-2" colSpan={4}>
+                <td className="px-3 py-2" colSpan={5}>
                   Staff: {fmtFte(y1Totals.adminFte)} Admin / {fmtFte(y1Totals.certFte)} Cert / {fmtFte(y1Totals.classFte)} Class (Y1)
                 </td>
                 {yearTotals.map((yt, i) => (
@@ -749,6 +800,8 @@ function GroupSection({
   onUpdateTitle,
   onRemove,
   onAdd,
+  onDragStart,
+  onDrop,
 }: {
   label: string
   classification: 'Administrative' | 'Certificated' | 'Classified'
@@ -761,11 +814,13 @@ function GroupSection({
   onUpdateTitle: (id: string, value: string) => void
   onRemove: (id: string) => void
   onAdd: (classification: 'Administrative' | 'Certificated' | 'Classified') => void
+  onDragStart: (id: string, classification: string) => void
+  onDrop: (targetId: string) => void
 }) {
   return (
     <>
       <tr className="bg-slate-50/70">
-        <td colSpan={10} className="px-3 py-1.5">
+        <td colSpan={11} className="px-3 py-1.5">
           <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${color.bg} ${color.text}`}>
             {label}
           </span>
@@ -782,10 +837,12 @@ function GroupSection({
           onUpdateSalary={onUpdateSalary}
           onUpdateTitle={onUpdateTitle}
           onRemove={onRemove}
+          onDragStart={onDragStart}
+          onDrop={onDrop}
         />
       ))}
       <tr className="border-b border-slate-100">
-        <td colSpan={10} className="px-3 py-1.5">
+        <td colSpan={11} className="px-3 py-1.5">
           <button
             onClick={() => onAdd(classification)}
             className={`text-xs font-medium ${color.text} opacity-70 hover:opacity-100 transition-opacity`}
@@ -816,6 +873,8 @@ function PositionRow({
   onUpdateSalary,
   onUpdateTitle,
   onRemove,
+  onDragStart,
+  onDrop,
 }: {
   pos: MultiYearPosition
   classification: 'Administrative' | 'Certificated' | 'Classified'
@@ -825,6 +884,8 @@ function PositionRow({
   onUpdateSalary: (id: string, value: number) => void
   onUpdateTitle: (id: string, value: string) => void
   onRemove: (id: string) => void
+  onDragStart: (id: string, classification: string) => void
+  onDrop: (targetId: string) => void
 }) {
   const driverLabel = DRIVER_LABELS[pos.driver] || pos.driver.replace(/_/g, ' ')
   const clsColor = CLASSIFICATION_COLORS[pos.classification] || CLASSIFICATION_COLORS.Classified
@@ -837,7 +898,16 @@ function PositionRow({
   const totalComp = pos.salary > 0 ? Math.round(pos.salary * (1 + benefitsRate)) : 0
 
   return (
-    <tr className="border-b border-slate-100 hover:bg-slate-50/50">
+    <tr
+      className="border-b border-slate-100 hover:bg-slate-50/50"
+      draggable
+      onDragStart={() => onDragStart(pos.id, pos.classification)}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={() => onDrop(pos.id)}
+    >
+      <td className="px-1 py-1.5 w-6 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 select-none" title="Drag to reorder">
+        <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor" className="mx-auto"><circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/><circle cx="3" cy="8" r="1.5"/><circle cx="9" cy="8" r="1.5"/><circle cx="3" cy="14" r="1.5"/><circle cx="9" cy="14" r="1.5"/></svg>
+      </td>
       <td className="px-3 py-1.5">
         <select
           value={pos.positionType}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { calcBenefits, calcCommissionRevenue } from '@/lib/calculations'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 
@@ -176,6 +176,25 @@ export default function StepStaffing({ enrollment, maxClassSize, sectionsY1, gra
     setPositions(buildDefaultPositions(enrollment, maxClassSize, gradeConfig, pctIep, pctEll, sectionsY1))
   }
 
+  // Drag-and-drop reordering
+  const dragIndexRef = useRef<number | null>(null)
+
+  function handleDragStart(index: number) {
+    dragIndexRef.current = index
+  }
+
+  function handleDrop(targetIndex: number) {
+    const from = dragIndexRef.current
+    if (from === null || from === targetIndex) { dragIndexRef.current = null; return }
+    setPositions((prev) => {
+      const next = [...prev]
+      const [moved] = next.splice(from, 1)
+      next.splice(targetIndex, 0, moved)
+      return next
+    })
+    dragIndexRef.current = null
+  }
+
   function handleNext(e: React.FormEvent) {
     e.preventDefault()
     onNext(positions)
@@ -239,6 +258,7 @@ export default function StepStaffing({ enrollment, maxClassSize, sectionsY1, gra
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200">
+              <th className="py-2 w-6"></th>
               <th className="text-left py-2 pr-3 font-medium text-slate-600">Position Title</th>
               <th className="text-left py-2 pr-3 font-medium text-slate-600">Category</th>
               <th className="text-right py-2 pr-3 font-medium text-slate-600">FTE</th>
@@ -249,12 +269,22 @@ export default function StepStaffing({ enrollment, maxClassSize, sectionsY1, gra
             </tr>
           </thead>
           <tbody>
-            {positions.map((p) => {
+            {positions.map((p, i) => {
               const effectiveSalary = p.fte * p.salary
               const benefits = calcBenefits(effectiveSalary)
               const total = effectiveSalary + benefits
               return (
-                <tr key={p.key} className="border-b border-slate-100 hover:bg-slate-50">
+                <tr
+                  key={p.key}
+                  className="border-b border-slate-100 hover:bg-slate-50"
+                  draggable
+                  onDragStart={() => handleDragStart(i)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => handleDrop(i)}
+                >
+                  <td className="py-2 w-6 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 select-none" title="Drag to reorder">
+                    <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor" className="mx-auto"><circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/><circle cx="3" cy="8" r="1.5"/><circle cx="9" cy="8" r="1.5"/><circle cx="3" cy="14" r="1.5"/><circle cx="9" cy="14" r="1.5"/></svg>
+                  </td>
                   <td className="py-2 pr-3">
                     <input
                       type="text"

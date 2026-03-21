@@ -306,7 +306,7 @@ export default function OnboardingPage() {
     // Delete old positions for year 1, then insert new
     await supabase.from('staffing_positions').delete().eq('school_id', schoolId).eq('year', 1)
 
-    const rows = positions.map((p) => ({
+    const rows = positions.map((p, i) => ({
       school_id: schoolId,
       year: 1,
       title: p.title,
@@ -316,6 +316,7 @@ export default function OnboardingPage() {
       position_type: p.positionType || null,
       driver: p.driver || null,
       classification: p.classification || null,
+      sort_order: i,
     }))
 
     if (rows.length > 0) {
