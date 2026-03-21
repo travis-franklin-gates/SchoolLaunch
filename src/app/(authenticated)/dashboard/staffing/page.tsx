@@ -810,6 +810,7 @@ function GroupSection({
   onAdd,
   onDragStart,
   onDrop,
+  canEdit,
 }: {
   label: string
   classification: 'Administrative' | 'Certificated' | 'Classified'
@@ -887,6 +888,7 @@ function PositionRow({
   onRemove,
   onDragStart,
   onDrop,
+  canEdit,
 }: {
   pos: MultiYearPosition
   classification: 'Administrative' | 'Certificated' | 'Classified'
