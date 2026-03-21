@@ -167,17 +167,20 @@ export default function DashboardPage() {
   // Days of Cash: use scorecard Y1 value (matches Multi-Year tab and Commission Scorecard)
   const daysOfCash = scorecard.measures.find(m => m.name === 'Days of Cash')?.values[0] ?? 0
   const rc = reserveColor(daysOfCash)
-  // Use multiYear Y1 as single source of truth (matches Multi-Year tab and Trajectory)
+  // Use multiYear Y1 as single source of truth (matches Multi-Year tab, Trajectory, and AI briefing)
   const y1Net = multiYear.length > 0 ? multiYear[0].net : baseSummary.netPosition
   const y1Revenue = multiYear.length > 0 ? multiYear[0].revenue.total : baseSummary.totalRevenue
   const y1Personnel = multiYear.length > 0 ? multiYear[0].personnel.total : baseSummary.totalPersonnel
   const y1Operations = multiYear.length > 0 ? multiYear[0].operations.total : baseSummary.totalOperations
   const y1Expenses = multiYear.length > 0 ? multiYear[0].totalExpenses : baseSummary.totalExpenses
-  const personnelColor = baseSummary.personnelPctRevenue < 72
+  // Personnel % uses baseSummary.operatingRevenue (excludes interest & grants) — single source of truth
+  // shared with Staffing tab badge and AI briefing context
+  const personnelPctRevenue = baseSummary.operatingRevenue > 0 ? (y1Personnel / baseSummary.operatingRevenue) * 100 : 0
+  const personnelColor = personnelPctRevenue < 72
     ? { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
-    : baseSummary.personnelPctRevenue <= 78
+    : personnelPctRevenue <= 78
     ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
-    : baseSummary.personnelPctRevenue <= 80
+    : personnelPctRevenue <= 80
     ? { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-l-amber-500' }
     : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
 
@@ -190,8 +193,8 @@ export default function DashboardPage() {
     ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
     : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
 
-  // Total Margin % = Net Position / Total Revenue (Commission FPF metric)
-  const totalMarginPct = y1Revenue > 0 ? (y1Net / y1Revenue) * 100 : 0
+  // Total Margin % = Net Position / Operating Revenue (Commission FPF metric)
+  const totalMarginPct = baseSummary.operatingRevenue > 0 ? (y1Net / baseSummary.operatingRevenue) * 100 : 0
   const totalMarginColor = totalMarginPct >= 0
     ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
     : totalMarginPct >= -5
@@ -331,11 +334,6 @@ export default function DashboardPage() {
           colorClass={rc}
         />
         <HealthTile
-          label="Personnel % Revenue"
-          value={`${baseSummary.personnelPctRevenue.toFixed(1)}%`}
-          colorClass={personnelColor}
-        />
-        <HealthTile
           label="Ending Cash Y1"
           value={fmt(endingCashY1)}
           colorClass={endingCashColor}
@@ -345,6 +343,11 @@ export default function DashboardPage() {
           value={`${totalMarginPct.toFixed(1)}%`}
           subtitle={totalMarginSubtitle}
           colorClass={totalMarginColor}
+        />
+        <HealthTile
+          label="Personnel % Revenue"
+          value={`${personnelPctRevenue.toFixed(1)}%`}
+          colorClass={personnelColor}
         />
         <HealthTile
           label="Facility % Revenue"

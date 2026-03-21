@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
-import { calcBenefits, calcCommissionRevenue } from '@/lib/calculations'
+import { calcBenefits } from '@/lib/calculations'
 import { createClient } from '@/lib/supabase/client'
 import { COMMISSION_POSITIONS, getCommissionPosition } from '@/lib/types'
 import { expansionToEnrollmentArray } from '@/lib/gradeExpansion'
@@ -258,6 +258,7 @@ export default function StaffingPage() {
   const {
     schoolData: { schoolId, positions: dbPositions, allPositions: dbAllPositions, projections, gradeExpansionPlan, profile, loading, reload },
     assumptions,
+    baseSummary,
     isModified,
   } = useScenario()
   const [positions, setPositions] = useState<MultiYearPosition[]>([])
@@ -299,14 +300,8 @@ export default function StaffingPage() {
     return result
   }, [gradeExpansionPlan])
 
-  // Operating revenue for Year 1 (for personnel % badge) — calculated live, same as Overview
-  const y1Revenue = useMemo(() => {
-    const rev = calcCommissionRevenue(
-      profile.target_enrollment_y1, profile.pct_frl, profile.pct_iep,
-      profile.pct_ell, profile.pct_hicap, assumptions,
-    )
-    return rev.total
-  }, [profile, assumptions])
+  // Operating revenue for Year 1 (for personnel % badge) — from baseSummary, same source as Overview
+  const y1Revenue = baseSummary.operatingRevenue
 
   // Server-side seed: call API endpoint that atomically checks + inserts
   const ensureSeeded = useCallback(async () => {

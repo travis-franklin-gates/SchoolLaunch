@@ -19,8 +19,9 @@ export function buildSchoolContextString(
   const aafte = calcAAFTE(enroll, assumptions.aafte_pct)
   const hasMultiYear = multiYear && multiYear.length > 0
 
-  // Use multiYear Y1 as single source of truth when available (matches dashboard tiles exactly)
-  const operatingRevenue = hasMultiYear ? multiYear[0].revenue.operatingRevenue : rev.total
+  // Operating revenue from calcCommissionRevenue (excludes interest & grants) — matches baseSummary
+  // and dashboard tiles. Interest income is included in multiYear but excluded here for consistency.
+  const operatingRevenue = rev.total
   const totalRevenue = hasMultiYear ? multiYear[0].revenue.total : rev.total
   const totalPersonnel = hasMultiYear
     ? multiYear[0].personnel.total
