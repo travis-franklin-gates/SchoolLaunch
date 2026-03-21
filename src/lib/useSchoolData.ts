@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { SchoolProfile, StaffingPosition, BudgetProjection, GradeExpansionEntry } from '@/lib/types'
 
+export const SELECTED_SCHOOL_KEY = 'sl_selected_school'
+
 export interface SchoolData {
   schoolId: string
   schoolName: string
@@ -57,10 +59,21 @@ export function useSchoolData(): SchoolData {
       .in('role', ['school_ceo', 'school_editor', 'school_viewer'])
       .order('created_at', { ascending: false })
 
-    // Prefer CEO role, then most recently joined school
-    const roleData = roles?.find((r) => r.role === 'school_ceo') || roles?.[0]
+    if (!roles || roles.length === 0) { setLoading(false); return }
+
+    // Check sessionStorage for a selected school
+    const selectedId = sessionStorage.getItem(SELECTED_SCHOOL_KEY)
+    const selectedRole = selectedId ? roles.find((r) => r.school_id === selectedId) : null
+
+    // Use selected school if valid, else prefer CEO role, then most recent
+    const roleData = selectedRole || roles.find((r) => r.role === 'school_ceo') || roles[0]
 
     if (!roleData?.school_id) { setLoading(false); return }
+
+    // Clear invalid sessionStorage selection
+    if (selectedId && !selectedRole) {
+      sessionStorage.removeItem(SELECTED_SCHOOL_KEY)
+    }
 
     const sid = roleData.school_id
     setSchoolId(sid)
@@ -88,7 +101,7 @@ export function useSchoolData(): SchoolData {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return { schoolId, schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, scenarioId, loading, reload: load }
 }

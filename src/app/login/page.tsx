@@ -82,9 +82,23 @@ export default function LoginPage() {
         return
       }
 
-      // For school roles: prefer CEO role, then most recently created
-      const primaryRole = roles.find((r) => r.role === 'school_ceo') || roles[0]
-      const { role, school_id } = primaryRole
+      // Filter to school-level roles only
+      const schoolRoles = roles.filter((r) => ['school_ceo', 'school_editor', 'school_viewer'].includes(r.role))
+
+      if (schoolRoles.length === 0) {
+        router.push('/dashboard')
+        return
+      }
+
+      // Multiple schools: show school picker
+      if (schoolRoles.length > 1) {
+        router.push('/select-school')
+        return
+      }
+
+      // Single school: route directly
+      const { role, school_id } = schoolRoles[0]
+      sessionStorage.setItem('sl_selected_school', school_id)
 
       if (school_id) {
         const { data: profile } = await supabase

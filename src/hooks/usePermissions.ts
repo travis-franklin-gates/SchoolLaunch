@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { SELECTED_SCHOOL_KEY } from '@/lib/useSchoolData'
 
 export type SchoolRole = 'school_ceo' | 'school_editor' | 'school_viewer' | 'org_admin' | 'super_admin'
 
@@ -35,12 +36,17 @@ export function usePermissions(): Permissions {
 
       const { data: roles } = await supabase
         .from('user_roles')
-        .select('role, created_at')
+        .select('role, school_id, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
-      // Prefer CEO role, then most recent
-      const primary = roles?.find((r) => r.role === 'school_ceo') || roles?.[0]
+      if (!roles || roles.length === 0) { setIsLoading(false); return }
+
+      // Resolve role for the currently selected school
+      const selectedId = sessionStorage.getItem(SELECTED_SCHOOL_KEY)
+      const selectedRole = selectedId ? roles.find((r) => r.school_id === selectedId) : null
+
+      const primary = selectedRole || roles.find((r) => r.role === 'school_ceo') || roles[0]
       if (primary?.role) {
         setRole(primary.role as SchoolRole)
       }

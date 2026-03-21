@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { SELECTED_SCHOOL_KEY } from '@/lib/useSchoolData'
 
 interface Invitation {
   id: string
@@ -79,8 +80,12 @@ export default function InviteForm({
         return
       }
 
-      await acceptInvitation(authData.user.id)
+      const result = await acceptInvitation(authData.user.id)
 
+      // Set the newly joined school as selected and route there
+      if (result.schoolId) {
+        sessionStorage.setItem(SELECTED_SCHOOL_KEY, result.schoolId)
+      }
       router.push('/dashboard')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred.')
@@ -118,6 +123,10 @@ export default function InviteForm({
       }
 
       const result = await acceptInvitation(authData.user.id)
+
+      if (result.schoolId) {
+        sessionStorage.setItem(SELECTED_SCHOOL_KEY, result.schoolId)
+      }
 
       if (invitation.role === 'school_ceo') {
         router.push('/onboarding')
