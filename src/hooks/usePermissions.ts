@@ -33,14 +33,16 @@ export function usePermissions(): Permissions {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setIsLoading(false); return }
 
-      const { data } = await supabase
+      const { data: roles } = await supabase
         .from('user_roles')
-        .select('role')
+        .select('role, created_at')
         .eq('user_id', user.id)
-        .single()
+        .order('created_at', { ascending: false })
 
-      if (data?.role) {
-        setRole(data.role as SchoolRole)
+      // Prefer CEO role, then most recent
+      const primary = roles?.find((r) => r.role === 'school_ceo') || roles?.[0]
+      if (primary?.role) {
+        setRole(primary.role as SchoolRole)
       }
       setIsLoading(false)
     }

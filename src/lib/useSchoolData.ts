@@ -50,12 +50,15 @@ export function useSchoolData(): SchoolData {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const { data: roleData } = await supabase
+    const { data: roles } = await supabase
       .from('user_roles')
-      .select('school_id, role')
+      .select('school_id, role, created_at')
       .eq('user_id', user.id)
       .in('role', ['school_ceo', 'school_editor', 'school_viewer'])
-      .single()
+      .order('created_at', { ascending: false })
+
+    // Prefer CEO role, then most recently joined school
+    const roleData = roles?.find((r) => r.role === 'school_ceo') || roles?.[0]
 
     if (!roleData?.school_id) { setLoading(false); return }
 

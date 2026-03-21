@@ -66,12 +66,13 @@ export function useTour(): TourState {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
 
-      const { data } = await supabase
+      const { data: roles } = await supabase
         .from('user_roles')
         .select('role, tour_completed, completed_tours')
         .eq('user_id', user.id)
-        .single()
+        .order('created_at', { ascending: false })
 
+      const data = roles?.[0]
       if (data) {
         setRole(data.role as UserRole)
         setTourCompleted(data.tour_completed ?? false)

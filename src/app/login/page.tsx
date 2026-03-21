@@ -63,24 +63,28 @@ export default function LoginPage() {
 
       const userId = authData.user.id
 
-      const { data: roleData, error: roleError } = await supabase
+      const { data: roles, error: roleError } = await supabase
         .from('user_roles')
-        .select('role, school_id')
+        .select('role, school_id, created_at')
         .eq('user_id', userId)
-        .single()
+        .order('created_at', { ascending: false })
 
-      if (roleError || !roleData) {
+      if (roleError || !roles || roles.length === 0) {
         setError('No role assigned to this account.')
         setLoading(false)
         return
       }
 
-      const { role, school_id } = roleData
-
-      if (role === 'super_admin' || role === 'org_admin') {
+      // Check for admin roles first
+      const adminRole = roles.find((r) => r.role === 'super_admin' || r.role === 'org_admin')
+      if (adminRole) {
         router.push('/portfolio')
         return
       }
+
+      // For school roles: prefer CEO role, then most recently created
+      const primaryRole = roles.find((r) => r.role === 'school_ceo') || roles[0]
+      const { role, school_id } = primaryRole
 
       if (school_id) {
         const { data: profile } = await supabase
@@ -94,8 +98,7 @@ export default function LoginPage() {
         } else if (role === 'school_ceo') {
           router.push('/onboarding')
         } else {
-          // Editors/viewers can't onboard — show waiting state
-          router.push('/dashboard?awaiting_onboarding=true')
+          router.push('/dashboard')
         }
         return
       }

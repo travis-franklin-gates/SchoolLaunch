@@ -47,5 +47,29 @@ export default async function InvitePage({
     )
   }
 
-  return <InviteForm invitation={invitation} ceoName={invitation.ceo_name || undefined} />
+  // Check if a user with this email already exists
+  const { data: existingUsers } = await supabase.auth.admin.listUsers()
+  const existingUser = existingUsers?.users?.find(
+    (u) => u.email?.toLowerCase() === invitation.email.toLowerCase()
+  )
+
+  // Get school name for team invites
+  let schoolName: string | undefined
+  if (invitation.school_id) {
+    const { data: school } = await supabase
+      .from('schools')
+      .select('name')
+      .eq('id', invitation.school_id)
+      .single()
+    schoolName = school?.name || undefined
+  }
+
+  return (
+    <InviteForm
+      invitation={invitation}
+      ceoName={invitation.ceo_name || undefined}
+      existingUser={!!existingUser}
+      schoolName={schoolName}
+    />
+  )
 }
