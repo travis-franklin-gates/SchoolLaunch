@@ -18,6 +18,8 @@ interface MultiYearRow {
     tbip: number
     hicap: number
     interestIncome: number
+    grantRevenue: number
+    operatingRevenue: number
     total: number
     apportionment: number
   }
@@ -229,8 +231,8 @@ export async function POST(request: Request) {
     ['Cumulative Net Position', 0, ...multiYear.map((r) => r.cumulativeNet)],
     [],
     ['KEY METRICS'],
-    ['Personnel % of Revenue', '', ...multiYear.map((r) => r.revenue.total > 0 ? `${(r.personnel.total / r.revenue.total * 100).toFixed(1)}%` : '0%')],
-    ['Total Margin', '', ...multiYear.map((r) => r.revenue.total > 0 ? `${(r.net / r.revenue.total * 100).toFixed(1)}%` : '0%')],
+    ['Personnel % of Revenue', '', ...multiYear.map((r) => r.revenue.operatingRevenue > 0 ? `${(r.personnel.total / r.revenue.operatingRevenue * 100).toFixed(1)}%` : '0%')],
+    ['Total Margin', '', ...multiYear.map((r) => r.revenue.operatingRevenue > 0 ? `${(r.net / r.revenue.operatingRevenue * 100).toFixed(1)}%` : '0%')],
     ['Days of Cash on Hand', '', ...multiYear.map((r) => r.reserveDays)],
   ]
 

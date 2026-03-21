@@ -382,8 +382,8 @@ export default function PortfolioPage() {
         <div data-tour="school-cards" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {schools.map((school, idx) => {
             const y1 = school.multiYear[0]
-            const personnelPct = y1 && y1.revenue.total > 0
-              ? (y1.personnel.total / y1.revenue.total) * 100
+            const personnelPct = y1 && y1.revenue.operatingRevenue > 0
+              ? (y1.personnel.total / y1.revenue.operatingRevenue) * 100
               : 0
             const netPosition = y1 ? y1.net : 0
             const reserveDays = y1 ? y1.reserveDays : 0

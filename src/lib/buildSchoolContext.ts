@@ -17,25 +17,31 @@ export function buildSchoolContextString(
   const enroll = profile.target_enrollment_y1
   const rev = calcCommissionRevenue(enroll, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
   const aafte = calcAAFTE(enroll, assumptions.aafte_pct)
-  const operatingRevenue = rev.total
-  // When multiYear is available, use its Y1 revenue (includes grants); otherwise fall back to operating
-  const totalRevenue = multiYear && multiYear.length > 0 ? multiYear[0].revenue.total : operatingRevenue
+  const hasMultiYear = multiYear && multiYear.length > 0
+
+  // Use multiYear Y1 as single source of truth when available (matches dashboard tiles exactly)
+  const operatingRevenue = hasMultiYear ? multiYear[0].revenue.operatingRevenue : rev.total
+  const totalRevenue = hasMultiYear ? multiYear[0].revenue.total : rev.total
+  const totalPersonnel = hasMultiYear
+    ? multiYear[0].personnel.total
+    : positions.reduce(
+        (s, p) => {
+          const cost = p.annual_salary * p.fte
+          return s + cost + calcBenefits(cost, assumptions.benefits_load_pct / 100)
+        },
+        0
+      )
+  const totalOperations = hasMultiYear
+    ? multiYear[0].operations.total
+    : projections.filter((p) => !p.is_revenue && p.category === 'Operations').reduce((s, p) => s + p.amount, 0)
 
   const totalFte = positions.reduce((s, p) => s + p.fte, 0)
-  const totalPersonnel = positions.reduce(
-    (s, p) => {
-      const cost = p.annual_salary * p.fte
-      return s + cost + calcBenefits(cost, assumptions.benefits_load_pct / 100)
-    },
-    0
-  )
-
   const opsProjections = projections.filter((p) => !p.is_revenue && p.category === 'Operations')
-  const totalOperations = opsProjections.reduce((s, p) => s + p.amount, 0)
   const totalExpenses = totalPersonnel + totalOperations
-  const netPosition = totalRevenue - totalExpenses
+  const netPosition = hasMultiYear ? multiYear[0].net : totalRevenue - totalExpenses
   const dailyCost = totalExpenses > 0 ? totalExpenses / 365 : 1
   const reserveDays = Math.round(netPosition / dailyCost)
+  // Personnel % uses operating revenue (excludes grants) — matches budget engine and dashboard
   const personnelPct = operatingRevenue > 0 ? ((totalPersonnel / operatingRevenue) * 100).toFixed(1) : '0'
   const revenuePerStudent = enroll > 0 ? totalRevenue / enroll : 0
   const breakEvenEnrollment = revenuePerStudent > 0 ? Math.ceil(totalExpenses / revenuePerStudent) : 0
@@ -114,7 +120,8 @@ REVENUE (Year 1, AAFTE: ${aafte} of ${enroll} headcount):
 - LAP High Poverty: $${rev.lapHighPoverty.toLocaleString()}
 - TBIP: $${rev.tbip.toLocaleString()}
 - HiCap: $${rev.hicap.toLocaleString()}
-- Total Revenue: $${totalRevenue.toLocaleString()}
+- Operating Revenue (recurring, excludes grants): $${operatingRevenue.toLocaleString()}
+- Total Revenue (including one-time grants): $${totalRevenue.toLocaleString()}
 
 STAFFING (Year 1):
 ${staffingList}
@@ -126,11 +133,12 @@ ${opsBreakdown}
 Total Operations: $${totalOperations.toLocaleString()}
 
 KEY METRICS (pre-computed by the budget engine — use these exact numbers, do not independently calculate):
-- Net Position: $${(multiYear && multiYear.length > 0 ? multiYear[0].net : netPosition).toLocaleString()}
+- Net Position: $${(hasMultiYear ? multiYear[0].net : netPosition).toLocaleString()}
 - Reserve Days (Days of Cash): ${scorecard ? (scorecard.measures.find(m => m.name === 'Days of Cash')?.values[0] ?? reserveDays) : reserveDays}
-- Personnel % of Revenue: ${personnelPct}%
+- Personnel % of Operating Revenue: ${personnelPct}% (= $${totalPersonnel.toLocaleString()} ÷ $${operatingRevenue.toLocaleString()})
 - Break-Even Enrollment: ${breakEvenEnrollment} students (target: ${enroll})
-- Facility % of Revenue: ${facilityPct}%${multiYear && multiYear.length > 0 ? `
+- Facility % of Operating Revenue: ${facilityPct}%
+NOTE: Personnel % and Facility % use Operating Revenue as the denominator (excludes one-time grants). This matches the Commission FPF evaluation methodology.${multiYear && multiYear.length > 0 ? `
 
 MULTI-YEAR SUMMARY (Years 1-${multiYear.length}):
 ${multiYear.map((r, i) => {
