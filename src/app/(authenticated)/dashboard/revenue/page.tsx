@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useScenario } from '@/lib/ScenarioContext'
 import { calcCommissionRevenue, calcAAFTE } from '@/lib/calculations'
 import { getGrantAllocationsForYear } from '@/lib/budgetEngine'
@@ -30,6 +31,7 @@ interface RevenueRow {
 }
 
 export default function RevenuePage() {
+  const { canEdit } = usePermissions()
   const {
     schoolData: { schoolId, profile, loading, reload },
     assumptions,
@@ -262,6 +264,11 @@ export default function RevenuePage() {
 
   return (
     <div className="animate-fade-in">
+      {!canEdit && (
+        <div className="mb-4 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-600">
+          You have view-only access. Contact the school owner to request edit permissions.
+        </div>
+      )}
       <h1 className="text-[28px] font-semibold text-slate-900 mb-2">Revenue</h1>
       <p className="text-sm text-slate-500 mb-2">Commission-aligned revenue breakdown for Year 1. Override any line by entering a custom amount.</p>
       <div className="text-xs text-slate-400 mb-6">
@@ -299,7 +306,7 @@ export default function RevenuePage() {
                     </td>
                   </tr>
                   {groupRows.map((row) => (
-                    <RevenueRowComponent key={row.label} row={row} isModified={isModified} overrides={overrides} setOverrides={setOverrides} overrideKey={row.label} />
+                    <RevenueRowComponent key={row.label} row={row} isModified={isModified} overrides={overrides} setOverrides={setOverrides} overrideKey={row.label} canEdit={canEdit} />
                   ))}
                 </React.Fragment>
               )
@@ -331,21 +338,23 @@ export default function RevenuePage() {
                 <div className="bg-slate-50/50 border-y border-slate-100 px-6 py-4">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xs text-slate-500">Manage funding sources and year-by-year allocations</span>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={addSource}
-                        className="px-3 py-1.5 text-xs font-medium text-teal-600 border border-teal-200 rounded-lg hover:bg-teal-50 transition-colors"
-                      >
-                        + Add Source
-                      </button>
-                      <button
-                        onClick={saveFunding}
-                        disabled={savingFunding}
-                        className="px-3 py-1.5 text-xs font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
-                      >
-                        {savingFunding ? 'Saving...' : 'Save'}
-                      </button>
-                    </div>
+                    {canEdit && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={addSource}
+                          className="px-3 py-1.5 text-xs font-medium text-teal-600 border border-teal-200 rounded-lg hover:bg-teal-50 transition-colors"
+                        >
+                          + Add Source
+                        </button>
+                        <button
+                          onClick={saveFunding}
+                          disabled={savingFunding}
+                          className="px-3 py-1.5 text-xs font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+                        >
+                          {savingFunding ? 'Saving...' : 'Save'}
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="overflow-x-auto sl-scroll">
@@ -374,7 +383,8 @@ export default function RevenuePage() {
                                   value={src.source}
                                   onChange={(e) => updateSource(idx, 'source', e.target.value)}
                                   placeholder="Funding source name..."
-                                  className="w-full border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                  disabled={!canEdit}
+                                  className="w-full border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
                                 />
                               </td>
                               <td className="px-3 py-2">
@@ -383,14 +393,16 @@ export default function RevenuePage() {
                                   step={1000}
                                   value={src.amount}
                                   onChange={(e) => updateSource(idx, 'amount', Number(e.target.value))}
-                                  className="w-full text-right border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                  disabled={!canEdit}
+                                  className="w-full text-right border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
                                 />
                               </td>
                               <td className="px-3 py-2">
                                 <select
                                   value={src.type}
                                   onChange={(e) => updateSource(idx, 'type', e.target.value)}
-                                  className="w-full border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                  disabled={!canEdit}
+                                  className="w-full border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
                                 >
                                   {FUNDING_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                                 </select>
@@ -399,7 +411,8 @@ export default function RevenuePage() {
                                 <select
                                   value={src.status}
                                   onChange={(e) => updateSource(idx, 'status', e.target.value)}
-                                  className="w-full border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                  disabled={!canEdit}
+                                  className="w-full border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
                                 >
                                   {FUNDING_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                                 </select>
@@ -410,11 +423,12 @@ export default function RevenuePage() {
                                     <button
                                       key={y}
                                       onClick={() => toggleYear(idx, y)}
+                                      disabled={!canEdit}
                                       className={`px-2 py-0.5 text-xs rounded font-medium transition-colors ${
                                         selected.includes(y)
                                           ? 'bg-teal-600 text-white'
                                           : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                                      }`}
+                                      } disabled:opacity-50`}
                                     >
                                       Y{y}
                                     </button>
@@ -430,7 +444,8 @@ export default function RevenuePage() {
                                           step={1000}
                                           value={allocs[y] || 0}
                                           onChange={(e) => updateYearAllocation(idx, y, Number(e.target.value))}
-                                          className="w-20 text-right border border-slate-200 rounded px-1.5 py-0.5 text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                          disabled={!canEdit}
+                                          className="w-20 text-right border border-slate-200 rounded px-1.5 py-0.5 text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
                                         />
                                       </div>
                                     ))}
@@ -446,13 +461,15 @@ export default function RevenuePage() {
                                 )}
                               </td>
                               <td className="px-3 py-2 text-center">
-                                <button
-                                  onClick={() => removeSource(idx)}
-                                  className="text-slate-400 hover:text-red-500 text-lg leading-none"
-                                  title="Remove"
-                                >
-                                  &times;
-                                </button>
+                                {canEdit && (
+                                  <button
+                                    onClick={() => removeSource(idx)}
+                                    className="text-slate-400 hover:text-red-500 text-lg leading-none"
+                                    title="Remove"
+                                  >
+                                    &times;
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           )
@@ -494,7 +511,7 @@ export default function RevenuePage() {
             {grantRows.length > 0 && (
               <>
                 {grantRows.map((row) => (
-                  <RevenueRowComponent key={row.label} row={row} isModified={isModified} overrides={overrides} setOverrides={setOverrides} overrideKey={`grant:${row.label}`} />
+                  <RevenueRowComponent key={row.label} row={row} isModified={isModified} overrides={overrides} setOverrides={setOverrides} overrideKey={`grant:${row.label}`} canEdit={canEdit} />
                 ))}
               </>
             )}
@@ -537,12 +554,13 @@ export default function RevenuePage() {
   )
 }
 
-function RevenueRowComponent({ row, isModified, overrides, setOverrides, overrideKey }: {
+function RevenueRowComponent({ row, isModified, overrides, setOverrides, overrideKey, canEdit }: {
   row: RevenueRow
   isModified: boolean
   overrides: Record<string, number>
   setOverrides: React.Dispatch<React.SetStateAction<Record<string, number>>>
   overrideKey: string
+  canEdit: boolean
 }) {
   const effective = row.override ?? (isModified ? row.scenarioCalc : row.calculated)
   return (
@@ -573,7 +591,8 @@ function RevenueRowComponent({ row, isModified, overrides, setOverrides, overrid
               return next
             })
           }}
-          className="w-28 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          disabled={!canEdit}
+          className="w-28 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
         />
       </td>
       <td className={`num px-6 py-3 font-medium ${row.override !== null ? 'text-teal-600' : 'text-slate-800'}`}>

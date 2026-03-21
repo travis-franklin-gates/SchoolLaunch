@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useScenario } from '@/lib/ScenarioContext'
 import { createClient } from '@/lib/supabase/client'
@@ -9,6 +9,8 @@ import type { FinancialAssumptions, GradeExpansionEntry } from '@/lib/types'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
 import GradeExpansionEditor from '@/components/GradeExpansionEditor'
+import TeamSection from '@/components/settings/TeamSection'
+import { usePermissions } from '@/hooks/usePermissions'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -23,6 +25,8 @@ export default function SettingsPage() {
     assumptions,
   } = useScenario()
   const supabase = createClient()
+  const { canEdit, canManageTeam, canResetSchool, canEditIdentity } = usePermissions()
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   const [name, setName] = useState(schoolName)
   const [region, setRegion] = useState(profile.region)
@@ -60,6 +64,13 @@ export default function SettingsPage() {
   }) => {
     setExpansionData(data)
   }, [])
+
+  // Fetch current user ID for team section
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setCurrentUserId(user.id)
+    })
+  }, [supabase])
 
   // Enrollment is derived from expansion plan (read-only)
   const enrollY1 = expansionData?.enrollments.find((e) => e.year === 1)?.total ?? profile.target_enrollment_y1
@@ -172,6 +183,12 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {!canEdit && (
+        <div className="mb-4 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-600">
+          You have view-only access. Contact the school owner to request edit permissions.
+        </div>
+      )}
+
       {/* Section 1: School Profile */}
       <div data-tour="school-profile" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">School Profile</h2>
@@ -182,7 +199,8 @@ export default function SettingsPage() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              disabled={!canEditIdentity}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
             />
           </div>
           <div>
@@ -194,7 +212,8 @@ export default function SettingsPage() {
                 const factor = REGIONALIZATION_FACTORS[e.target.value]?.factor ?? 1.0
                 updateFa('regionalization_factor', factor)
               }}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              disabled={!canEditIdentity}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
             >
               <option value="">Select county...</option>
               {COUNTY_KEYS.map((key) => <option key={key} value={key}>{REGIONALIZATION_FACTORS[key].label}</option>)}
@@ -206,7 +225,8 @@ export default function SettingsPage() {
               type="number"
               value={openYear}
               onChange={(e) => setOpenYear(Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              disabled={!canEditIdentity}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
             />
           </div>
           <div>
@@ -214,7 +234,8 @@ export default function SettingsPage() {
             <select
               value={gradeConfig}
               onChange={(e) => setGradeConfig(e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              disabled={!canEditIdentity}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
             >
               <option value="">Select grades...</option>
               {GRADE_CONFIGS.map((g) => <option key={g} value={g}>{g}</option>)}
@@ -222,6 +243,11 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Section: Team Members (CEO only) */}
+      {canManageTeam && schoolId && currentUserId && (
+        <TeamSection schoolId={schoolId} currentUserId={currentUserId} />
+      )}
 
       {/* Section 2: Enrollment & Demographics */}
       <div data-tour="enrollment-demographics" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
@@ -532,30 +558,34 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="px-6 py-2.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
-      >
-        {saving ? 'Saving...' : 'Save Changes'}
-      </button>
-
-      {/* Danger Zone */}
-      <div className="mt-12 border border-red-200 rounded-xl p-6 bg-red-50/50">
-        <h2 className="text-xs font-medium text-red-500 uppercase tracking-wide mb-2">Danger Zone</h2>
-        <p className="text-sm text-slate-600 mb-4">
-          Reset all school planning data and restart the onboarding process from scratch. Your account and school record will be preserved.
-        </p>
+      {canEdit && (
         <button
-          onClick={() => setShowResetModal(true)}
-          className="px-5 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+          onClick={handleSave}
+          disabled={saving}
+          className="px-6 py-2.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
         >
-          Reset School &amp; Start Over
+          {saving ? 'Saving...' : 'Save Changes'}
         </button>
-      </div>
+      )}
 
-      {/* Reset confirmation modal */}
-      {showResetModal && (
+      {/* Danger Zone — CEO only */}
+      {canResetSchool && (
+        <>
+        <div className="mt-12 border border-red-200 rounded-xl p-6 bg-red-50/50">
+          <h2 className="text-xs font-medium text-red-500 uppercase tracking-wide mb-2">Danger Zone</h2>
+          <p className="text-sm text-slate-600 mb-4">
+            Reset all school planning data and restart the onboarding process from scratch. Your account and school record will be preserved.
+          </p>
+          <button
+            onClick={() => setShowResetModal(true)}
+            className="px-5 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+          >
+            Reset School &amp; Start Over
+          </button>
+        </div>
+
+        {/* Reset confirmation modal */}
+        {showResetModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
             <h3 className="text-lg font-semibold text-slate-900 mb-2">Reset School Data</h3>
@@ -605,6 +635,8 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+        )}
+        </>
       )}
     </div>
   )

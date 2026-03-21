@@ -48,7 +48,8 @@
       "Bash(node -e \":*)",
       "Bash(claude mcp:*)",
       "Bash(git rm:*)",
-      "Skill(telegram:access)"
+      "Skill(telegram:access)",
+      "Bash(ls \"C:/users/travisfr/schoollaunch/src/hooks/usePermissions\"*)"
     ]
   },
   "enableAllProjectMcpServers": true,

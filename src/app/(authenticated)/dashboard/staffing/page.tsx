@@ -6,6 +6,7 @@ import { calcBenefits } from '@/lib/calculations'
 import { createClient } from '@/lib/supabase/client'
 import { COMMISSION_POSITIONS, getCommissionPosition } from '@/lib/types'
 import { expansionToEnrollmentArray } from '@/lib/gradeExpansion'
+import { usePermissions } from '@/hooks/usePermissions'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -261,6 +262,7 @@ export default function StaffingPage() {
     baseSummary,
     isModified,
   } = useScenario()
+  const { canEdit } = usePermissions()
   const [positions, setPositions] = useState<MultiYearPosition[]>([])
   const [saving, setSaving] = useState(false)
   const [seeding, setSeeding] = useState(false)
@@ -639,6 +641,12 @@ export default function StaffingPage() {
         </div>
       )}
 
+      {!canEdit && (
+        <div className="mb-4 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-600">
+          You have view-only access. Contact the school owner to request edit permissions.
+        </div>
+      )}
+
       {isModified && (
         <div className="mb-4 bg-teal-50 border border-teal-200 rounded-lg px-4 py-3 text-sm text-teal-700">
           Scenario active — showing base case staffing. Adjust positions here to update the base case budget.
@@ -660,13 +668,15 @@ export default function StaffingPage() {
             Personnel: {personnelPctY1}% of Revenue
             <span className="text-[10px] opacity-70 ml-1">(Y1)</span>
           </div>
-          <button
-            data-tour="add-position"
-            onClick={() => addPosition()}
-            className="px-3 py-1.5 text-sm font-medium text-teal-600 border border-teal-300 rounded-lg hover:bg-teal-50 transition-colors"
-          >
-            + Add Position
-          </button>
+          {canEdit && (
+            <button
+              data-tour="add-position"
+              onClick={() => addPosition()}
+              className="px-3 py-1.5 text-sm font-medium text-teal-600 border border-teal-300 rounded-lg hover:bg-teal-50 transition-colors"
+            >
+              + Add Position
+            </button>
+          )}
         </div>
       </div>
 
@@ -714,6 +724,7 @@ export default function StaffingPage() {
                   onAdd={addPosition}
                   onDragStart={handleDragStart}
                   onDrop={handleDrop}
+                  canEdit={canEdit}
                 />
               ))}
             </tbody>
@@ -768,15 +779,17 @@ export default function StaffingPage() {
         </div>
       </div>
 
-      <div className="flex gap-3">
-        <button
-          onClick={save}
-          disabled={saving}
-          className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
-        >
-          {saving ? 'Saving...' : 'Save Changes'}
-        </button>
-      </div>
+      {canEdit && (
+        <div className="flex gap-3">
+          <button
+            onClick={save}
+            disabled={saving}
+            className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -811,6 +824,7 @@ function GroupSection({
   onAdd: (classification: 'Administrative' | 'Certificated' | 'Classified') => void
   onDragStart: (id: string, classification: string) => void
   onDrop: (targetId: string) => void
+  canEdit: boolean
 }) {
   return (
     <>
@@ -834,18 +848,21 @@ function GroupSection({
           onRemove={onRemove}
           onDragStart={onDragStart}
           onDrop={onDrop}
+          canEdit={canEdit}
         />
       ))}
-      <tr className="border-b border-slate-100">
-        <td colSpan={11} className="px-3 py-1.5">
-          <button
-            onClick={() => onAdd(classification)}
-            className={`text-xs font-medium ${color.text} opacity-70 hover:opacity-100 transition-opacity`}
-          >
-            + Add {label} Position
-          </button>
-        </td>
-      </tr>
+      {canEdit && (
+        <tr className="border-b border-slate-100">
+          <td colSpan={11} className="px-3 py-1.5">
+            <button
+              onClick={() => onAdd(classification)}
+              className={`text-xs font-medium ${color.text} opacity-70 hover:opacity-100 transition-opacity`}
+            >
+              + Add {label} Position
+            </button>
+          </td>
+        </tr>
+      )}
     </>
   )
 }
@@ -881,33 +898,37 @@ function PositionRow({
   onRemove: (id: string) => void
   onDragStart: (id: string, classification: string) => void
   onDrop: (targetId: string) => void
+  canEdit: boolean
 }) {
   const driverLabel = DRIVER_LABELS[pos.driver] || pos.driver.replace(/_/g, ' ')
   const clsColor = CLASSIFICATION_COLORS[pos.classification] || CLASSIFICATION_COLORS.Classified
 
-  // Show section-filtered types + Custom, with full dropdown as fallback
   const sectionTypes = getTypesForClassification(classification)
   const isCustom = pos.positionType === 'custom'
 
-  // Live total compensation = salary + benefits
   const totalComp = pos.salary > 0 ? Math.round(pos.salary * (1 + benefitsRate)) : 0
 
   return (
     <tr
       className="border-b border-slate-100 hover:bg-slate-50/50"
-      draggable
-      onDragStart={() => onDragStart(pos.id, pos.classification)}
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={() => onDrop(pos.id)}
+      draggable={canEdit}
+      onDragStart={canEdit ? () => onDragStart(pos.id, pos.classification) : undefined}
+      onDragOver={canEdit ? (e) => e.preventDefault() : undefined}
+      onDrop={canEdit ? () => onDrop(pos.id) : undefined}
     >
-      <td className="px-1 py-1.5 w-6 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 select-none" title="Drag to reorder">
-        <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor" className="mx-auto"><circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/><circle cx="3" cy="8" r="1.5"/><circle cx="9" cy="8" r="1.5"/><circle cx="3" cy="14" r="1.5"/><circle cx="9" cy="14" r="1.5"/></svg>
-      </td>
+      {canEdit ? (
+        <td className="px-1 py-1.5 w-6 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 select-none" title="Drag to reorder">
+          <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor" className="mx-auto"><circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/><circle cx="3" cy="8" r="1.5"/><circle cx="9" cy="8" r="1.5"/><circle cx="3" cy="14" r="1.5"/><circle cx="9" cy="14" r="1.5"/></svg>
+        </td>
+      ) : (
+        <td className="px-1 py-1.5 w-6" />
+      )}
       <td className="px-3 py-1.5">
         <select
           value={pos.positionType}
           onChange={(e) => onSelectType(pos.id, e.target.value)}
-          className="w-full border border-slate-200 rounded px-2 py-1 text-sm"
+          disabled={!canEdit}
+          className="w-full border border-slate-200 rounded px-2 py-1 text-sm disabled:bg-slate-50 disabled:text-slate-600"
         >
           {sectionTypes.map(cp => (
             <option key={cp.type} value={cp.type}>{cp.name}</option>
@@ -918,7 +939,8 @@ function PositionRow({
           <input
             value={pos.title}
             onChange={(e) => onUpdateTitle(pos.id, e.target.value)}
-            className="w-full border border-slate-200 rounded px-2 py-1 text-sm mt-1"
+            disabled={!canEdit}
+            className="w-full border border-slate-200 rounded px-2 py-1 text-sm mt-1 disabled:bg-slate-50"
             placeholder="Custom position name"
           />
         )}
@@ -937,7 +959,8 @@ function PositionRow({
           step={1000}
           value={pos.salary}
           onChange={(e) => onUpdateSalary(pos.id, Number(e.target.value))}
-          className="w-24 text-right border border-slate-200 rounded px-2 py-1 text-sm"
+          disabled={!canEdit}
+          className="w-24 text-right border border-slate-200 rounded px-2 py-1 text-sm disabled:bg-slate-50 disabled:text-slate-600"
         />
         {totalComp > 0 && (
           <div className="text-[9px] text-slate-400 text-right mt-0.5">Total comp: {fmt(totalComp)}</div>
@@ -951,17 +974,20 @@ function PositionRow({
             min={0}
             value={pos.fte[yi]}
             onChange={(e) => onUpdateFte(pos.id, yi, Number(e.target.value))}
-            className="w-14 text-right border border-slate-200 rounded px-1.5 py-1 text-sm"
+            disabled={!canEdit}
+            className="w-14 text-right border border-slate-200 rounded px-1.5 py-1 text-sm disabled:bg-slate-50 disabled:text-slate-600"
           />
         </td>
       ))}
       <td className="px-2 py-1.5">
-        <button
-          onClick={() => onRemove(pos.id)}
-          className="text-red-400 hover:text-red-600 text-xs"
-        >
-          &times;
-        </button>
+        {canEdit && (
+          <button
+            onClick={() => onRemove(pos.id)}
+            className="text-red-400 hover:text-red-600 text-xs"
+          >
+            &times;
+          </button>
+        )}
       </td>
     </tr>
   )

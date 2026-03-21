@@ -6,6 +6,7 @@ import { buildSchoolContextString } from '@/lib/buildSchoolContext'
 import { computeMultiYearDetailed, computeFPFScorecard } from '@/lib/budgetEngine'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { usePermissions } from '@/hooks/usePermissions'
 
 interface Misalignment {
   severity: 'critical' | 'important' | 'minor'
@@ -66,6 +67,7 @@ export default function AlignmentPage() {
     conservativeMode,
   } = useScenario()
   const supabase = createClient()
+  const { canEdit } = usePermissions()
 
   const multiYear = useMemo(
     () => computeMultiYearDetailed(profile, positions, projections, assumptions, 0, gradeExpansionPlan, allPositions, profile.startup_funding),
@@ -251,8 +253,8 @@ export default function AlignmentPage() {
         <div className="mb-6 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
-      {/* Upload area */}
-      <div data-tour="alignment-input" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+      {/* Upload area — editors and owners only */}
+      {canEdit && <div data-tour="alignment-input" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
         <div
           onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
           onDragLeave={() => setDragging(false)}
@@ -305,7 +307,7 @@ export default function AlignmentPage() {
             {analyzing ? 'Analyzing...' : 'Analyze Alignment'}
           </button>
         </div>
-      </div>
+      </div>}
 
       {/* Loading state */}
       {analyzing && (

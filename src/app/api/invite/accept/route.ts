@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   // 1. Fetch and validate invitation
   const { data: invitation, error: invError } = await admin
     .from('invitations')
-    .select('id, email, role, organization_id, ceo_name, accepted')
+    .select('id, email, role, organization_id, school_id, ceo_name, accepted, expires_at')
     .eq('id', invitationId)
     .single()
 
@@ -26,45 +26,69 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invitation already accepted' }, { status: 400 })
   }
 
+  if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
+    return NextResponse.json({ error: 'Invitation has expired' }, { status: 410 })
+  }
+
   const orgId = invitation.organization_id
 
-  // 2. Create school record
-  const { data: school, error: schoolError } = await admin
-    .from('schools')
-    .insert({
-      name: 'New School',
-      organization_id: orgId,
-      status: 'planning',
-    })
-    .select('id')
-    .single()
+  // Team invitation: school_id is already set (editor/viewer joining an existing school)
+  const isTeamInvite = !!invitation.school_id
 
-  if (schoolError || !school) {
-    return NextResponse.json({ error: 'Failed to create school', detail: schoolError }, { status: 500 })
+  let schoolId: string
+
+  if (isTeamInvite) {
+    // Joining an existing school — verify the school exists
+    const { data: existingSchool } = await admin
+      .from('schools')
+      .select('id')
+      .eq('id', invitation.school_id)
+      .single()
+
+    if (!existingSchool) {
+      return NextResponse.json({ error: 'School no longer exists' }, { status: 404 })
+    }
+
+    schoolId = existingSchool.id
+  } else {
+    // New school invitation (CEO) — create school + profile
+    const { data: school, error: schoolError } = await admin
+      .from('schools')
+      .insert({
+        name: 'New School',
+        organization_id: orgId,
+        status: 'planning',
+      })
+      .select('id')
+      .single()
+
+    if (schoolError || !school) {
+      return NextResponse.json({ error: 'Failed to create school', detail: schoolError }, { status: 500 })
+    }
+
+    const { error: profileError } = await admin
+      .from('school_profiles')
+      .insert({
+        school_id: school.id,
+        onboarding_complete: false,
+        max_class_size: 24,
+      })
+
+    if (profileError) {
+      await admin.from('schools').delete().eq('id', school.id)
+      return NextResponse.json({ error: 'Failed to create school profile', detail: profileError }, { status: 500 })
+    }
+
+    schoolId = school.id
   }
 
-  // 3. Create minimal school profile
-  const { error: profileError } = await admin
-    .from('school_profiles')
-    .insert({
-      school_id: school.id,
-      onboarding_complete: false,
-      max_class_size: 24,
-    })
-
-  if (profileError) {
-    // Clean up: delete the school we just created
-    await admin.from('schools').delete().eq('id', school.id)
-    return NextResponse.json({ error: 'Failed to create school profile', detail: profileError }, { status: 500 })
-  }
-
-  // 4. Create user_roles record
+  // Create user_roles record
   const { error: roleError } = await admin
     .from('user_roles')
     .insert({
       user_id: userId,
       role: invitation.role,
-      school_id: school.id,
+      school_id: schoolId,
       organization_id: orgId,
     })
 
@@ -72,18 +96,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to assign role', detail: roleError }, { status: 500 })
   }
 
-  // 5. Mark invitation accepted and link to school
+  // Mark invitation accepted
   await admin
     .from('invitations')
     .update({
       accepted: true,
       accepted_at: new Date().toISOString(),
-      school_id: school.id,
+      school_id: schoolId,
     })
     .eq('id', invitationId)
 
   return NextResponse.json({
     success: true,
-    schoolId: school.id,
+    schoolId,
+    isTeamInvite,
   })
 }

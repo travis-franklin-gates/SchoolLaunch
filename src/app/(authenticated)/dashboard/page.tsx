@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { AdvisoryCache } from '@/lib/types'
 import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
 import Link from 'next/link'
+import { usePermissions } from '@/hooks/usePermissions'
 
 type AdvisoryData = AdvisoryCache
 
@@ -72,6 +73,7 @@ export default function DashboardPage() {
     baseApportionment,
     conservativeSummary,
   } = useScenario()
+  const { role } = usePermissions()
 
   const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
 
@@ -162,6 +164,25 @@ export default function DashboardPage() {
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
+  }
+
+  // Non-CEO users viewing a school that hasn't finished onboarding
+  if (!profile.onboarding_complete && role && role !== 'school_ceo') {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-semibold text-slate-800 mb-2">School Setup in Progress</h2>
+          <p className="text-sm text-slate-500">
+            This school hasn&apos;t completed the initial setup yet. The school owner needs to finish onboarding before you can access the dashboard.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   // Days of Cash: use scorecard Y1 value (matches Multi-Year tab and Commission Scorecard)

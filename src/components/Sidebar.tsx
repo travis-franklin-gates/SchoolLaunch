@@ -4,6 +4,13 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { usePermissions } from '@/hooks/usePermissions'
+
+const ROLE_BADGE: Record<string, { label: string; className: string }> = {
+  school_ceo: { label: 'Owner', className: 'bg-teal-500/20 text-teal-300' },
+  school_editor: { label: 'Editor', className: 'bg-blue-500/20 text-blue-300' },
+  school_viewer: { label: 'Viewer', className: 'bg-slate-500/20 text-slate-400' },
+}
 
 const navGroups = [
   {
@@ -52,6 +59,8 @@ export default function Sidebar() {
   const router = useRouter()
   const supabase = createClient()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { role } = usePermissions()
+  const roleBadge = role && role !== 'org_admin' && role !== 'super_admin' ? ROLE_BADGE[role] : null
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -73,8 +82,13 @@ export default function Sidebar() {
             <div className="text-white text-lg font-semibold tracking-tight" style={{ fontFamily: 'var(--font-heading-var)' }}>
               School<span className="text-emerald-400">Launch</span>
             </div>
-            <div className="text-[10px] text-slate-500 uppercase tracking-[0.15em] font-medium">
+            <div className="text-[10px] text-slate-500 uppercase tracking-[0.15em] font-medium flex items-center gap-1.5">
               Financial Planning
+              {roleBadge && (
+                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${roleBadge.className}`}>
+                  {roleBadge.label}
+                </span>
+              )}
             </div>
           </div>
         </div>

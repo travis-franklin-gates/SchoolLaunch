@@ -284,6 +284,11 @@ const settingsTour: Step[] = [
     title: 'School Profile',
   },
   {
+    target: '[data-tour="team-section"]',
+    content: 'Invite collaborators to work on your financial plan. Editors can modify the model alongside you. Viewers get read-only access \u2014 useful for board members or advisors who need to review your plan.',
+    title: 'Team Members',
+  },
+  {
     target: '[data-tour="enrollment-demographics"]',
     content: 'Your enrollment targets and student demographic percentages. FRL%, IEP%, ELL%, and HiCap% drive your categorical grant estimates on the Revenue tab. Adjust these as you refine your community projections.',
     title: 'Enrollment & Demographics',

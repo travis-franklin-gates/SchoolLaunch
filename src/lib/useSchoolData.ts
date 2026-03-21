@@ -52,9 +52,9 @@ export function useSchoolData(): SchoolData {
 
     const { data: roleData } = await supabase
       .from('user_roles')
-      .select('school_id')
+      .select('school_id, role')
       .eq('user_id', user.id)
-      .eq('role', 'school_ceo')
+      .in('role', ['school_ceo', 'school_editor', 'school_viewer'])
       .single()
 
     if (!roleData?.school_id) { setLoading(false); return }

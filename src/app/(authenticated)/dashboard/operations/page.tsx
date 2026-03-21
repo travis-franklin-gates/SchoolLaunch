@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { createClient } from '@/lib/supabase/client'
+import { usePermissions } from '@/hooks/usePermissions'
 import type { FinancialAssumptions } from '@/lib/types'
 
 function fmt(n: number) {
@@ -71,6 +72,7 @@ export default function OperationsPage() {
     currentSummary,
     isModified,
   } = useScenario()
+  const { canEdit } = usePermissions()
   const [rows, setRows] = useState<OpsRow[]>([])
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -250,6 +252,11 @@ export default function OperationsPage() {
 
   return (
     <div className="animate-fade-in">
+      {!canEdit && (
+        <div className="mb-4 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-600">
+          You have view-only access. Contact the school owner to request edit permissions.
+        </div>
+      )}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[28px] font-semibold text-slate-900">Operations</h1>
@@ -323,6 +330,7 @@ export default function OperationsPage() {
                   updateAmount={updateAmount}
                   updateRate={updateRate}
                   getBenchmarkText={getBenchmarkText}
+                  canEdit={canEdit}
                 />
               ))}
             </tbody>
@@ -336,13 +344,15 @@ export default function OperationsPage() {
         </div>
       </div>
 
-      <button
-        onClick={save}
-        disabled={saving}
-        className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
-      >
-        {saving ? 'Saving...' : 'Save Changes'}
-      </button>
+      {canEdit && (
+        <button
+          onClick={save}
+          disabled={saving}
+          className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
+        >
+          {saving ? 'Saving...' : 'Save Changes'}
+        </button>
+      )}
     </div>
   )
 }
@@ -355,6 +365,7 @@ function GroupSection({
   updateAmount,
   updateRate,
   getBenchmarkText,
+  canEdit,
 }: {
   group: string
   rows: OpsRow[]
@@ -363,6 +374,7 @@ function GroupSection({
   updateAmount: (idx: number, amount: number) => void
   updateRate: (idx: number, rate: number) => void
   getBenchmarkText: (lineItem: string) => string
+  canEdit: boolean
 }) {
   return (
     <>
@@ -389,7 +401,8 @@ function GroupSection({
                     min={0}
                     value={row.rate ?? 0}
                     onChange={(e) => updateRate(globalIdx, Number(e.target.value))}
-                    className="w-16 text-right border border-slate-200 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    disabled={!canEdit}
+                    className="w-16 text-right border border-slate-200 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
                   />
                   <span className="text-slate-400 text-xs">{unit}</span>
                 </div>
@@ -407,7 +420,8 @@ function GroupSection({
                   step={1000}
                   value={row.amount}
                   onChange={(e) => updateAmount(globalIdx, Number(e.target.value))}
-                  className="w-32 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  disabled={!canEdit}
+                  className="w-32 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
                 />
               )}
             </td>

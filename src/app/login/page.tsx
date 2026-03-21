@@ -82,7 +82,7 @@ export default function LoginPage() {
         return
       }
 
-      if (role === 'school_ceo' && school_id) {
+      if (school_id) {
         const { data: profile } = await supabase
           .from('school_profiles')
           .select('onboarding_complete')
@@ -91,8 +91,11 @@ export default function LoginPage() {
 
         if (profile?.onboarding_complete) {
           router.push('/dashboard')
-        } else {
+        } else if (role === 'school_ceo') {
           router.push('/onboarding')
+        } else {
+          // Editors/viewers can't onboard — show waiting state
+          router.push('/dashboard?awaiting_onboarding=true')
         }
         return
       }
