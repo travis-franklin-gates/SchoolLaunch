@@ -173,9 +173,6 @@ export default function DashboardPage() {
   const y1Personnel = multiYear.length > 0 ? multiYear[0].personnel.total : baseSummary.totalPersonnel
   const y1Operations = multiYear.length > 0 ? multiYear[0].operations.total : baseSummary.totalOperations
   const y1Expenses = multiYear.length > 0 ? multiYear[0].totalExpenses : baseSummary.totalExpenses
-  const surplusColor = y1Net >= 0
-    ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
-    : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
   const personnelColor = baseSummary.personnelPctRevenue < 72
     ? { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
     : baseSummary.personnelPctRevenue <= 78
@@ -187,16 +184,24 @@ export default function DashboardPage() {
   const facilityCost = projections.find((p) => p.subcategory === 'Facilities' && !p.is_revenue)?.amount || 0
   const fc = facilityColor(baseSummary.facilityPct)
 
-  // Break-even color coding
-  const breakEvenColor = baseSummary.breakEvenEnrollment > profile.target_enrollment_y1
-    ? { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
-    : baseSummary.breakEvenEnrollment >= profile.target_enrollment_y1 * 0.9
-    ? { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-l-amber-500' }
-    : { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
+  // Ending Cash Y1 (same as Multi-Year tab: cumulativeNet includes carry-forward)
+  const endingCashY1 = multiYear.length > 0 ? multiYear[0].cumulativeNet : y1Net
+  const endingCashColor = endingCashY1 >= 0
+    ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
+    : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
 
-  const breakEvenSubtitle = baseSummary.breakEvenEnrollment > profile.target_enrollment_y1
-    ? `Above target (${profile.target_enrollment_y1}) | Operating only`
-    : `Target: ${profile.target_enrollment_y1} | Operating only`
+  // Total Margin % = Net Position / Total Revenue (Commission FPF metric)
+  const totalMarginPct = y1Revenue > 0 ? (y1Net / y1Revenue) * 100 : 0
+  const totalMarginColor = totalMarginPct >= 0
+    ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
+    : totalMarginPct >= -5
+    ? { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-l-amber-500' }
+    : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
+  const totalMarginSubtitle = totalMarginPct >= 0
+    ? 'Meets Stage 2'
+    : totalMarginPct >= -5
+    ? 'Meets Stage 1'
+    : 'Below Stage 1'
 
   const conservativeEnrollment = Math.floor(profile.target_enrollment_y1 * 0.9)
 
@@ -320,7 +325,7 @@ export default function DashboardPage() {
       {/* 2. Health tiles */}
       <div data-tour="health-tiles" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
         <HealthTile
-          label="Days of Cash"
+          label="Days of Cash Y1 End"
           value={`${daysOfCash} days`}
           subtitle={daysOfCash >= 60 ? 'Meets Stage 2' : daysOfCash >= 30 ? 'Meets Stage 1' : daysOfCash >= 21 ? 'Approaches Stage 1' : 'Below Stage 1 minimum'}
           colorClass={rc}
@@ -331,15 +336,15 @@ export default function DashboardPage() {
           colorClass={personnelColor}
         />
         <HealthTile
-          label="Year 1 Net"
-          value={fmt(y1Net)}
-          colorClass={surplusColor}
+          label="Ending Cash Y1"
+          value={fmt(endingCashY1)}
+          colorClass={endingCashColor}
         />
         <HealthTile
-          label="Break-Even"
-          value={`${baseSummary.breakEvenEnrollment}`}
-          subtitle={breakEvenSubtitle}
-          colorClass={breakEvenColor}
+          label="Total Margin %"
+          value={`${totalMarginPct.toFixed(1)}%`}
+          subtitle={totalMarginSubtitle}
+          colorClass={totalMarginColor}
         />
         <HealthTile
           label="Facility % Revenue"
