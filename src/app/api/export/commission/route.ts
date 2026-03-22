@@ -38,6 +38,12 @@ interface MultiYearRow {
     technology: number
     authorizerFee: number
     insurance: number
+    foodService: number
+    transportation: number
+    curriculum: number
+    profDev: number
+    marketing: number
+    fundraising: number
     contingency: number
     total: number
   }
