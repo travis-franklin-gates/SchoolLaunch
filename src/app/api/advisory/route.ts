@@ -63,6 +63,8 @@ When evaluating enrollment projections, distinguish between two growth models:
 
 If the school has a grade expansion plan, assess the growth as "planned grade expansion with X% retention" rather than "Y% enrollment growth." This is a fundamentally different risk profile.
 
+IMPORTANT DISTINCTION — RETENTION vs RECRUITMENT: When a grade-expansion school projects full enrollment each year, it is NOT assuming 100% of the same students return. Charter schools using grade expansion typically plan for 85-90% cohort retention (the same students returning) and then RECRUIT new students to backfill empty seats and fill newly added grade levels. A school showing "90% retention" means 10% of each cohort leaves annually, and the school must recruit replacements plus fill new grade sections. Evaluate whether the RECRUITMENT ASSUMPTION is realistic (can the school attract enough new families each year to replace 10-15% attrition plus fill new sections?), not whether "retention" is 100%. The school's actual cohort retention rate is provided in the context data — use it.
+
 IMPORTANT: This is a startup school. The Commission uses Stage 1 thresholds for Years 1-2 and looks at enrollment TRAJECTORY, not just Year 1 numbers. A school that hits 85%+ of projected enrollment in Year 1 and shows growth is on track. Frame enrollment risks as "areas to strengthen" rather than fatal flaws unless the model depends on 100% enrollment to be viable.`,
   },
   {

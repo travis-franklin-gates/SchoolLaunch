@@ -66,7 +66,7 @@ export function buildAgentContextString(
     enrollSummary = expansionEnrollments.map(e =>
       `Year ${e.year}: ${e.total} students [${e.grades.join(', ')}]${e.newGrades.length > 0 ? ` (adding: ${e.newGrades.join(', ')})` : ''}`
     ).join('; ')
-    enrollSummary += ` | Growth model: Grade expansion with ${retRate}% cohort retention`
+    enrollSummary += ` | Growth model: Grade expansion with ${retRate}% cohort retention (${100 - retRate}% annual attrition backfilled through new student recruitment)`
   } else {
     enrollSummary = `Y1: ${enroll}, Y2: ${profile.target_enrollment_y2}, Y3: ${profile.target_enrollment_y3}, Y4: ${profile.target_enrollment_y4}, Y5: ${profile.target_enrollment_y5 || profile.target_enrollment_y4}`
   }
