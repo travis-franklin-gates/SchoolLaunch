@@ -4,6 +4,11 @@ import { calcCommissionRevenue, calcAAFTE, calcBenefits } from './calculations'
 import { computeExpansionEnrollments, expansionToEnrollmentArray } from './gradeExpansion'
 import type { MultiYearDetailedRow, FPFScorecard } from './budgetEngine'
 
+/** Stable hash of key financial metrics for advisory cache invalidation */
+export function computeAdvisoryHash(revenue: number, personnel: number, operations: number, enrollment: number, staffCount: number): string {
+  return `r:${Math.round(revenue)}|p:${Math.round(personnel)}|o:${Math.round(operations)}|e:${enrollment}|s:${Math.round(staffCount * 10) / 10}`
+}
+
 export function buildSchoolContextString(
   schoolName: string,
   profile: SchoolProfile,

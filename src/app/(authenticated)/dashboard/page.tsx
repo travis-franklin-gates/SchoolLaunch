@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { computeMultiYearDetailed, computeCashFlow, computeFPFScorecard, computeCarryForward, type FPFScorecard } from '@/lib/budgetEngine'
-import { buildSchoolContextString } from '@/lib/buildSchoolContext'
+import { buildSchoolContextString, computeAdvisoryHash } from '@/lib/buildSchoolContext'
 import { createClient } from '@/lib/supabase/client'
 import type { AdvisoryCache } from '@/lib/types'
 import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
@@ -13,10 +13,6 @@ import SchoolLogo from '@/components/SchoolLogo'
 
 type AdvisoryData = AdvisoryCache
 
-/** Simple hash of key financial metrics to detect model changes */
-function computeDataHash(revenue: number, personnel: number, operations: number, enrollment: number, staffCount: number): string {
-  return `r:${Math.round(revenue)}|p:${Math.round(personnel)}|o:${Math.round(operations)}|e:${enrollment}|s:${Math.round(staffCount * 10) / 10}`
-}
 
 function fmt(n: number) {
   if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
@@ -107,7 +103,7 @@ export default function DashboardPage() {
   // Compute current data hash for change detection
   const totalFte = positions.reduce((s, p) => s + p.fte, 0)
   const currentDataHash = useMemo(
-    () => computeDataHash(baseSummary.operatingRevenue, baseSummary.totalPersonnel, baseSummary.totalOperations, profile.target_enrollment_y1, totalFte),
+    () => computeAdvisoryHash(baseSummary.operatingRevenue, baseSummary.totalPersonnel, baseSummary.totalOperations, profile.target_enrollment_y1, totalFte),
     [baseSummary.operatingRevenue, baseSummary.totalPersonnel, baseSummary.totalOperations, profile.target_enrollment_y1, totalFte]
   )
 
@@ -161,7 +157,7 @@ export default function DashboardPage() {
       // First visit — no cached briefing, auto-generate
       fetchAdvisory()
     }
-  }, [loading, profile.advisory_cache, currentDataHash, fetchAdvisory])
+  }, [loading, profile.advisory_cache, currentDataHash]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>

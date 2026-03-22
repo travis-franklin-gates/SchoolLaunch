@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
-import { buildSchoolContextString } from '@/lib/buildSchoolContext'
+import { buildSchoolContextString, computeAdvisoryHash } from '@/lib/buildSchoolContext'
 import { computeMultiYearDetailed, computeFPFScorecard } from '@/lib/budgetEngine'
 import { createClient } from '@/lib/supabase/client'
 import type { AdvisoryCache } from '@/lib/types'
@@ -23,11 +23,6 @@ interface AdvisoryData {
   agents: AgentResult[]
   generatedAt: string
   dataHash?: string
-}
-
-/** Same hash function used by Overview page */
-function computeDataHash(revenue: number, personnel: number, operations: number, enrollment: number, staffCount: number): string {
-  return `r:${Math.round(revenue)}|p:${Math.round(personnel)}|o:${Math.round(operations)}|e:${enrollment}|s:${Math.round(staffCount * 10) / 10}`
 }
 
 const STATUS_CONFIG = {
@@ -110,7 +105,7 @@ export default function AdvisoryPage() {
   // Compute current data hash — same inputs as Overview page
   const totalFte = positions.reduce((s, p) => s + p.fte, 0)
   const currentDataHash = useMemo(
-    () => computeDataHash(baseSummary.operatingRevenue, baseSummary.totalPersonnel, baseSummary.totalOperations, profile.target_enrollment_y1, totalFte),
+    () => computeAdvisoryHash(baseSummary.operatingRevenue, baseSummary.totalPersonnel, baseSummary.totalOperations, profile.target_enrollment_y1, totalFte),
     [baseSummary.operatingRevenue, baseSummary.totalPersonnel, baseSummary.totalOperations, profile.target_enrollment_y1, totalFte]
   )
 
@@ -202,7 +197,7 @@ ${criticalFindings ? `Key misalignments:\n${criticalFindings}` : 'No critical mi
       // First visit — no cached analysis, auto-generate
       fetchAdvisory()
     }
-  }, [loading, profile.advisory_cache, currentDataHash, fetchAdvisory])
+  }, [loading, profile.advisory_cache, currentDataHash]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
