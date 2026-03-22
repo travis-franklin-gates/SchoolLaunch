@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { computeMultiYearDetailed, computeCashFlow, computeFPFScorecard, computeCarryForward, type FPFScorecard } from '@/lib/budgetEngine'
-import { buildSchoolContextString, computeAdvisoryHash } from '@/lib/buildSchoolContext'
+import { buildSchoolContextString, buildAgentContextString, computeAdvisoryHash } from '@/lib/buildSchoolContext'
 import { createClient } from '@/lib/supabase/client'
 import type { AdvisoryCache } from '@/lib/types'
 import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
@@ -124,10 +124,11 @@ export default function DashboardPage() {
     setModelChanged(false)
     try {
       const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
+      const agentContext = buildAgentContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
       const res = await fetch('/api/advisory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schoolContext }),
+        body: JSON.stringify({ schoolContext, agentContext }),
       })
       if (res.ok) {
         const data = await res.json() as AdvisoryData
@@ -242,10 +243,11 @@ export default function DashboardPage() {
       if (!advisoryForPdf) {
         // Try generating a fresh one for the export
         const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
+        const agentContext = buildAgentContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
         const advRes = await fetch('/api/advisory', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ schoolContext }),
+          body: JSON.stringify({ schoolContext, agentContext }),
         })
         if (advRes.ok) {
           advisoryForPdf = await advRes.json()

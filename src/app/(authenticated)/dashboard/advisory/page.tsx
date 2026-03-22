@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
-import { buildSchoolContextString, computeAdvisoryHash } from '@/lib/buildSchoolContext'
+import { buildSchoolContextString, buildAgentContextString, computeAdvisoryHash } from '@/lib/buildSchoolContext'
 import { computeMultiYearDetailed, computeFPFScorecard } from '@/lib/budgetEngine'
 import { createClient } from '@/lib/supabase/client'
 import type { AdvisoryCache } from '@/lib/types'
@@ -147,6 +147,7 @@ export default function AdvisoryPage() {
     setModelChanged(false)
     try {
       let schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
+      let agentContext = buildAgentContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
 
       // Append alignment review findings if available
       if (alignmentReview) {
@@ -154,15 +155,17 @@ export default function AdvisoryPage() {
           .filter((m) => m.severity === 'critical' || m.severity === 'important')
           .map((m) => `- [${m.severity}] ${m.title}`)
           .join('\n')
-        schoolContext += `\n\nAPPLICATION ALIGNMENT REVIEW (${alignmentReview.overall_alignment}):
+        const alignmentAppendix = `\n\nAPPLICATION ALIGNMENT REVIEW (${alignmentReview.overall_alignment}):
 ${alignmentReview.summary}
 ${criticalFindings ? `Key misalignments:\n${criticalFindings}` : 'No critical misalignments found.'}`
+        schoolContext += alignmentAppendix
+        agentContext += alignmentAppendix
       }
 
       const res = await fetch('/api/advisory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schoolContext }),
+        body: JSON.stringify({ schoolContext, agentContext }),
       })
       if (!res.ok) throw new Error(`API returned ${res.status}`)
       const result = await res.json() as AdvisoryData

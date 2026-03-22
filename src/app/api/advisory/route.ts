@@ -256,22 +256,28 @@ Your tone should be: constructive advisor helping a founder strengthen their pla
 }
 
 export async function POST(request: NextRequest) {
-  const { schoolContext } = await request.json()
+  const { schoolContext, agentContext } = await request.json()
 
   if (!schoolContext || typeof schoolContext !== 'string') {
     return NextResponse.json({ error: 'Missing schoolContext' }, { status: 400 })
   }
 
-  // Log the days of cash value being sent to agents for verification
-  const daysMatch = schoolContext.match(/Days of Cash \(Year 1\):\s*(\d+)/)
-  console.log('[advisory] Days of Cash in context:', daysMatch?.[1] || 'NOT FOUND')
+  // Agents receive the summarized context (pre-computed metrics only, no raw data for recomputation)
+  // Briefing synthesis receives the full context for reference
+  const contextForAgents = agentContext || schoolContext
 
-  // Run all 7 agents in parallel
+  // Log the days of cash value being sent to agents for verification
+  const daysMatch = contextForAgents.match(/(\d+) days of cash at the end of Year 1/)
+  console.log('[advisory] Days of Cash in agent context:', daysMatch?.[1] || 'NOT FOUND (checking alt)')
+  const altMatch = contextForAgents.match(/Days of Cash.*?:\s*(\d+)/)
+  if (!daysMatch) console.log('[advisory] Alt match:', altMatch?.[1] || 'NOT FOUND')
+
+  // Run all 7 agents in parallel with summarized context
   const agentResults = await Promise.all(
-    AGENTS.map((agent) => runAgent(agent, schoolContext))
+    AGENTS.map((agent) => runAgent(agent, contextForAgents))
   )
 
-  // Generate synthesized briefing
+  // Generate synthesized briefing with FULL context (includes scorecard) + agent results
   const briefing = await generateBriefing(agentResults, schoolContext)
 
   return NextResponse.json({
