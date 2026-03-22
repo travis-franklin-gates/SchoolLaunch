@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { buildSchoolContextString, buildAgentContextString, computeAdvisoryHash } from '@/lib/buildSchoolContext'
-import { computeMultiYearDetailed, computeFPFScorecard } from '@/lib/budgetEngine'
+import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward } from '@/lib/budgetEngine'
 import { createClient } from '@/lib/supabase/client'
 import type { AdvisoryCache } from '@/lib/types'
 import Link from 'next/link'
@@ -84,12 +84,12 @@ export default function AdvisoryPage() {
   } = useScenario()
   const supabase = createClient()
 
+  // Carry-forward from Year 0 — same computation as Overview page
+  const preOpenCash = useMemo(() => computeCarryForward(profile), [profile])
   const multiYear = useMemo(
-    () => computeMultiYearDetailed(profile, positions, projections, assumptions, 0, gradeExpansionPlan, allPositions, profile.startup_funding),
-    [profile, positions, allPositions, projections, assumptions, gradeExpansionPlan]
+    () => computeMultiYearDetailed(profile, positions, projections, assumptions, preOpenCash, gradeExpansionPlan, allPositions, profile.startup_funding),
+    [profile, positions, allPositions, projections, assumptions, preOpenCash, gradeExpansionPlan]
   )
-  const startupFunding = profile.startup_funding?.reduce((s: number, f: { amount: number }) => s + f.amount, 0) || 0
-  const preOpenCash = Math.round(startupFunding * 0.6)
   const scorecard = useMemo(
     () => computeFPFScorecard(multiYear, preOpenCash, conservativeMode),
     [multiYear, preOpenCash, conservativeMode]
@@ -186,18 +186,19 @@ ${criticalFindings ? `Key misalignments:\n${criticalFindings}` : 'No critical mi
 
     const cached = profile.advisory_cache
     if (cached && cached.briefing) {
+      console.log('[advisory-panel] Cache hit: showing cached results (hash:', cached.dataHash, ')')
       setData({
         briefing: cached.briefing,
         agents: cached.agents,
         generatedAt: cached.generatedAt,
         dataHash: cached.dataHash,
       })
-      // Check if the model has changed since the cached analysis
       if (cached.dataHash && cached.dataHash !== currentDataHash) {
+        console.log('[advisory-panel] Model changed since cache (current:', currentDataHash, ')')
         setModelChanged(true)
       }
     } else {
-      // First visit — no cached analysis, auto-generate
+      console.log('[advisory-panel] Cache miss: regenerating (reason:', !cached ? 'no cache' : 'no briefing in cache', ')')
       fetchAdvisory()
     }
   }, [loading, profile.advisory_cache, currentDataHash]) // eslint-disable-line react-hooks/exhaustive-deps

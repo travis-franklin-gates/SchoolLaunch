@@ -149,13 +149,14 @@ export default function DashboardPage() {
 
     const cached = profile.advisory_cache
     if (cached && cached.briefing) {
+      console.log('[overview] Advisory cache hit (hash:', cached.dataHash, ')')
       setAdvisory(cached)
-      // Check if the model has changed since the cached briefing
       if (cached.dataHash && cached.dataHash !== currentDataHash) {
+        console.log('[overview] Model changed since cache (current:', currentDataHash, ')')
         setModelChanged(true)
       }
     } else {
-      // First visit — no cached briefing, auto-generate
+      console.log('[overview] Advisory cache miss: generating fresh')
       fetchAdvisory()
     }
   }, [loading, profile.advisory_cache, currentDataHash]) // eslint-disable-line react-hooks/exhaustive-deps
