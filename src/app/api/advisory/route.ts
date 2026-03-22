@@ -262,6 +262,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing schoolContext' }, { status: 400 })
   }
 
+  // Log the days of cash value being sent to agents for verification
+  const daysMatch = schoolContext.match(/Days of Cash \(Year 1\):\s*(\d+)/)
+  console.log('[advisory] Days of Cash in context:', daysMatch?.[1] || 'NOT FOUND')
+
   // Run all 7 agents in parallel
   const agentResults = await Promise.all(
     AGENTS.map((agent) => runAgent(agent, schoolContext))
