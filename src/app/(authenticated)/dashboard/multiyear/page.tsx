@@ -271,6 +271,12 @@ export default function MultiYearPage() {
             <Row label="Technology" values={yearsWithStartup.map((y) => y.operations.technology)} />
             <Row label="Authorizer Fee" values={yearsWithStartup.map((y) => y.operations.authorizerFee)} />
             <Row label="Insurance" values={yearsWithStartup.map((y) => y.operations.insurance)} />
+            <Row label="Food Service" values={yearsWithStartup.map((y) => y.operations.foodService)} />
+            <Row label="Transportation" values={yearsWithStartup.map((y) => y.operations.transportation)} />
+            <Row label="Curriculum & Materials" values={yearsWithStartup.map((y) => y.operations.curriculum)} />
+            <Row label="Professional Development" values={yearsWithStartup.map((y) => y.operations.profDev)} />
+            <Row label="Marketing & Outreach" values={yearsWithStartup.map((y) => y.operations.marketing)} />
+            <Row label="Fundraising" values={yearsWithStartup.map((y) => y.operations.fundraising)} />
             <Row label="Misc/Contingency" values={yearsWithStartup.map((y) => y.operations.contingency)} />
             <TotalRow label="Total Operations" values={yearsWithStartup.map((y) => y.operations.total)} />
 

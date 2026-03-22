@@ -399,6 +399,12 @@ export interface MultiYearDetailedRow {
     technology: number
     authorizerFee: number
     insurance: number
+    foodService: number
+    transportation: number
+    curriculum: number
+    profDev: number
+    marketing: number
+    fundraising: number
     contingency: number
     total: number
   }
@@ -447,12 +453,18 @@ export function computeMultiYearDetailed(
   const benefitsRate = assumptions.benefits_load_pct / 100
   const feeRate = assumptions.authorizer_fee_pct / 100
 
-  // Year 1 base data from projections
+  // Year 1 base data from projections — ALL operational categories
   const y1Facilities = projections.find((p) => !p.is_revenue && p.subcategory === 'Facilities')?.amount || 0
   const y1Supplies = projections.find((p) => !p.is_revenue && p.subcategory === 'Supplies & Materials')?.amount || 0
   const y1Contracted = projections.find((p) => !p.is_revenue && p.subcategory === 'Contracted Services')?.amount || 0
   const y1Technology = projections.find((p) => !p.is_revenue && p.subcategory === 'Technology')?.amount || 0
   const y1Insurance = projections.find((p) => !p.is_revenue && p.subcategory === 'Insurance')?.amount || 0
+  const y1FoodService = projections.find((p) => !p.is_revenue && p.subcategory === 'Food Service')?.amount || 0
+  const y1Transportation = projections.find((p) => !p.is_revenue && p.subcategory === 'Transportation')?.amount || 0
+  const y1Curriculum = projections.find((p) => !p.is_revenue && p.subcategory === 'Curriculum & Materials')?.amount || 0
+  const y1ProfDev = projections.find((p) => !p.is_revenue && p.subcategory === 'Professional Development')?.amount || 0
+  const y1Marketing = projections.find((p) => !p.is_revenue && p.subcategory === 'Marketing & Outreach')?.amount || 0
+  const y1Fundraising = projections.find((p) => !p.is_revenue && p.subcategory === 'Fundraising')?.amount || 0
 
   let cumulativeNet = preOpeningNet
   const rows: MultiYearDetailedRow[] = []
@@ -555,7 +567,7 @@ export function computeMultiYearDetailed(
     }
     const totalPersonnel = certCost + classCost + adminCost + benefitsCost
 
-    // Operations
+    // Operations — all categories scaled appropriately
     const opsScale = Math.pow(opsEscalator, y - 1)
     const enrRatio = enrollments[0] > 0 ? enr / enrollments[0] : 1
     const facilities = Math.round(y1Facilities * opsScale)
@@ -564,9 +576,15 @@ export function computeMultiYearDetailed(
     const technology = Math.round(y1Technology * enrRatio * opsScale)
     const authorizerFee = calcAuthorizerFeeCommission(stateApport, feeRate)
     const insurance = Math.round(y1Insurance * opsScale)
-    const contingencyBase = totalPersonnel + facilities + supplies + contracted + technology + authorizerFee + insurance
+    const foodService = Math.round(y1FoodService * enrRatio * opsScale)
+    const transportation = Math.round(y1Transportation * enrRatio * opsScale)
+    const curriculum = Math.round(y1Curriculum * enrRatio * opsScale)
+    const profDev = Math.round(y1ProfDev * opsScale) // scales with inflation, not enrollment
+    const marketing = Math.round(y1Marketing * opsScale) // scales with inflation only
+    const fundraising = Math.round(y1Fundraising * opsScale)
+    const contingencyBase = totalPersonnel + facilities + supplies + contracted + technology + authorizerFee + insurance + foodService + transportation + curriculum + profDev + marketing + fundraising
     const contingency = Math.round(contingencyBase * (assumptions.contingency_pct / 100))
-    const totalOperations = facilities + supplies + contracted + technology + authorizerFee + insurance + contingency
+    const totalOperations = facilities + supplies + contracted + technology + authorizerFee + insurance + foodService + transportation + curriculum + profDev + marketing + fundraising + contingency
 
     const totalExpenses = totalPersonnel + totalOperations
     const net = totalRevenue - totalExpenses
@@ -609,7 +627,7 @@ export function computeMultiYearDetailed(
         total: totalPersonnel,
         totalSalaries,
       },
-      operations: { facilities, supplies, contracted, technology, authorizerFee, insurance, contingency, total: totalOperations },
+      operations: { facilities, supplies, contracted, technology, authorizerFee, insurance, foodService, transportation, curriculum, profDev, marketing, fundraising, contingency, total: totalOperations },
       totalExpenses,
       net,
       cumulativeNet,
