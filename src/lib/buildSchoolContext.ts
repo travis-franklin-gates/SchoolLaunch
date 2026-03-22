@@ -40,11 +40,6 @@ export function buildSchoolContextString(
   const opsProjections = projections.filter((p) => !p.is_revenue && p.category === 'Operations')
   const totalExpenses = totalPersonnel + totalOperations
   const netPosition = hasMultiYear ? multiYear[0].net : totalRevenue - totalExpenses
-  const dailyCost = totalExpenses > 0 ? totalExpenses / 365 : 1
-  // Days of Cash = ending cash / daily expenses (NOT net position / daily expenses)
-  // ending cash = cumulativeNet which includes pre-opening carry-forward
-  const endingCash = hasMultiYear ? multiYear[0].cumulativeNet : netPosition
-  const reserveDays = Math.round(endingCash / dailyCost)
   // Personnel % uses operating revenue (excludes grants) — matches budget engine and dashboard
   const personnelPct = operatingRevenue > 0 ? ((totalPersonnel / operatingRevenue) * 100).toFixed(1) : '0'
   const revenuePerStudent = enroll > 0 ? totalRevenue / enroll : 0
@@ -138,7 +133,7 @@ Total Operations: $${totalOperations.toLocaleString()}
 
 KEY METRICS (pre-computed by the budget engine — use these exact numbers, do not independently calculate):
 - Net Position: $${(hasMultiYear ? multiYear[0].net : netPosition).toLocaleString()}
-- Days of Cash (Year 1): ${scorecard ? (scorecard.measures.find(m => m.name === 'Days of Cash')?.values[0] ?? reserveDays) : reserveDays} (= ending cash ÷ daily expenses)
+- Days of Cash (Year 1): ${scorecard ? scorecard.measures.find(m => m.name === 'Days of Cash')?.values[0] : hasMultiYear ? multiYear[0].reserveDays : 0} days — USE THIS VALUE, do not calculate independently
 - Personnel % of Operating Revenue: ${personnelPct}% (= $${totalPersonnel.toLocaleString()} ÷ $${operatingRevenue.toLocaleString()})
 - Break-Even Enrollment: ${breakEvenEnrollment} students (target: ${enroll})
 - Facility % of Operating Revenue: ${facilityPct}%
@@ -146,7 +141,7 @@ NOTE: Personnel % and Facility % use Operating Revenue as the denominator (exclu
 
 MULTI-YEAR SUMMARY (Years 1-${multiYear.length}):
 ${multiYear.map((r, i) => {
-    const daysOfCash = scorecard ? (scorecard.measures.find(m => m.name === 'Days of Cash')?.values[i] ?? r.reserveDays) : r.reserveDays
+    const daysOfCash = scorecard ? (scorecard.measures.find(m => m.name === 'Days of Cash')?.values[i] ?? r.reserveDays) : r.reserveDays // reserveDays now = endingCash / dailyExpense
     return `- Year ${r.year}: Revenue $${r.revenue.total.toLocaleString()}, Expenses $${r.totalExpenses.toLocaleString()}, Net $${r.net.toLocaleString()}, Cumulative $${r.cumulativeNet.toLocaleString()}, ${daysOfCash} days cash`
   }).join('\n')}` : ''}${scorecard ? `
 

@@ -572,7 +572,8 @@ export function computeMultiYearDetailed(
     const net = totalRevenue - totalExpenses
     cumulativeNet += net
     const dailyExpense = totalExpenses / 365
-    const reserveDays = dailyExpense > 0 ? Math.round(net / dailyExpense) : 0
+    // Days of Cash = ending cash (cumulativeNet) / daily expenses
+    const reserveDays = dailyExpense > 0 ? Math.round(cumulativeNet / dailyExpense) : 0
 
     const expansionDetail = expansionDetails
       ? expansionDetails.find((d) => d.year === y)
