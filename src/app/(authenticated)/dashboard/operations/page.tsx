@@ -133,8 +133,17 @@ export default function OperationsPage() {
       const effectiveRate = mapping ? (assumptions[mapping.key] as number) : null
       const base = mapping?.perFte ? totalFte : enrollment
 
-      // Use DB amount if present; otherwise default to $0 (migration backfills existing schools)
-      const amount = existingByName.get(lineItem) ?? 0
+      // Use DB amount if present; if $0 and a per-pupil rate exists, compute default
+      let amount = existingByName.get(lineItem) ?? 0
+      if (amount === 0 && effectiveRate && effectiveRate > 0) {
+        // Auto-populate from benchmark rate × base (enrollment or FTE)
+        // For Food Service / Transportation, only populate if the program is enabled
+        const isFood = lineItem === 'Food Service'
+        const isTransport = lineItem === 'Transportation'
+        if (isFood && !assumptions.food_service_offered) { /* leave at 0 */ }
+        else if (isTransport && !assumptions.transportation_offered) { /* leave at 0 */ }
+        else { amount = Math.round(effectiveRate * base) }
+      }
 
       return {
         lineItem,

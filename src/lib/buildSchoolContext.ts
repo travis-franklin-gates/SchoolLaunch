@@ -78,11 +78,28 @@ export function buildAgentContextString(
     return `- ${p.title}: ${p.fte} FTE, $${p.annual_salary.toLocaleString()} salary, ${p.category} (total with benefits: $${total.toLocaleString()})`
   }).join('\n')
 
-  // Operations breakdown (agents need this for facilities/ops analysis)
-  const opsBreakdown = projections
-    .filter(p => !p.is_revenue && p.category === 'Operations')
-    .map(p => `- ${p.subcategory}: $${p.amount.toLocaleString()}`)
-    .join('\n')
+  // Detailed operations breakdown with per-pupil/per-FTE context
+  const opsItems = projections.filter(p => !p.is_revenue && p.category === 'Operations')
+  const opsMap = new Map(opsItems.map(p => [p.subcategory, p.amount]))
+  const perStudent = (amt: number) => enroll > 0 ? `$${Math.round(amt / enroll).toLocaleString()}/student` : ''
+  const perFte = (amt: number) => totalFte > 0 ? `$${Math.round(amt / totalFte).toLocaleString()}/FTE` : ''
+  const foodAmt = opsMap.get('Food Service') ?? 0
+  const transportAmt = opsMap.get('Transportation') ?? 0
+  const opsBreakdown = [
+    `- Facilities: $${(opsMap.get('Facilities') ?? 0).toLocaleString()} (${facilityPct}% of operating revenue)`,
+    `- Insurance: $${(opsMap.get('Insurance') ?? 0).toLocaleString()}`,
+    `- Supplies & Materials: $${(opsMap.get('Supplies & Materials') ?? 0).toLocaleString()} (${perStudent(opsMap.get('Supplies & Materials') ?? 0)})`,
+    `- Technology: $${(opsMap.get('Technology') ?? 0).toLocaleString()} (${perStudent(opsMap.get('Technology') ?? 0)})`,
+    `- Curriculum & Materials: $${(opsMap.get('Curriculum & Materials') ?? 0).toLocaleString()} (${perStudent(opsMap.get('Curriculum & Materials') ?? 0)})`,
+    `- Professional Development: $${(opsMap.get('Professional Development') ?? 0).toLocaleString()} (${perFte(opsMap.get('Professional Development') ?? 0)})`,
+    `- Food Service: ${foodAmt > 0 ? `$${foodAmt.toLocaleString()} (${perStudent(foodAmt)})` : 'Not budgeted'}${assumptions.food_service_offered ? ' [program enabled]' : ''}`,
+    `- Transportation: ${transportAmt > 0 ? `$${transportAmt.toLocaleString()} (${perStudent(transportAmt)})` : 'Not budgeted'}${assumptions.transportation_offered ? ' [program enabled]' : ''}`,
+    `- Contracted Services: $${(opsMap.get('Contracted Services') ?? 0).toLocaleString()} (${perStudent(opsMap.get('Contracted Services') ?? 0)})`,
+    `- Marketing & Outreach: $${(opsMap.get('Marketing & Outreach') ?? 0).toLocaleString()} (${perStudent(opsMap.get('Marketing & Outreach') ?? 0)})`,
+    `- Fundraising: $${(opsMap.get('Fundraising') ?? 0).toLocaleString()}`,
+    `- Authorizer Fee: $${(opsMap.get('Authorizer Fee') ?? 0).toLocaleString()} (3% of state apportionment)`,
+    `- Misc/Contingency: $${(opsMap.get('Misc/Contingency') ?? 0).toLocaleString()} (${totalExpenses > 0 ? ((opsMap.get('Misc/Contingency') ?? 0) / totalExpenses * 100).toFixed(1) : '0'}% of total expenses)`,
+  ].join('\n')
 
   // Days of cash trajectory in prose
   const cashTrajectory = daysOfCashValues.length > 0
