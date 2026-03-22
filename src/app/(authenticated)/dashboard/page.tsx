@@ -111,10 +111,11 @@ export default function DashboardPage() {
   const saveAdvisoryCache = useCallback(async (data: AdvisoryData) => {
     if (!schoolId) return
     const cache: AdvisoryCache = { ...data, dataHash: currentDataHash }
-    await supabase
+    const { error } = await supabase
       .from('school_profiles')
       .update({ advisory_cache: cache })
       .eq('school_id', schoolId)
+    console.log('[overview] Saved to Supabase:', error ? `FAILED: ${error.message}` : 'success')
   }, [schoolId, currentDataHash, supabase])
 
   // Fetch fresh advisory from API and cache it
@@ -142,24 +143,34 @@ export default function DashboardPage() {
     setAdvisoryLoading(false)
   }, [schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard, loading, currentDataHash, saveAdvisoryCache])
 
-  // Load cached advisory on mount; auto-generate only on first visit (no cache)
+  // Load cached advisory on mount — query Supabase directly for latest cache
   useEffect(() => {
-    if (loading || advisoryInitRef.current) return
+    if (loading || !schoolId || advisoryInitRef.current) return
     advisoryInitRef.current = true
 
-    const cached = profile.advisory_cache
-    if (cached && cached.briefing) {
-      console.log('[overview] Advisory cache hit (hash:', cached.dataHash, ')')
-      setAdvisory(cached)
-      if (cached.dataHash && cached.dataHash !== currentDataHash) {
-        console.log('[overview] Model changed since cache (current:', currentDataHash, ')')
-        setModelChanged(true)
+    async function loadCachedAdvisory() {
+      const { data } = await supabase
+        .from('school_profiles')
+        .select('advisory_cache')
+        .eq('school_id', schoolId)
+        .single()
+
+      const cached = data?.advisory_cache as AdvisoryCache | null
+      if (cached && cached.briefing) {
+        console.log('[overview] Cache loaded from Supabase: yes, hash match:', cached.dataHash === currentDataHash)
+        console.log('[overview] Decision: serving cached')
+        setAdvisory(cached)
+        if (cached.dataHash && cached.dataHash !== currentDataHash) {
+          setModelChanged(true)
+        }
+      } else {
+        console.log('[overview] Cache loaded from Supabase: no')
+        console.log('[overview] Decision: generating fresh (reason: no cache)')
+        fetchAdvisory()
       }
-    } else {
-      console.log('[overview] Advisory cache miss: generating fresh')
-      fetchAdvisory()
     }
-  }, [loading, profile.advisory_cache, currentDataHash]) // eslint-disable-line react-hooks/exhaustive-deps
+    loadCachedAdvisory()
+  }, [loading, schoolId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>

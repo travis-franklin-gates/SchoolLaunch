@@ -133,10 +133,11 @@ export default function AdvisoryPage() {
       generatedAt: advisoryData.generatedAt,
       dataHash: currentDataHash,
     }
-    await supabase
+    const { error } = await supabase
       .from('school_profiles')
       .update({ advisory_cache: cache })
       .eq('school_id', schoolId)
+    console.log('[advisory-panel] Saved to Supabase:', error ? `FAILED: ${error.message}` : 'success')
   }, [schoolId, currentDataHash, supabase])
 
   // Fetch fresh advisory from API and cache it
@@ -179,29 +180,39 @@ ${criticalFindings ? `Key misalignments:\n${criticalFindings}` : 'No critical mi
     setFetching(false)
   }, [schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard, loading, alignmentReview, currentDataHash, saveAdvisoryCache])
 
-  // Load cached advisory on mount; auto-generate only on first visit (no cache)
+  // Load cached advisory on mount — query Supabase directly for latest cache
   useEffect(() => {
-    if (loading || initRef.current) return
+    if (loading || !schoolId || initRef.current) return
     initRef.current = true
 
-    const cached = profile.advisory_cache
-    if (cached && cached.briefing) {
-      console.log('[advisory-panel] Cache hit: showing cached results (hash:', cached.dataHash, ')')
-      setData({
-        briefing: cached.briefing,
-        agents: cached.agents,
-        generatedAt: cached.generatedAt,
-        dataHash: cached.dataHash,
-      })
-      if (cached.dataHash && cached.dataHash !== currentDataHash) {
-        console.log('[advisory-panel] Model changed since cache (current:', currentDataHash, ')')
-        setModelChanged(true)
+    async function loadCachedAdvisory() {
+      const { data: row } = await supabase
+        .from('school_profiles')
+        .select('advisory_cache')
+        .eq('school_id', schoolId)
+        .single()
+
+      const cached = row?.advisory_cache as AdvisoryCache | null
+      if (cached && cached.briefing) {
+        console.log('[advisory-panel] Cache loaded from Supabase: yes, hash match:', cached.dataHash === currentDataHash)
+        console.log('[advisory-panel] Decision: serving cached')
+        setData({
+          briefing: cached.briefing,
+          agents: cached.agents,
+          generatedAt: cached.generatedAt,
+          dataHash: cached.dataHash,
+        })
+        if (cached.dataHash && cached.dataHash !== currentDataHash) {
+          setModelChanged(true)
+        }
+      } else {
+        console.log('[advisory-panel] Cache loaded from Supabase: no')
+        console.log('[advisory-panel] Decision: generating fresh (reason: no cache)')
+        fetchAdvisory()
       }
-    } else {
-      console.log('[advisory-panel] Cache miss: regenerating (reason:', !cached ? 'no cache' : 'no briefing in cache', ')')
-      fetchAdvisory()
     }
-  }, [loading, profile.advisory_cache, currentDataHash]) // eslint-disable-line react-hooks/exhaustive-deps
+    loadCachedAdvisory()
+  }, [loading, schoolId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
