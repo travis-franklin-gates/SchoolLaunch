@@ -306,7 +306,7 @@ export default function MultiYearPage() {
               ))}
             </tr>
             <tr>
-              <td className="px-5 py-3 font-bold text-slate-800">Reserve Days</td>
+              <td className="px-5 py-3 font-bold text-slate-800">Days Cash</td>
               {yearsWithStartup.map((y) => {
                 const dailyExpense = y.totalExpenses / 365
                 const days = dailyExpense > 0 ? Math.round(y.cumulativeNet / dailyExpense) : 0

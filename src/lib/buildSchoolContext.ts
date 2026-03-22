@@ -41,7 +41,10 @@ export function buildSchoolContextString(
   const totalExpenses = totalPersonnel + totalOperations
   const netPosition = hasMultiYear ? multiYear[0].net : totalRevenue - totalExpenses
   const dailyCost = totalExpenses > 0 ? totalExpenses / 365 : 1
-  const reserveDays = Math.round(netPosition / dailyCost)
+  // Days of Cash = ending cash / daily expenses (NOT net position / daily expenses)
+  // ending cash = cumulativeNet which includes pre-opening carry-forward
+  const endingCash = hasMultiYear ? multiYear[0].cumulativeNet : netPosition
+  const reserveDays = Math.round(endingCash / dailyCost)
   // Personnel % uses operating revenue (excludes grants) — matches budget engine and dashboard
   const personnelPct = operatingRevenue > 0 ? ((totalPersonnel / operatingRevenue) * 100).toFixed(1) : '0'
   const revenuePerStudent = enroll > 0 ? totalRevenue / enroll : 0
@@ -135,7 +138,7 @@ Total Operations: $${totalOperations.toLocaleString()}
 
 KEY METRICS (pre-computed by the budget engine — use these exact numbers, do not independently calculate):
 - Net Position: $${(hasMultiYear ? multiYear[0].net : netPosition).toLocaleString()}
-- Reserve Days (Days of Cash): ${scorecard ? (scorecard.measures.find(m => m.name === 'Days of Cash')?.values[0] ?? reserveDays) : reserveDays}
+- Days of Cash (Year 1): ${scorecard ? (scorecard.measures.find(m => m.name === 'Days of Cash')?.values[0] ?? reserveDays) : reserveDays} (= ending cash ÷ daily expenses)
 - Personnel % of Operating Revenue: ${personnelPct}% (= $${totalPersonnel.toLocaleString()} ÷ $${operatingRevenue.toLocaleString()})
 - Break-Even Enrollment: ${breakEvenEnrollment} students (target: ${enroll})
 - Facility % of Operating Revenue: ${facilityPct}%
