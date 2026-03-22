@@ -270,7 +270,7 @@ REVENUE (Year 1, AAFTE: ${aafte} of ${enroll} headcount):
 - LAP: $${rev.lap.toLocaleString()}
 - LAP High Poverty: $${rev.lapHighPoverty.toLocaleString()}
 - TBIP: $${rev.tbip.toLocaleString()}
-- HiCap: $${rev.hicap.toLocaleString()}
+- HiCap: $${rev.hicap.toLocaleString()}${rev.foodServiceRev > 0 ? `\n- Food Service (NSLP): $${rev.foodServiceRev.toLocaleString()}` : ''}${rev.transportationRev > 0 ? `\n- Transportation (State): $${rev.transportationRev.toLocaleString()}` : ''}
 - Operating Revenue (recurring, excludes grants): $${operatingRevenue.toLocaleString()}
 - Total Revenue (including one-time grants): $${totalRevenue.toLocaleString()}
 

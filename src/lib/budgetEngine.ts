@@ -377,6 +377,8 @@ export interface MultiYearDetailedRow {
     lapHighPoverty: number
     tbip: number
     hicap: number
+    foodServiceRev: number
+    transportationRev: number
     interestIncome: number
     grantRevenue: number
     operatingRevenue: number
@@ -483,7 +485,7 @@ export function computeMultiYearDetailed(
       : Math.round(Math.max(0, priorCash) * interestRate)
     // Grant revenue for this year from startup funding allocations
     const yearGrantRevenue = getGrantRevenueForYear(startupFunding, y)
-    const operatingRevenue = rev.total + interestIncome
+    const operatingRevenue = rev.total + interestIncome // rev.total already includes foodServiceRev + transportationRev
     const totalRevenue = operatingRevenue + yearGrantRevenue
     // State apportionment = regularEd + sped + stateSped + facilitiesRev (for authorizer fee)
     const stateApport = rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev
@@ -613,6 +615,8 @@ export function computeMultiYearDetailed(
         lapHighPoverty: rev.lapHighPoverty,
         tbip: rev.tbip,
         hicap: rev.hicap,
+        foodServiceRev: rev.foodServiceRev,
+        transportationRev: rev.transportationRev,
         interestIncome,
         grantRevenue: yearGrantRevenue,
         operatingRevenue,

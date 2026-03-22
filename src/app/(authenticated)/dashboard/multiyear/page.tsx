@@ -236,6 +236,12 @@ export default function MultiYearPage() {
             <Row label="LAP High Poverty" values={yearsWithStartup.map((y) => y.revenue.lapHighPoverty)} />
             <Row label="TBIP" values={yearsWithStartup.map((y) => y.revenue.tbip)} />
             <Row label="HiCap" values={yearsWithStartup.map((y) => y.revenue.hicap)} />
+            {yearsWithStartup.some((y) => y.revenue.foodServiceRev > 0) && (
+              <Row label="Food Service (NSLP)" values={yearsWithStartup.map((y) => y.revenue.foodServiceRev)} />
+            )}
+            {yearsWithStartup.some((y) => y.revenue.transportationRev > 0) && (
+              <Row label="Transportation (State)" values={yearsWithStartup.map((y) => y.revenue.transportationRev)} />
+            )}
             <Row label="Interest & Other Income" values={yearsWithStartup.map((y) => y.revenue.interestIncome)} />
             <TotalRow label="Operating Revenue" values={yearsWithStartup.map((y) => y.revenue.operatingRevenue)} />
             {yearsWithStartup.some((y) => y.revenue.grantRevenue > 0) && (

@@ -97,6 +97,8 @@ export interface CommissionRevenue {
   lapHighPoverty: number
   tbip: number
   hicap: number
+  foodServiceRev: number
+  transportationRev: number
   total: number
   aafte: number
   headcount: number
@@ -148,9 +150,15 @@ export function calcCommissionRevenue(
   const titleI = pctFrl > 40 ? Math.round(headcount * (pctFrl / 100) * titleIRate) : 0
   const idea = Math.round(headcount * (pctIep / 100) * ideaRate)
 
-  const total = regularEd + sped + stateSped + facilitiesRev + levyEquity + titleI + idea + lap + lapHighPoverty + tbip + hicap
+  // Program revenue (only when programs are enabled)
+  const foodServiceRevRate = Math.round((assumptions.food_service_revenue_per_pupil || 0) * colaMult)
+  const transportRevRate = Math.round((assumptions.transportation_revenue_per_pupil || 0) * colaMult)
+  const foodServiceRev = assumptions.food_service_offered ? headcount * foodServiceRevRate : 0
+  const transportationRev = assumptions.transportation_offered ? headcount * transportRevRate : 0
 
-  return { regularEd, sped, stateSped, facilitiesRev, levyEquity, titleI, idea, lap, lapHighPoverty, tbip, hicap, total, aafte, headcount }
+  const total = regularEd + sped + stateSped + facilitiesRev + levyEquity + titleI + idea + lap + lapHighPoverty + tbip + hicap + foodServiceRev + transportationRev
+
+  return { regularEd, sped, stateSped, facilitiesRev, levyEquity, titleI, idea, lap, lapHighPoverty, tbip, hicap, foodServiceRev, transportationRev, total, aafte, headcount }
 }
 
 // --- Benefits ---

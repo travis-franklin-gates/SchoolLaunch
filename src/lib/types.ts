@@ -19,6 +19,8 @@ export interface FinancialAssumptions {
   fundraising_annual: number
   food_service_offered: boolean
   transportation_offered: boolean
+  food_service_revenue_per_pupil: number
+  transportation_revenue_per_pupil: number
   // Commission-aligned revenue fields
   regular_ed_per_pupil: number
   sped_per_pupil: number
@@ -56,6 +58,8 @@ export const DEFAULT_ASSUMPTIONS: FinancialAssumptions = {
   fundraising_annual: 15000,
   food_service_offered: false,
   transportation_offered: false,
+  food_service_revenue_per_pupil: 710,
+  transportation_revenue_per_pupil: 560,
   // Commission-aligned (validated against OSPI apportionment data)
   regular_ed_per_pupil: 11812,
   sped_per_pupil: 2548,

@@ -240,6 +240,25 @@ export default function RevenuePage() {
       scenarioCalc: scenarioRev.hicap,
       override: overrides['HiCap'] ?? null,
     },
+    // Program Revenue (only when programs are enabled)
+    ...(assumptions.food_service_offered ? [{
+      label: 'Food Service (NSLP)',
+      group: 'Program Revenue',
+      formula: `${baseEnrollment} × $${(assumptions.food_service_revenue_per_pupil || 710).toLocaleString()}/student`,
+      calculated: baseRev.foodServiceRev,
+      scenarioCalc: scenarioRev.foodServiceRev,
+      override: overrides['Food Service (NSLP)'] ?? null,
+      helperNote: 'NSLP reimbursement estimate. Actual rates depend on meal participation and FRL%. Override with your district\'s actual allocation if known.',
+    }] : []),
+    ...(assumptions.transportation_offered ? [{
+      label: 'Transportation (State)',
+      group: 'Program Revenue',
+      formula: `${baseEnrollment} × $${(assumptions.transportation_revenue_per_pupil || 560).toLocaleString()}/student`,
+      calculated: baseRev.transportationRev,
+      scenarioCalc: scenarioRev.transportationRev,
+      override: overrides['Transportation (State)'] ?? null,
+      helperNote: 'State transportation allocation estimate. Actual amount determined by OSPI based on host district\'s prior-year allocation. Override with your district\'s actual figure if known.',
+    }] : []),
   ], [baseEnrollment, scenarioEnrollment, baseAAFTE, spedStudents, profile, overrides, assumptions, baseRev, scenarioRev, regionFactor]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Operating revenue = all recurring state/local + federal + state categorical
@@ -255,7 +274,7 @@ export default function RevenuePage() {
   const totalScenario = operatingScenario + grantScenario
 
   // Group rows for display
-  const groups = ['State & Local', 'Federal', 'State Categorical']
+  const groups = ['State & Local', 'Federal', 'State Categorical', 'Program Revenue']
   const colSpan = isModified ? 6 : 5
 
   if (loading) {

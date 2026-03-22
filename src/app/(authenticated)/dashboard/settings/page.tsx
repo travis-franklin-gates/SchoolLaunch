@@ -555,6 +555,24 @@ export default function SettingsPage() {
               onChange={(e) => updateFa('transportation_per_student', Number(e.target.value))}
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
+          {fa.food_service_offered && (
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Food Service Revenue per Student ($)</label>
+              <input type="number" step={10} value={fa.food_service_revenue_per_pupil || 710}
+                onChange={(e) => updateFa('food_service_revenue_per_pupil', Number(e.target.value))}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+              <p className="text-[10px] text-slate-400 mt-0.5">NSLP reimbursement estimate. Schools with 60%+ FRL may receive $750-$900/student.</p>
+            </div>
+          )}
+          {fa.transportation_offered && (
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Transportation Revenue per Student ($)</label>
+              <input type="number" step={10} value={fa.transportation_revenue_per_pupil || 560}
+                onChange={(e) => updateFa('transportation_revenue_per_pupil', Number(e.target.value))}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+              <p className="text-[10px] text-slate-400 mt-0.5">State allocation estimate. Rural: $700-$1,000; urban: $500-$800.</p>
+            </div>
+          )}
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Marketing per Student ($)</label>
             <input type="number" step={10} value={fa.marketing_per_student}

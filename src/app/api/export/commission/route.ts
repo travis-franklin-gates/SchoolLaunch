@@ -17,6 +17,8 @@ interface MultiYearRow {
     lapHighPoverty: number
     tbip: number
     hicap: number
+    foodServiceRev: number
+    transportationRev: number
     interestIncome: number
     grantRevenue: number
     operatingRevenue: number
@@ -162,7 +164,9 @@ export async function POST(request: Request) {
     ['8.1', 'State Categorical', 'LAP High Poverty', 'Per Pupil', 0, ...multiYear.map((r) => r.revenue.lapHighPoverty)],
     ['9.0', 'State Categorical', 'TBIP (Bilingual)', 'Per Pupil-ELL', 0, ...multiYear.map((r) => r.revenue.tbip)],
     ['10.0', 'State Categorical', 'Highly Capable', 'Per Pupil-HiCap', 0, ...multiYear.map((r) => r.revenue.hicap)],
-    ['11.0', 'Other', 'Interest & Other Income', 'Cash Balance', 0, ...multiYear.map((r) => r.revenue.interestIncome)],
+    ['11.0', 'Program Revenue', 'Food Service (NSLP)', 'Per Pupil', 0, ...multiYear.map((r) => r.revenue.foodServiceRev)],
+    ['11.1', 'Program Revenue', 'Transportation (State)', 'Per Pupil', 0, ...multiYear.map((r) => r.revenue.transportationRev)],
+    ['12.0', 'Other', 'Interest & Other Income', 'Cash Balance', 0, ...multiYear.map((r) => r.revenue.interestIncome)],
     [],
     ['', '', 'Total Revenue', '', 0, ...multiYear.map((r) => r.revenue.total)],
   ]
@@ -211,6 +215,8 @@ export async function POST(request: Request) {
     ['LAP High Poverty', 0, ...multiYear.map((r) => r.revenue.lapHighPoverty)],
     ['TBIP', 0, ...multiYear.map((r) => r.revenue.tbip)],
     ['HiCap', 0, ...multiYear.map((r) => r.revenue.hicap)],
+    ['Food Service (NSLP)', 0, ...multiYear.map((r) => r.revenue.foodServiceRev)],
+    ['Transportation (State)', 0, ...multiYear.map((r) => r.revenue.transportationRev)],
     ['Interest & Other Income', 0, ...multiYear.map((r) => r.revenue.interestIncome)],
     ['Total Revenue', 0, ...multiYear.map((r) => r.revenue.total)],
     [],
