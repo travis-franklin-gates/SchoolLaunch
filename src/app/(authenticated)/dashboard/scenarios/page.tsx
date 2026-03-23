@@ -21,6 +21,10 @@ const SCENARIO_COLORS: Record<string, { accent: string; bg: string; border: stri
   Optimistic: { accent: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', pill: 'bg-emerald-100 text-emerald-700' },
 }
 
+function scenarioLabel(s: { name: string; assumptions: ScenarioAssumptions }) {
+  return `${s.name} (${Math.round(s.assumptions.enrollment_fill_rate * 100)}% Fill)`
+}
+
 function fmt(n: number) {
   if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
   if (Math.abs(n) >= 1_000) return `$${Math.round(n / 1_000)}K`
@@ -344,12 +348,12 @@ export default function ScenariosPage() {
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm mb-6 overflow-hidden">
           {/* Mobile scenario selector */}
           <div className="md:hidden flex gap-1 p-3 border-b border-slate-200">
-            {['Conservative', 'Base Case', 'Optimistic'].map(name => {
-              const colors = SCENARIO_COLORS[name]
+            {scenarios.map(s => {
+              const colors = SCENARIO_COLORS[s.name] || SCENARIO_COLORS['Base Case']
               return (
-                <button key={name} onClick={() => setMobileScenario(name)}
-                  className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${mobileScenario === name ? `${colors.bg} ${colors.text}` : 'text-slate-500 hover:bg-slate-50'}`}>
-                  {name}
+                <button key={s.id} onClick={() => setMobileScenario(s.name)}
+                  className={`flex-1 px-2 py-1.5 rounded text-[10px] font-medium transition-colors ${mobileScenario === s.name ? `${colors.bg} ${colors.text}` : 'text-slate-500 hover:bg-slate-50'}`}>
+                  {scenarioLabel(s)}
                 </button>
               )
             })}
@@ -358,12 +362,12 @@ export default function ScenariosPage() {
           {/* Header row — desktop: 4 cols, mobile: 2 cols */}
           <div className="hidden md:grid grid-cols-4 border-b border-slate-200">
             <div className="px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Metric</div>
-            {['Conservative', 'Base Case', 'Optimistic'].map(name => {
-              const colors = SCENARIO_COLORS[name]
-              const isBase = name === 'Base Case'
+            {scenarios.map(s => {
+              const colors = SCENARIO_COLORS[s.name] || SCENARIO_COLORS['Base Case']
+              const isBase = s.name === 'Base Case'
               return (
-                <div key={name} className={`px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide ${colors.accent} ${isBase ? 'bg-blue-50/50' : ''}`}>
-                  {name}
+                <div key={s.id} className={`px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide ${colors.accent} ${isBase ? 'bg-blue-50/50' : ''}`}>
+                  {scenarioLabel(s)}
                 </div>
               )
             })}
@@ -377,8 +381,8 @@ export default function ScenariosPage() {
               <ComparisonRow label="Total Revenue" scenarios={scenarios} getValue={y1 => y1?.total_revenue ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
               <ComparisonRow label="Total Expenses" scenarios={scenarios} getValue={y1 => y1?.total_expenses ?? 0} format={fmt} baseY1={baseY1} invert />
               <ComparisonRow label="Net Position" scenarios={scenarios} getValue={y1 => y1?.net_position ?? 0} format={fmt} baseY1={baseY1} highlight />
-              <ComparisonRow label="Ending Cash" scenarios={scenarios} getValue={y1 => y1?.ending_cash ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
-              <ComparisonRow label="Reserve Days" scenarios={scenarios} getValue={y1 => y1?.reserve_days ?? 0} format={v => `${v} days`} baseY1={baseY1} colorFn={reserveColor} suffix=" days" />
+              <ComparisonRow label="Ending Cash" scenarios={scenarios} getValue={y1 => y1?.ending_cash ?? 0} format={v => v < 0 ? '$0' : fmt(v)} baseY1={baseY1} mobileScenario={mobileScenario} badge={v => v < 0 ? 'Cash Shortfall' : undefined} />
+              <ComparisonRow label="Reserve Days" scenarios={scenarios} getValue={y1 => y1?.reserve_days ?? 0} format={v => v < 0 ? '0 days' : `${v} days`} baseY1={baseY1} colorFn={v => v <= 0 ? 'text-red-600' : reserveColor(v)} suffix=" days" badge={v => v < 0 ? 'Cash Shortfall' : undefined} />
               <ComparisonRow label="Personnel % Revenue" scenarios={scenarios} getValue={y1 => y1?.personnel_pct ?? 0} format={v => `${v.toFixed(1)}%`} baseY1={baseY1} colorFn={personnelColor} invert suffix="%" />
               <ComparisonRow label="Break-Even Enrollment" scenarios={scenarios} getValue={y1 => y1?.break_even_enrollment ?? 0} format={v => `${v} students`} baseY1={baseY1} invert suffix=" students" />
             </>
@@ -570,7 +574,7 @@ function GroupHeader({ label, group, expanded, onToggle }: { label: string; grou
   )
 }
 
-function ComparisonRow({ label, scenarios, getValue, format, baseY1, colorFn, invert, highlight, suffix, mobileScenario }: {
+function ComparisonRow({ label, scenarios, getValue, format, baseY1, colorFn, invert, highlight, suffix, mobileScenario, badge }: {
   label: string
   scenarios: ScenarioRecord[]
   getValue: (y1: ScenarioYearResult | undefined) => number
@@ -581,6 +585,7 @@ function ComparisonRow({ label, scenarios, getValue, format, baseY1, colorFn, in
   highlight?: boolean
   suffix?: string
   mobileScenario?: string
+  badge?: (v: number) => string | undefined
 }) {
   const baseValue = baseY1 ? getValue(baseY1) : 0
   return (
@@ -595,7 +600,10 @@ function ComparisonRow({ label, scenarios, getValue, format, baseY1, colorFn, in
           const color = colorFn ? colorFn(value) : 'text-slate-800'
           return (
             <div key={s.id} className={`px-4 py-2 text-center ${isBase ? 'bg-blue-50/30' : ''}`}>
-              <div className={`text-sm font-medium ${highlight ? 'font-semibold' : ''} ${color}`}>{format(value)}</div>
+              <div className={`text-sm font-medium ${highlight ? 'font-semibold' : ''} ${color}`}>
+                {format(value)}
+                {badge?.(value) && <span className="ml-1 text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">{badge(value)}</span>}
+              </div>
               {!isBase && <Delta value={value} base={baseValue} suffix={suffix} invert={invert} />}
             </div>
           )
@@ -608,7 +616,10 @@ function ComparisonRow({ label, scenarios, getValue, format, baseY1, colorFn, in
           const y1 = s.results?.years?.['1']
           const value = getValue(y1)
           const color = colorFn ? colorFn(value) : 'text-slate-800'
-          return <span key={s.id} className={`text-sm font-medium ${color}`}>{format(value)}</span>
+          return <span key={s.id} className={`text-sm font-medium ${color}`}>
+            {format(value)}
+            {badge?.(value) && <span className="ml-1 text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">{badge(value)}</span>}
+          </span>
         })}
       </div>
     </>

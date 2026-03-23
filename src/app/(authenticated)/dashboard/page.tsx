@@ -684,19 +684,19 @@ export default function DashboardPage() {
 
 /** Reusable row for the sectioned budget table */
 function ScenarioSummaryCard({ schoolId }: { schoolId: string }) {
-  const [scenarios, setScenarios] = useState<Array<{ name: string; results: { years: Record<string, { reserve_days: number; fpf_days_cash: string }> } | null }>>([])
+  const [scenarios, setScenarios] = useState<Array<{ name: string; assumptions: { enrollment_fill_rate: number }; results: { years: Record<string, { reserve_days: number; ending_cash: number; fpf_days_cash: string }> } | null }>>([])
   const supabase = createClient()
 
   useEffect(() => {
     if (!schoolId) return
     supabase
       .from('scenarios')
-      .select('name, results')
+      .select('name, assumptions, results')
       .eq('school_id', schoolId)
       .eq('scenario_type', 'engine')
       .order('name')
-      .then(({ data }) => { if (data && data.length > 0) setScenarios(data) })
-  }, [schoolId, supabase])
+      .then(({ data }) => { if (data && data.length > 0) setScenarios(data as typeof scenarios) })
+  }, [schoolId, supabase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (scenarios.length === 0) return null
 
@@ -711,17 +711,28 @@ function ScenarioSummaryCard({ schoolId }: { schoolId: string }) {
       <div className="grid grid-cols-3 gap-4 text-center">
         {scenarios.map(s => {
           const y1 = s.results?.years?.['1']
-          const days = y1?.reserve_days ?? 0
+          const days = Math.max(0, y1?.reserve_days ?? 0)
+          const endingCash = y1?.ending_cash ?? 0
           const status = y1?.fpf_days_cash || 'na'
+          const fillPct = Math.round((s.assumptions?.enrollment_fill_rate || 0.9) * 100)
           return (
             <div key={s.name}>
-              <div className={`text-xs font-semibold uppercase tracking-wide mb-1 ${colors[s.name] || 'text-slate-600'}`}>{s.name}</div>
-              <div className={`text-xl font-bold ${days >= 60 ? 'text-emerald-600' : days >= 30 ? 'text-amber-600' : 'text-red-600'}`}>{days} days</div>
-              <div className="mt-0.5">
-                {status === 'meets' ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">Meets Stage 1</span>
-                  : status === 'approaches' ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Approaching</span>
-                  : <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">Does Not Meet</span>}
-              </div>
+              <div className={`text-xs font-semibold uppercase tracking-wide mb-1 ${colors[s.name] || 'text-slate-600'}`}>{s.name} ({fillPct}% Fill)</div>
+              {endingCash < 0 ? (
+                <>
+                  <div className="text-xl font-bold text-red-600">0 days</div>
+                  <div className="mt-0.5"><span className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">Cash Shortfall</span></div>
+                </>
+              ) : (
+                <>
+                  <div className={`text-xl font-bold ${days >= 60 ? 'text-emerald-600' : days >= 30 ? 'text-amber-600' : 'text-red-600'}`}>{days} days</div>
+                  <div className="mt-0.5">
+                    {status === 'meets' ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">Meets Stage 1</span>
+                      : status === 'approaches' ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Approaching</span>
+                      : <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">Does Not Meet</span>}
+                  </div>
+                </>
+              )}
             </div>
           )
         })}
