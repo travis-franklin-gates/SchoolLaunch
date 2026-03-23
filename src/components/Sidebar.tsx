@@ -117,27 +117,16 @@ export default function Sidebar() {
   const sidebarContent = (
     <>
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-white/10">
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-extrabold text-white"
-            style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}
-          >
-            S
+      <div className="px-5 py-4 border-b border-white/10">
+        <div className="flex items-center gap-2">
+          <div className="text-white text-lg font-semibold tracking-tight" style={{ fontFamily: 'var(--font-heading-var)' }}>
+            School<span className="text-emerald-400">Launch</span>
           </div>
-          <div>
-            <div className="text-white text-lg font-semibold tracking-tight" style={{ fontFamily: 'var(--font-heading-var)' }}>
-              School<span className="text-emerald-400">Launch</span>
-            </div>
-            <div className="text-[10px] text-slate-500 uppercase tracking-[0.15em] font-medium flex items-center gap-1.5">
-              Financial Planning
-              {roleBadge && (
-                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${roleBadge.className}`}>
-                  {roleBadge.label}
-                </span>
-              )}
-            </div>
-          </div>
+          {roleBadge && (
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${roleBadge.className}`}>
+              {roleBadge.label}
+            </span>
+          )}
         </div>
       </div>
 
