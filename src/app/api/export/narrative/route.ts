@@ -123,6 +123,12 @@ interface NarrativePayload {
     }[]
     generatedAt: string
   }
+  scenarios?: {
+    name: string
+    assumptions: { enrollment_fill_rate: number; per_pupil_funding_adjustment: number; personnel_cost_adjustment: number; facility_cost_monthly: number; startup_capital: number }
+    results: { years: Record<string, { enrollment: number; total_revenue: number; total_expenses: number; net_position: number; reserve_days: number; personnel_pct: number; fpf_days_cash: string; fpf_total_margin: string }> } | null
+    ai_analysis?: string | null
+  }[]
 }
 
 function fmtDollars(n: number): string {
@@ -180,7 +186,7 @@ export async function POST(request: NextRequest) {
   const data: NarrativePayload = await request.json()
   const {
     schoolName, profile, assumptions, positions, projections,
-    baseSummary, conservativeSummary, cashFlow, multiYear, advisory,
+    baseSummary, conservativeSummary, cashFlow, multiYear, advisory, scenarios,
   } = data
 
   const enrollment = profile.target_enrollment_y1
@@ -783,6 +789,53 @@ ${securedFunding < totalFunding * 0.5 ? `<div class="callout warning"><strong>Fu
 </div>
 
 <div class="page-footer">SchoolLaunch Financial Plan &bull; ${schoolName} &bull; Generated ${dateStr}</div>
+
+${scenarios && scenarios.length > 0 ? `
+<!-- PAGE: Scenario Analysis -->
+<div class="page-break"></div>
+<h2>Scenario Analysis</h2>
+<p style="font-size:12px;color:#64748B;margin-bottom:16px;">Three scenarios modeled to stress-test financial assumptions against the Commission's Financial Performance Framework.</p>
+
+<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px;">
+  <thead>
+    <tr style="background:#F8FAFC;border-bottom:2px solid #E2E8F0;">
+      <th style="text-align:left;padding:8px 12px;color:#64748B;">Metric</th>
+      ${scenarios.map(s => `<th style="text-align:right;padding:8px 12px;color:${s.name === 'Conservative' ? '#D97706' : s.name === 'Optimistic' ? '#059669' : '#2563EB'};">${s.name}</th>`).join('')}
+    </tr>
+  </thead>
+  <tbody>
+    ${['enrollment', 'total_revenue', 'total_expenses', 'net_position', 'reserve_days', 'personnel_pct'].map(metric => {
+      const labels: Record<string, string> = { enrollment: 'Year 1 Enrollment', total_revenue: 'Total Revenue', total_expenses: 'Total Expenses', net_position: 'Net Position', reserve_days: 'Reserve Days', personnel_pct: 'Personnel %' }
+      return `<tr style="border-bottom:1px solid #F1F5F9;">
+        <td style="padding:6px 12px;color:#475569;">${labels[metric]}</td>
+        ${scenarios.map(s => {
+          const y1 = s.results?.years?.['1']
+          const val = y1 ? (y1 as unknown as Record<string, number>)[metric] : 0
+          const formatted = metric === 'personnel_pct' ? `${val?.toFixed(1)}%` : metric === 'reserve_days' ? `${val} days` : metric === 'enrollment' ? String(val) : `$${(val || 0).toLocaleString()}`
+          return `<td style="padding:6px 12px;text-align:right;font-weight:500;">${formatted}</td>`
+        }).join('')}
+      </tr>`
+    }).join('')}
+    <tr style="border-top:2px solid #E2E8F0;font-weight:700;">
+      <td style="padding:8px 12px;color:#1E293B;">FPF Compliance (Y1)</td>
+      ${scenarios.map(s => {
+        const y1 = s.results?.years?.['1']
+        const passing = [y1?.fpf_days_cash, y1?.fpf_total_margin].filter(v => v === 'meets' || v === 'approaches').length + 2
+        return `<td style="padding:8px 12px;text-align:right;">${passing}/4 pass</td>`
+      }).join('')}
+    </tr>
+  </tbody>
+</table>
+
+${scenarios[0]?.ai_analysis ? `
+<div style="background:#F8FAFC;border-radius:8px;padding:16px;margin-top:12px;">
+  <div style="font-size:11px;color:#64748B;text-transform:uppercase;font-weight:600;margin-bottom:8px;">AI Scenario Analysis</div>
+  <div style="font-size:12px;color:#334155;line-height:1.7;white-space:pre-wrap;">${scenarios[0].ai_analysis}</div>
+</div>
+` : ''}
+
+<div class="page-footer">SchoolLaunch Financial Plan &bull; ${schoolName} &bull; Generated ${dateStr}</div>
+` : ''}
 
 ${advisory ? `
 <!-- PAGE 11: Advisory Panel -->

@@ -1,0 +1,616 @@
+'use client'
+
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useScenario } from '@/lib/ScenarioContext'
+import { createClient } from '@/lib/supabase/client'
+import { computeAdvisoryHash } from '@/lib/buildSchoolContext'
+import type { ScenarioAssumptions, ScenarioResults, ScenarioYearResult } from '@/lib/scenarioEngine'
+
+interface ScenarioRecord {
+  id: string
+  name: string
+  assumptions: ScenarioAssumptions
+  results: ScenarioResults | null
+  ai_analysis: string | null
+  base_data_hash: string | null
+}
+
+const SCENARIO_COLORS: Record<string, { accent: string; bg: string; border: string; text: string; pill: string }> = {
+  Conservative: { accent: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', pill: 'bg-amber-100 text-amber-700' },
+  'Base Case': { accent: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', pill: 'bg-blue-100 text-blue-700' },
+  Optimistic: { accent: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', pill: 'bg-emerald-100 text-emerald-700' },
+}
+
+function fmt(n: number) {
+  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
+  if (Math.abs(n) >= 1_000) return `$${Math.round(n / 1_000)}K`
+  return `$${n.toLocaleString()}`
+}
+
+function fmtDelta(n: number) {
+  const sign = n >= 0 ? '+' : ''
+  if (Math.abs(n) >= 1_000_000) return `${sign}$${(n / 1_000_000).toFixed(1)}M`
+  if (Math.abs(n) >= 1_000) return `${sign}$${Math.round(n / 1_000)}K`
+  return `${sign}$${n.toLocaleString()}`
+}
+
+function reserveColor(days: number) {
+  if (days >= 60) return 'text-emerald-600'
+  if (days >= 30) return 'text-amber-600'
+  return 'text-red-600'
+}
+
+function personnelColor(pct: number) {
+  if (pct <= 78) return 'text-emerald-600'
+  if (pct <= 80) return 'text-amber-600'
+  return 'text-red-600'
+}
+
+function fpfBadge(status: string) {
+  if (status === 'meets') return <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">Meets</span>
+  if (status === 'approaches') return <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Approaching</span>
+  if (status === 'does_not_meet') return <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">Does Not Meet</span>
+  return <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-medium">N/A</span>
+}
+
+function Delta({ value, base, suffix = '', invert = false }: { value: number; base: number; suffix?: string; invert?: boolean }) {
+  const diff = value - base
+  if (Math.abs(diff) < 0.5 && !suffix) return null
+  if (Math.abs(diff) < 0.05 && suffix === '%') return null
+  const favorable = invert ? diff < 0 : diff > 0
+  const sign = diff >= 0 ? '+' : ''
+  const formatted = suffix === '%' ? `${sign}${diff.toFixed(1)}%`
+    : suffix === ' days' ? `${sign}${Math.round(diff)} days`
+    : suffix === ' students' ? `${sign}${Math.round(diff)} students`
+    : fmtDelta(diff)
+  return <div className={`text-[10px] ${favorable ? 'text-emerald-600' : 'text-red-500'}`}>{formatted}</div>
+}
+
+export default function ScenariosPage() {
+  const { schoolData: { schoolId, profile, positions, projections, loading } } = useScenario()
+  const supabase = createClient()
+  const [scenarios, setScenarios] = useState<ScenarioRecord[]>([])
+  const [activeTab, setActiveTab] = useState('Base Case')
+  const [seeding, setSeeding] = useState(false)
+  const [calculating, setCalculating] = useState(false)
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ outcomes: true })
+  const [stale, setStale] = useState(false)
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [mobileScenario, setMobileScenario] = useState('Base Case')
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Load scenarios from Supabase
+  const loadScenarios = useCallback(async () => {
+    if (!schoolId) return
+    const { data } = await supabase
+      .from('scenarios')
+      .select('id, name, assumptions, results, ai_analysis, base_data_hash')
+      .eq('school_id', schoolId)
+      .eq('scenario_type', 'engine')
+      .order('name')
+
+    if (data && data.length > 0) {
+      setScenarios(data as ScenarioRecord[])
+      setAiAnalysis(data[0]?.ai_analysis || null)
+      // Check staleness
+      const totalFte = positions.reduce((s, p) => s + p.fte, 0)
+      const totalPersonnel = positions.reduce((s, p) => s + p.fte * p.annual_salary, 0)
+      const totalOps = projections.filter(p => !p.is_revenue).reduce((s, p) => s + p.amount, 0)
+      const currentHash = computeAdvisoryHash(
+        profile.target_enrollment_y1 * 12000,
+        totalPersonnel, totalOps,
+        profile.target_enrollment_y1, totalFte
+      )
+      if (data[0]?.base_data_hash && data[0].base_data_hash !== currentHash) {
+        setStale(true)
+      }
+    }
+  }, [schoolId, supabase, positions, projections, profile])
+
+  useEffect(() => { if (!loading) loadScenarios() }, [loading, loadScenarios])
+
+  // Seed scenarios
+  async function handleSeed() {
+    setSeeding(true)
+    const res = await fetch('/api/scenarios/seed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schoolId }),
+    })
+    if (res.ok) {
+      // Now calculate all
+      await handleCalculateAll()
+      await loadScenarios()
+    }
+    setSeeding(false)
+  }
+
+  // Calculate all scenarios
+  async function handleCalculateAll() {
+    setCalculating(true)
+    setStale(false)
+    await fetch('/api/scenarios/calculate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schoolId }),
+    })
+    await loadScenarios()
+    setCalculating(false)
+  }
+
+  // Update a lever and recalculate (debounced)
+  function updateLever(scenarioId: string, field: keyof ScenarioAssumptions, value: number) {
+    setScenarios(prev => prev.map(s => {
+      if (s.id !== scenarioId) return s
+      return { ...s, assumptions: { ...s.assumptions, [field]: value } }
+    }))
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(async () => {
+      const scenario = scenarios.find(s => s.id === scenarioId)
+      if (!scenario) return
+      const updated = { ...scenario.assumptions, [field]: value }
+      await supabase.from('scenarios').update({ assumptions: updated, updated_at: new Date().toISOString() }).eq('id', scenarioId)
+      await fetch('/api/scenarios/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schoolId, scenarioId }),
+      })
+      await loadScenarios()
+    }, 500)
+  }
+
+  // AI Analysis
+  async function handleAiAnalysis() {
+    if (!scenarios.length) return
+    setAiLoading(true)
+    try {
+      const scenarioSummary = scenarios.map(s => {
+        const y1 = s.results?.years?.['1']
+        return `${s.name}: Enrollment ${y1?.enrollment || 'N/A'}, Revenue ${y1 ? fmt(y1.total_revenue) : 'N/A'}, Expenses ${y1 ? fmt(y1.total_expenses) : 'N/A'}, Net ${y1 ? fmt(y1.net_position) : 'N/A'}, ${y1?.reserve_days || 0} days cash, ${y1?.personnel_pct || 0}% personnel, Break-even ${y1?.break_even_enrollment || 'N/A'} students`
+      }).join('\n')
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: `Analyze these three financial scenarios for my charter school and provide a 3-4 paragraph assessment. Which scenario should I present as primary to the Commission? What are the key risks?\n\n${scenarioSummary}` }],
+          schoolContext: scenarioSummary,
+        }),
+      })
+
+      if (res.ok && res.body) {
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let text = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          text += decoder.decode(value, { stream: true })
+          setAiAnalysis(text)
+        }
+        // Save to first scenario record
+        if (scenarios[0]) {
+          await supabase.from('scenarios').update({ ai_analysis: text }).eq('id', scenarios[0].id)
+        }
+      }
+    } catch (err) {
+      console.error('AI analysis failed:', err)
+    }
+    setAiLoading(false)
+  }
+
+  const activeScenario = scenarios.find(s => s.name === activeTab)
+  const baseScenario = scenarios.find(s => s.name === 'Base Case')
+  const hasResults = scenarios.some(s => s.results)
+
+  function toggleGroup(group: string) {
+    setExpandedGroups(prev => ({ ...prev, [group]: !prev[group] }))
+  }
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
+  }
+
+  // Empty state
+  if (scenarios.length === 0) {
+    return (
+      <div className="animate-fade-in flex items-center justify-center min-h-[400px]">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 bg-teal-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-slate-800 mb-2" style={{ fontFamily: 'var(--font-heading-var)' }}>Stress-Test Your Financial Model</h2>
+          <p className="text-sm text-slate-500 mb-6">
+            Model conservative, base, and optimistic scenarios to show the Commission you&apos;ve planned for different outcomes. We&apos;ll start with smart defaults based on your current financial plan.
+          </p>
+          <button
+            onClick={handleSeed}
+            disabled={seeding}
+            className="bg-teal-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-teal-700 transition-colors disabled:opacity-50"
+          >
+            {seeding ? 'Building Scenarios...' : 'Build Scenarios'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const y1Results: Record<string, ScenarioYearResult | undefined> = {}
+  for (const s of scenarios) {
+    y1Results[s.name] = s.results?.years?.['1']
+  }
+  const baseY1 = y1Results['Base Case']
+
+  return (
+    <div className="animate-fade-in">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-[28px] font-semibold text-slate-900" style={{ fontFamily: 'var(--font-heading-var)' }}>Scenario Engine</h1>
+          <p className="text-sm text-slate-500 mt-1">Model conservative, base, and optimistic scenarios side-by-side.</p>
+        </div>
+        {calculating && (
+          <div className="flex items-center gap-2 text-sm text-teal-600">
+            <div className="w-4 h-4 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
+            Recalculating...
+          </div>
+        )}
+      </div>
+
+      {stale && (
+        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-700 flex items-center justify-between">
+          <span>Your base financial model has changed since these scenarios were last calculated.</span>
+          <button onClick={handleCalculateAll} className="font-medium underline hover:text-amber-900 ml-4 whitespace-nowrap">Recalculate All Scenarios</button>
+        </div>
+      )}
+
+      {/* Section 1: Lever Controls */}
+      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+        {/* Scenario tabs */}
+        <div className="flex gap-2 mb-5">
+          {scenarios.map(s => {
+            const colors = SCENARIO_COLORS[s.name] || SCENARIO_COLORS['Base Case']
+            const active = s.name === activeTab
+            return (
+              <button
+                key={s.id}
+                onClick={() => setActiveTab(s.name)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  active ? `${colors.bg} ${colors.text} ${colors.border} border` : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {s.name}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Lever grid */}
+        {activeScenario && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <LeverControl
+              label="Enrollment Fill Rate"
+              tooltip="Percentage of projected enrollment seats that are actually filled"
+              value={activeScenario.assumptions.enrollment_fill_rate}
+              onChange={v => updateLever(activeScenario.id, 'enrollment_fill_rate', v)}
+              min={0.70} max={1.00} step={0.01}
+              format={v => `${Math.round(v * 100)}%`}
+              warning={activeScenario.assumptions.enrollment_fill_rate < 0.80 ? 'WA charter schools average 76% fill rate in Year 1' : activeScenario.assumptions.enrollment_fill_rate > 0.95 ? '95%+ fill rate is ambitious for a new school' : undefined}
+            />
+            <LeverControl
+              label="Per-Pupil Funding"
+              tooltip="Adjustment to state per-pupil revenue rates (Regular Ed, SPED, Facilities)"
+              value={activeScenario.assumptions.per_pupil_funding_adjustment}
+              onChange={v => updateLever(activeScenario.id, 'per_pupil_funding_adjustment', v)}
+              min={-0.10} max={0.05} step={0.01}
+              format={v => `${v >= 0 ? '+' : ''}${Math.round(v * 100)}%`}
+            />
+            <LeverControl
+              label="Personnel Costs"
+              tooltip="Adjustment to total personnel costs (salary competitiveness, benefits, staffing levels)"
+              value={activeScenario.assumptions.personnel_cost_adjustment}
+              onChange={v => updateLever(activeScenario.id, 'personnel_cost_adjustment', v)}
+              min={-0.10} max={0.15} step={0.01}
+              format={v => `${v >= 0 ? '+' : ''}${Math.round(v * 100)}%`}
+              warning={activeScenario.assumptions.personnel_cost_adjustment > 0.10 ? 'Personnel costs may exceed 80% of revenue' : undefined}
+            />
+            <LeverControl
+              label="Monthly Facility Cost"
+              tooltip="Monthly facility lease or mortgage payment"
+              value={activeScenario.assumptions.facility_cost_monthly}
+              onChange={v => updateLever(activeScenario.id, 'facility_cost_monthly', v)}
+              min={0} max={50000} step={500}
+              format={v => `$${v.toLocaleString()}/mo`}
+              isCurrency
+            />
+            <LeverControl
+              label="Startup Capital"
+              tooltip="Total available startup funding (grants + donations + loans) that becomes Year 1 beginning cash"
+              value={activeScenario.assumptions.startup_capital}
+              onChange={v => updateLever(activeScenario.id, 'startup_capital', v)}
+              min={0} max={1000000} step={10000}
+              format={v => fmt(v)}
+              isCurrency
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Section 2: Side-by-Side Comparison */}
+      {hasResults && (
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm mb-6 overflow-hidden">
+          {/* Mobile scenario selector */}
+          <div className="md:hidden flex gap-1 p-3 border-b border-slate-200">
+            {['Conservative', 'Base Case', 'Optimistic'].map(name => {
+              const colors = SCENARIO_COLORS[name]
+              return (
+                <button key={name} onClick={() => setMobileScenario(name)}
+                  className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${mobileScenario === name ? `${colors.bg} ${colors.text}` : 'text-slate-500 hover:bg-slate-50'}`}>
+                  {name}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Header row — desktop: 4 cols, mobile: 2 cols */}
+          <div className="hidden md:grid grid-cols-4 border-b border-slate-200">
+            <div className="px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Metric</div>
+            {['Conservative', 'Base Case', 'Optimistic'].map(name => {
+              const colors = SCENARIO_COLORS[name]
+              const isBase = name === 'Base Case'
+              return (
+                <div key={name} className={`px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide ${colors.accent} ${isBase ? 'bg-blue-50/50' : ''}`}>
+                  {name}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Key Outcomes */}
+          <GroupHeader label="Key Outcomes" group="outcomes" expanded={expandedGroups.outcomes} onToggle={toggleGroup} />
+          {expandedGroups.outcomes && (
+            <>
+              <ComparisonRow label="Year 1 Enrollment" scenarios={scenarios} getValue={y1 => y1?.enrollment ?? 0} format={v => v.toLocaleString()} baseY1={baseY1} suffix=" students" />
+              <ComparisonRow label="Total Revenue" scenarios={scenarios} getValue={y1 => y1?.total_revenue ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
+              <ComparisonRow label="Total Expenses" scenarios={scenarios} getValue={y1 => y1?.total_expenses ?? 0} format={fmt} baseY1={baseY1} invert />
+              <ComparisonRow label="Net Position" scenarios={scenarios} getValue={y1 => y1?.net_position ?? 0} format={fmt} baseY1={baseY1} highlight />
+              <ComparisonRow label="Ending Cash" scenarios={scenarios} getValue={y1 => y1?.ending_cash ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
+              <ComparisonRow label="Reserve Days" scenarios={scenarios} getValue={y1 => y1?.reserve_days ?? 0} format={v => `${v} days`} baseY1={baseY1} colorFn={reserveColor} suffix=" days" />
+              <ComparisonRow label="Personnel % Revenue" scenarios={scenarios} getValue={y1 => y1?.personnel_pct ?? 0} format={v => `${v.toFixed(1)}%`} baseY1={baseY1} colorFn={personnelColor} invert suffix="%" />
+              <ComparisonRow label="Break-Even Enrollment" scenarios={scenarios} getValue={y1 => y1?.break_even_enrollment ?? 0} format={v => `${v} students`} baseY1={baseY1} invert suffix=" students" />
+            </>
+          )}
+
+          {/* 5-Year Trajectory */}
+          <GroupHeader label="5-Year Trajectory" group="trajectory" expanded={expandedGroups.trajectory} onToggle={toggleGroup} />
+          {expandedGroups.trajectory && (
+            <div className="px-5 py-4">
+              <div className="grid grid-cols-4 gap-4">
+                <div />
+                {scenarios.map(s => (
+                  <div key={s.id} className="text-xs">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="text-slate-400">
+                          <th className="text-left py-1">Yr</th>
+                          <th className="text-right py-1">Enr</th>
+                          <th className="text-right py-1">Net</th>
+                          <th className="text-right py-1">Days</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[1, 2, 3, 4, 5].map(y => {
+                          const yr = s.results?.years?.[String(y)]
+                          return (
+                            <tr key={y} className={y === 1 ? 'font-semibold' : ''}>
+                              <td className="py-0.5 text-slate-600">Y{y}</td>
+                              <td className="py-0.5 text-right text-slate-700">{yr?.enrollment ?? '-'}</td>
+                              <td className={`py-0.5 text-right ${(yr?.net_position ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{yr ? fmt(yr.net_position) : '-'}</td>
+                              <td className={`py-0.5 text-right ${reserveColor(yr?.reserve_days ?? 0)}`}>{yr?.reserve_days ?? '-'}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* FPF Compliance */}
+          <GroupHeader label="Commission FPF Compliance" group="fpf" expanded={expandedGroups.fpf} onToggle={toggleGroup} />
+          {expandedGroups.fpf && (
+            <div className="px-5 py-4">
+              <div className="grid grid-cols-4 gap-4">
+                <div className="text-xs text-slate-500 space-y-2 pt-6">
+                  <div>Current Ratio</div>
+                  <div>Days Cash</div>
+                  <div>Total Margin</div>
+                  <div>Enrollment Variance</div>
+                  <div className="pt-2 font-semibold text-slate-700">Summary</div>
+                </div>
+                {scenarios.map(s => {
+                  const y1 = s.results?.years?.['1']
+                  const metrics = [
+                    { status: y1?.fpf_current_ratio || 'na' },
+                    { status: y1?.fpf_days_cash || 'na' },
+                    { status: y1?.fpf_total_margin || 'na' },
+                    { status: y1?.fpf_enrollment_variance || 'na' },
+                  ]
+                  const passing = metrics.filter(m => m.status === 'meets' || m.status === 'approaches').length
+                  return (
+                    <div key={s.id} className="text-xs space-y-2 text-center">
+                      <div className="text-[10px] text-slate-400 font-medium uppercase pb-1">Year 1</div>
+                      {metrics.map((m, i) => <div key={i}>{fpfBadge(m.status)}</div>)}
+                      <div className="pt-2 font-semibold text-slate-700">{passing}/4 pass</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Revenue Breakdown */}
+          <GroupHeader label="Revenue Breakdown" group="revenue" expanded={expandedGroups.revenue} onToggle={toggleGroup} />
+          {expandedGroups.revenue && (
+            <>
+              <ComparisonRow label="Total Revenue" scenarios={scenarios} getValue={y1 => y1?.total_revenue ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
+            </>
+          )}
+
+          {/* Expense Breakdown */}
+          <GroupHeader label="Expense Breakdown" group="expenses" expanded={expandedGroups.expenses} onToggle={toggleGroup} />
+          {expandedGroups.expenses && (
+            <>
+              <ComparisonRow label="Total Personnel" scenarios={scenarios} getValue={y1 => y1?.total_personnel ?? 0} format={fmt} baseY1={baseY1} invert />
+              <ComparisonRow label="Facility Costs" scenarios={scenarios} getValue={y1 => (y1 as any)?.facility_cost ?? 0} format={fmt} baseY1={baseY1} invert />
+              <ComparisonRow label="Total Operations" scenarios={scenarios} getValue={y1 => y1?.total_operations ?? 0} format={fmt} baseY1={baseY1} invert />
+              <ComparisonRow label="Total Expenses" scenarios={scenarios} getValue={y1 => y1?.total_expenses ?? 0} format={fmt} baseY1={baseY1} invert highlight />
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Section 3: AI Analysis */}
+      {hasResults && (
+        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide">AI Scenario Analysis</h2>
+            <button
+              onClick={handleAiAnalysis}
+              disabled={aiLoading}
+              className="px-4 py-2 text-sm font-medium text-teal-600 border border-teal-300 rounded-lg hover:bg-teal-50 transition-colors disabled:opacity-50"
+            >
+              {aiLoading ? 'Analyzing...' : aiAnalysis ? 'Refresh Analysis' : 'Get AI Analysis of Scenarios'}
+            </button>
+          </div>
+          {aiAnalysis ? (
+            <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{aiAnalysis}</div>
+          ) : !aiLoading ? (
+            <p className="text-sm text-slate-400">Click the button above to generate an AI-powered analysis comparing your three scenarios.</p>
+          ) : (
+            <div className="space-y-2">
+              <div className="h-3 bg-slate-100 rounded animate-pulse w-full" />
+              <div className="h-3 bg-slate-100 rounded animate-pulse w-5/6" />
+              <div className="h-3 bg-slate-100 rounded animate-pulse w-4/6" />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* --- Sub-components --- */
+
+function LeverControl({ label, tooltip, value, onChange, min, max, step, format, warning, isCurrency }: {
+  label: string
+  tooltip: string
+  value: number
+  onChange: (v: number) => void
+  min: number
+  max: number
+  step: number
+  format: (v: number) => string
+  warning?: string
+  isCurrency?: boolean
+}) {
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 mb-1">
+        <label className="text-xs font-medium text-slate-600">{label}</label>
+        <span className="text-[10px] text-slate-400 cursor-help" title={tooltip}>?</span>
+      </div>
+      <div className="text-lg font-semibold text-slate-800 mb-2" style={{ fontFamily: 'var(--font-heading-var)' }}>{format(value)}</div>
+      {isCurrency ? (
+        <input
+          type="number"
+          value={value}
+          onChange={e => onChange(Number(e.target.value))}
+          min={min} max={max} step={step}
+          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+        />
+      ) : (
+        <input
+          type="range"
+          value={value}
+          onChange={e => onChange(Number(e.target.value))}
+          min={min} max={max} step={step}
+          className="w-full accent-teal-600"
+        />
+      )}
+      <div className="flex justify-between text-[10px] text-slate-400 mt-0.5">
+        <span>{format(min)}</span>
+        <span>{format(max)}</span>
+      </div>
+      {warning && (
+        <div className="mt-1 text-[10px] text-amber-600 bg-amber-50 rounded px-2 py-1">{warning}</div>
+      )}
+    </div>
+  )
+}
+
+function GroupHeader({ label, group, expanded, onToggle }: { label: string; group: string; expanded?: boolean; onToggle: (g: string) => void }) {
+  return (
+    <button
+      onClick={() => onToggle(group)}
+      className="w-full grid grid-cols-4 border-b border-slate-100 hover:bg-slate-50/50 transition-colors"
+    >
+      <div className="px-5 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1.5 col-span-4">
+        <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform ${expanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+        {label}
+      </div>
+    </button>
+  )
+}
+
+function ComparisonRow({ label, scenarios, getValue, format, baseY1, colorFn, invert, highlight, suffix, mobileScenario }: {
+  label: string
+  scenarios: ScenarioRecord[]
+  getValue: (y1: ScenarioYearResult | undefined) => number
+  format: (v: number) => string
+  baseY1?: ScenarioYearResult
+  colorFn?: (v: number) => string
+  invert?: boolean
+  highlight?: boolean
+  suffix?: string
+  mobileScenario?: string
+}) {
+  const baseValue = baseY1 ? getValue(baseY1) : 0
+  return (
+    <>
+      {/* Desktop: 4-column grid */}
+      <div className={`hidden md:grid grid-cols-4 border-b border-slate-50 ${highlight ? 'bg-slate-50/50' : ''}`}>
+        <div className="px-5 py-2 text-xs text-slate-600">{label}</div>
+        {scenarios.map(s => {
+          const y1 = s.results?.years?.['1']
+          const value = getValue(y1)
+          const isBase = s.name === 'Base Case'
+          const color = colorFn ? colorFn(value) : 'text-slate-800'
+          return (
+            <div key={s.id} className={`px-4 py-2 text-center ${isBase ? 'bg-blue-50/30' : ''}`}>
+              <div className={`text-sm font-medium ${highlight ? 'font-semibold' : ''} ${color}`}>{format(value)}</div>
+              {!isBase && <Delta value={value} base={baseValue} suffix={suffix} invert={invert} />}
+            </div>
+          )
+        })}
+      </div>
+      {/* Mobile: single selected scenario */}
+      <div className={`md:hidden flex justify-between items-center px-4 py-2 border-b border-slate-50 ${highlight ? 'bg-slate-50/50' : ''}`}>
+        <span className="text-xs text-slate-600">{label}</span>
+        {scenarios.filter(s => s.name === mobileScenario).map(s => {
+          const y1 = s.results?.years?.['1']
+          const value = getValue(y1)
+          const color = colorFn ? colorFn(value) : 'text-slate-800'
+          return <span key={s.id} className={`text-sm font-medium ${color}`}>{format(value)}</span>
+        })}
+      </div>
+    </>
+  )
+}

@@ -106,6 +106,7 @@ export async function POST(request: Request) {
     multiYear: MultiYearRow[]
     scorecard: { measures: FPFMeasure[] }
     startingCash: number
+    scenarios?: { name: string; assumptions: Record<string, number>; results: { years: Record<string, Record<string, number | string>> } | null }[]
   }
 
   const wb = XLSX.utils.book_new()
@@ -300,6 +301,44 @@ export async function POST(request: Request) {
 
   const dashSheet = XLSX.utils.aoa_to_sheet(dashRows)
   XLSX.utils.book_append_sheet(wb, dashSheet, 'DASHBOARD')
+
+  // --- Tab 7: SCENARIOS (if seeded) ---
+  const { scenarios } = body as { scenarios?: { name: string; assumptions: Record<string, number>; results: { years: Record<string, Record<string, number | string>> } | null }[] }
+  if (scenarios && scenarios.length > 0) {
+    const scenRows: (string | number)[][] = [
+      ['SCENARIO ASSUMPTIONS', ...scenarios.map(s => s.name)],
+      ['Enrollment Fill Rate', ...scenarios.map(s => `${Math.round((s.assumptions.enrollment_fill_rate || 0) * 100)}%`)],
+      ['Per-Pupil Funding Adj', ...scenarios.map(s => `${((s.assumptions.per_pupil_funding_adjustment || 0) * 100).toFixed(0)}%`)],
+      ['Personnel Cost Adj', ...scenarios.map(s => `${((s.assumptions.personnel_cost_adjustment || 0) * 100).toFixed(0)}%`)],
+      ['Monthly Facility Cost', ...scenarios.map(s => s.assumptions.facility_cost_monthly || 0)],
+      ['Startup Capital', ...scenarios.map(s => s.assumptions.startup_capital || 0)],
+      [],
+      ['5-YEAR PROJECTIONS'],
+    ]
+
+    const metrics = ['enrollment', 'total_revenue', 'total_expenses', 'net_position', 'reserve_days', 'personnel_pct']
+    const metricLabels: Record<string, string> = { enrollment: 'Enrollment', total_revenue: 'Total Revenue', total_expenses: 'Total Expenses', net_position: 'Net Position', reserve_days: 'Reserve Days', personnel_pct: 'Personnel %' }
+
+    for (let y = 1; y <= 5; y++) {
+      scenRows.push([`Year ${y}`, ...scenarios.map(s => s.name)])
+      for (const m of metrics) {
+        scenRows.push([metricLabels[m], ...scenarios.map(s => {
+          const val = s.results?.years?.[String(y)]?.[m]
+          return val !== undefined ? (typeof val === 'number' ? val : String(val)) : ''
+        })])
+      }
+      scenRows.push([])
+    }
+
+    scenRows.push(['FPF COMPLIANCE (Year 1)', ...scenarios.map(s => s.name)])
+    for (const fpf of ['fpf_current_ratio', 'fpf_days_cash', 'fpf_total_margin', 'fpf_enrollment_variance']) {
+      const label = fpf.replace('fpf_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+      scenRows.push([label, ...scenarios.map(s => String(s.results?.years?.['1']?.[fpf] || 'N/A'))])
+    }
+
+    const scenSheet = XLSX.utils.aoa_to_sheet(scenRows)
+    XLSX.utils.book_append_sheet(wb, scenSheet, 'SCENARIOS')
+  }
 
   // Generate Excel buffer
   const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })

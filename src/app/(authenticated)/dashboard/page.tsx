@@ -268,6 +268,14 @@ export default function DashboardPage() {
         }
       }
 
+      // Fetch scenarios for export if they exist
+      const { data: scenarioData } = await supabase
+        .from('scenarios')
+        .select('name, assumptions, results, ai_analysis')
+        .eq('school_id', schoolId)
+        .eq('scenario_type', 'engine')
+        .order('name')
+
       const payload = {
         schoolName,
         profile,
@@ -279,6 +287,7 @@ export default function DashboardPage() {
         cashFlow: cashFlowData,
         multiYear,
         advisory: advisoryForPdf || undefined,
+        scenarios: scenarioData && scenarioData.length > 0 ? scenarioData : undefined,
       }
 
       const res = await fetch('/api/export/narrative', {
@@ -308,6 +317,14 @@ export default function DashboardPage() {
   async function handleCommissionExport() {
     setCommissionExporting(true)
     try {
+      // Fetch scenarios for commission export
+      const { data: commScenarios } = await supabase
+        .from('scenarios')
+        .select('name, assumptions, results')
+        .eq('school_id', schoolId)
+        .eq('scenario_type', 'engine')
+        .order('name')
+
       const payload = {
         schoolName,
         profile,
@@ -318,6 +335,7 @@ export default function DashboardPage() {
         gradeExpansionPlan,
         scorecard,
         startingCash: preOpenCash,
+        scenarios: commScenarios && commScenarios.length > 0 ? commScenarios : undefined,
       }
       const res = await fetch('/api/export/commission', {
         method: 'POST',
@@ -634,6 +652,9 @@ export default function DashboardPage() {
         </table>
       </div>
 
+      {/* 9.5 Scenario Summary (only if scenarios have been seeded) */}
+      <ScenarioSummaryCard schoolId={schoolId} />
+
       {/* 10. Export buttons */}
       <div data-tour="export-buttons" className="flex flex-col sm:flex-row gap-3">
         <button
@@ -662,6 +683,53 @@ export default function DashboardPage() {
 }
 
 /** Reusable row for the sectioned budget table */
+function ScenarioSummaryCard({ schoolId }: { schoolId: string }) {
+  const [scenarios, setScenarios] = useState<Array<{ name: string; results: { years: Record<string, { reserve_days: number; fpf_days_cash: string }> } | null }>>([])
+  const supabase = createClient()
+
+  useEffect(() => {
+    if (!schoolId) return
+    supabase
+      .from('scenarios')
+      .select('name, results')
+      .eq('school_id', schoolId)
+      .eq('scenario_type', 'engine')
+      .order('name')
+      .then(({ data }) => { if (data && data.length > 0) setScenarios(data) })
+  }, [schoolId, supabase])
+
+  if (scenarios.length === 0) return null
+
+  const colors: Record<string, string> = { Conservative: 'text-amber-600', 'Base Case': 'text-blue-600', Optimistic: 'text-emerald-600' }
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wide">Scenario Summary</h3>
+        <a href="/dashboard/scenarios" className="text-xs text-teal-600 hover:text-teal-700 font-medium">View Full Scenarios →</a>
+      </div>
+      <div className="grid grid-cols-3 gap-4 text-center">
+        {scenarios.map(s => {
+          const y1 = s.results?.years?.['1']
+          const days = y1?.reserve_days ?? 0
+          const status = y1?.fpf_days_cash || 'na'
+          return (
+            <div key={s.name}>
+              <div className={`text-xs font-semibold uppercase tracking-wide mb-1 ${colors[s.name] || 'text-slate-600'}`}>{s.name}</div>
+              <div className={`text-xl font-bold ${days >= 60 ? 'text-emerald-600' : days >= 30 ? 'text-amber-600' : 'text-red-600'}`}>{days} days</div>
+              <div className="mt-0.5">
+                {status === 'meets' ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">Meets Stage 1</span>
+                  : status === 'approaches' ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Approaching</span>
+                  : <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">Does Not Meet</span>}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function BudgetRow({ label, value, bold, borderTop }: {
   label: string
   value: number
