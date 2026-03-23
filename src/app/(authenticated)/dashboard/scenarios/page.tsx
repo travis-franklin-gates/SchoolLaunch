@@ -347,7 +347,7 @@ export default function ScenariosPage() {
       {hasResults && (
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm mb-6 overflow-hidden">
           {/* Mobile scenario selector */}
-          <div className="md:hidden flex gap-1 p-3 border-b border-slate-200">
+          <div className="lg:hidden flex gap-1 p-3 border-b border-slate-200">
             {scenarios.map(s => {
               const colors = SCENARIO_COLORS[s.name] || SCENARIO_COLORS['Base Case']
               return (
@@ -360,7 +360,7 @@ export default function ScenariosPage() {
           </div>
 
           {/* Header row — desktop: 4 cols, mobile: 2 cols */}
-          <div className="hidden md:grid grid-cols-4 border-b border-slate-200">
+          <div className="hidden lg:grid grid-cols-4 border-b border-slate-200">
             <div className="px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Metric</div>
             {scenarios.map(s => {
               const colors = SCENARIO_COLORS[s.name] || SCENARIO_COLORS['Base Case']
@@ -601,7 +601,7 @@ function ComparisonRow({ label, scenarios, getValue, format, baseY1, colorFn, in
   return (
     <>
       {/* Desktop: 4-column grid */}
-      <div className={`hidden md:grid grid-cols-4 border-b border-slate-50 ${highlight ? 'bg-slate-50/50' : ''}`}>
+      <div className={`hidden lg:grid grid-cols-4 border-b border-slate-50 ${highlight ? 'bg-slate-50/50' : ''}`}>
         <div className="px-5 py-2 text-xs text-slate-600">{label}</div>
         {scenarios.map(s => {
           const y1 = s.results?.years?.['1']
@@ -612,7 +612,7 @@ function ComparisonRow({ label, scenarios, getValue, format, baseY1, colorFn, in
             <div key={s.id} className={`px-4 py-2 text-center ${isBase ? 'bg-blue-50/30' : ''}`}>
               <div className={`text-sm font-medium ${highlight ? 'font-semibold' : ''} ${color}`}>
                 {format(value)}
-                {badge?.(value) && <span className="ml-1 text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">{badge(value)}</span>}
+                {badge?.(value) && <span className="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium whitespace-nowrap">{badge(value)}</span>}
               </div>
               {!isBase && <Delta value={value} base={baseValue} suffix={suffix} invert={invert} />}
             </div>
@@ -620,7 +620,7 @@ function ComparisonRow({ label, scenarios, getValue, format, baseY1, colorFn, in
         })}
       </div>
       {/* Mobile: single selected scenario */}
-      <div className={`md:hidden flex justify-between items-center px-4 py-2 border-b border-slate-50 ${highlight ? 'bg-slate-50/50' : ''}`}>
+      <div className={`lg:hidden flex justify-between items-center px-4 py-2 border-b border-slate-50 ${highlight ? 'bg-slate-50/50' : ''}`}>
         <span className="text-xs text-slate-600">{label}</span>
         {scenarios.filter(s => s.name === mobileScenario).map(s => {
           const y1 = s.results?.years?.['1']
@@ -628,7 +628,7 @@ function ComparisonRow({ label, scenarios, getValue, format, baseY1, colorFn, in
           const color = colorFn ? colorFn(value) : 'text-slate-800'
           return <span key={s.id} className={`text-sm font-medium ${color}`}>
             {format(value)}
-            {badge?.(value) && <span className="ml-1 text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">{badge(value)}</span>}
+            {badge?.(value) && <span className="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium whitespace-nowrap">{badge(value)}</span>}
           </span>
         })}
       </div>
