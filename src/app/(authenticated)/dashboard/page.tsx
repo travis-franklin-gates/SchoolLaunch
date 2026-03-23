@@ -224,8 +224,8 @@ export default function DashboardPage() {
     ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
     : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
 
-  // Total Margin % = Net Position / Operating Revenue (Commission FPF metric)
-  const totalMarginPct = baseSummary.operatingRevenue > 0 ? (y1Net / baseSummary.operatingRevenue) * 100 : 0
+  // Total Margin % = Net Income / Total Revenue (Commission FPF definition, includes grants)
+  const totalMarginPct = y1Revenue > 0 ? (y1Net / y1Revenue) * 100 : 0
   const totalMarginColor = totalMarginPct >= 0
     ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
     : totalMarginPct >= -5
@@ -575,7 +575,7 @@ export default function DashboardPage() {
               ))}
             </tr>
             <tr>
-              <td className="px-5 py-2.5 text-slate-600">Reserve Days</td>
+              <td className="px-5 py-2.5 text-slate-600">Days Cash</td>
               {multiYear.map((y, i) => {
                 const days = daysOfCashAllYears[i] ?? 0
                 const color = days >= 60 ? 'text-emerald-600' : days >= 30 ? 'text-amber-600' : 'text-red-600'
