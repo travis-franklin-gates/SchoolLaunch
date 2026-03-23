@@ -493,7 +493,17 @@ export default function ScenariosPage() {
             </button>
           </div>
           {aiAnalysis ? (
-            <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{aiAnalysis}</div>
+            <div className="text-sm text-slate-700 leading-relaxed space-y-3">
+              {aiAnalysis.split('\n\n').filter(Boolean).map((para, i) => (
+                <p key={i}>
+                  {para.split(/(\*\*[^*]+\*\*)/).map((seg, j) =>
+                    seg.startsWith('**') && seg.endsWith('**')
+                      ? <strong key={j} className="font-semibold text-slate-800">{seg.slice(2, -2)}</strong>
+                      : seg
+                  )}
+                </p>
+              ))}
+            </div>
           ) : !aiLoading ? (
             <p className="text-sm text-slate-400">Click the button above to generate an AI-powered analysis comparing your three scenarios.</p>
           ) : (
