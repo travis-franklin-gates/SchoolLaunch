@@ -218,10 +218,20 @@ export async function POST(request: Request) {
   }
   console.log('[onboarding/complete] insert budget_projections succeeded')
 
-  // Mark onboarding as complete
+  // Mark onboarding as complete and persist program flags to financial_assumptions
+  const existingFa = profile.financial_assumptions || {}
+  const updatedFa = {
+    ...existingFa,
+    food_service_offered: !!operations.foodProgram,
+    transportation_offered: !!operations.transportationProgram,
+    food_service_per_student: existingFa.food_service_per_student || 1200,
+    transportation_per_student: existingFa.transportation_per_student || 800,
+    food_service_revenue_per_pupil: existingFa.food_service_revenue_per_pupil || 710,
+    transportation_revenue_per_pupil: existingFa.transportation_revenue_per_pupil || 560,
+  }
   const { error: onboardingError } = await admin
     .from('school_profiles')
-    .update({ onboarding_complete: true })
+    .update({ onboarding_complete: true, financial_assumptions: updatedFa })
     .eq('school_id', schoolId)
 
   if (onboardingError) {
