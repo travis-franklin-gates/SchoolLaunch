@@ -167,6 +167,11 @@ export default function PortfolioPage() {
   const [sortKey, setSortKey] = useState<string>('reserveDays')
   const [sortAsc, setSortAsc] = useState(true)
   const [showFpfMatrix, setShowFpfMatrix] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeFilter, setActiveFilter] = useState<string>('all')
+  const [sortDropdown, setSortDropdown] = useState('reserveDays-asc')
+  const [notesModal, setNotesModal] = useState<string | null>(null) // school ID for open notes modal
+  const [exporting, setExporting] = useState(false)
 
   const loadData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -349,6 +354,73 @@ export default function PortfolioPage() {
     }
   }
 
+  function buildExportPayload() {
+    return schools.map(s => {
+      const y1 = s.multiYear[0]
+      const pct = y1 && y1.revenue.operatingRevenue > 0 ? (y1.personnel.total / y1.revenue.operatingRevenue) * 100 : 0
+      return {
+        name: s.name,
+        status: s.status,
+        gradeConfig: s.gradeConfig,
+        openingYear: s.plannedOpenYear,
+        enrollmentY1: s.enrollmentY1,
+        reserveDays: y1?.reserveDays ?? 0,
+        personnelPct: Math.round(pct * 10) / 10,
+        netPosition: y1?.net ?? 0,
+        totalRevenue: y1?.revenue.total ?? 0,
+        totalExpenses: y1?.totalExpenses ?? 0,
+        fpfIssues: s.stage1Issues,
+        readinessScore: s.readinessScore,
+        advisoryStatus: s.advisoryStatus ? `${s.advisoryStatus.strong}S ${s.advisoryStatus.attention}A ${s.advisoryStatus.risk}R` : 'Not Run',
+        onboardingComplete: s.onboardingComplete,
+        multiYear: s.multiYear.map(r => ({ year: r.year, revenue: r.revenue.total, expenses: r.totalExpenses, net: r.net, reserveDays: r.reserveDays })),
+        scenarios: s.scenarioReserveDays ? [
+          { name: 'Conservative', assumptions: {}, y1ReserveDays: s.scenarioReserveDays.conservative },
+          { name: 'Base Case', assumptions: {}, y1ReserveDays: s.scenarioReserveDays.base },
+          { name: 'Optimistic', assumptions: {}, y1ReserveDays: s.scenarioReserveDays.optimistic },
+        ] : null,
+      }
+    })
+  }
+
+  async function handleExportPdf() {
+    setExporting(true)
+    try {
+      const res = await fetch('/api/portfolio/export-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgName, schools: buildExportPayload(), dateStr: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) }),
+      })
+      if (res.ok) {
+        const html = await res.text()
+        const w = window.open('', '_blank')
+        if (w) { w.document.write(html); w.document.close() }
+      }
+    } catch (err) { console.error('PDF export failed:', err) }
+    setExporting(false)
+  }
+
+  async function handleExportExcel() {
+    setExporting(true)
+    try {
+      const res = await fetch('/api/portfolio/export-excel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgName, schools: buildExportPayload() }),
+      })
+      if (res.ok) {
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${orgName.replace(/\s+/g, '_')}_Portfolio_Summary.xlsx`
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+    } catch (err) { console.error('Excel export failed:', err) }
+    setExporting(false)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -380,13 +452,50 @@ export default function PortfolioPage() {
   const showDeadlineBanner = true
 
   // Table sorting
-  const sortedSchools = [...schools].sort((a, b) => {
+  // Filter counts
+  const needsAttentionCount = schools.filter(s => {
+    if (!s.onboardingComplete) return false
+    const days = s.multiYear[0]?.reserveDays ?? 0
+    const pct = s.multiYear[0] && s.multiYear[0].revenue.operatingRevenue > 0 ? (s.multiYear[0].personnel.total / s.multiYear[0].revenue.operatingRevenue) * 100 : 0
+    return days < 30 || pct > 80 || s.stage1Issues > 0
+  }).length
+  const onTrackCount = schools.filter(s => s.onboardingComplete && s.stage1Issues === 0).length
+  const notStartedCount2 = schools.filter(s => !s.onboardingComplete).length
+  const scenariosMissingCount = schools.filter(s => !s.hasScenarios).length
+
+  // Apply search + filter
+  const filteredSchools = schools.filter(s => {
+    // Search
+    if (searchQuery && !s.name.toLowerCase().includes(searchQuery.toLowerCase())) return false
+    // Filter
+    if (activeFilter === 'needsAttention') {
+      if (!s.onboardingComplete) return false
+      const days = s.multiYear[0]?.reserveDays ?? 0
+      const pct = s.multiYear[0] && s.multiYear[0].revenue.operatingRevenue > 0 ? (s.multiYear[0].personnel.total / s.multiYear[0].revenue.operatingRevenue) * 100 : 0
+      return days < 30 || pct > 80 || s.stage1Issues > 0
+    }
+    if (activeFilter === 'onTrack') return s.onboardingComplete && s.stage1Issues === 0
+    if (activeFilter === 'notStarted') return !s.onboardingComplete
+    if (activeFilter === 'scenariosMissing') return !s.hasScenarios
+    return true
+  })
+
+  // Sort dropdown sync
+  function handleSortDropdown(val: string) {
+    setSortDropdown(val)
+    const [key, dir] = val.split('-')
+    setSortKey(key)
+    setSortAsc(dir === 'asc')
+  }
+
+  const sortedSchools = [...filteredSchools].sort((a, b) => {
     const getVal = (s: SchoolCard): number => {
       if (sortKey === 'reserveDays') return s.multiYear[0]?.reserveDays ?? -999
       if (sortKey === 'personnel') return s.multiYear[0] && s.multiYear[0].revenue.operatingRevenue > 0 ? (s.multiYear[0].personnel.total / s.multiYear[0].revenue.operatingRevenue) * 100 : 999
       if (sortKey === 'netPosition') return s.multiYear[0]?.net ?? -999999
       if (sortKey === 'readiness') return s.readinessScore
       if (sortKey === 'name') return 0
+      if (sortKey === 'updated') return s.lastUpdated ? new Date(s.lastUpdated).getTime() : 0
       return 0
     }
     if (sortKey === 'name') return sortAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
@@ -417,14 +526,20 @@ export default function PortfolioPage() {
           <h1 className="text-[28px] font-semibold text-slate-900">Portfolio</h1>
           <p className="text-sm text-slate-500 mt-1">{orgName}</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button onClick={() => setShowFpfMatrix(!showFpfMatrix)} className="px-4 py-2 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-            {showFpfMatrix ? 'Hide FPF Matrix' : 'View FPF Matrix'}
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowFpfMatrix(!showFpfMatrix)} className="px-3 py-2 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+            {showFpfMatrix ? 'Hide FPF Matrix' : 'FPF Matrix'}
+          </button>
+          <button onClick={handleExportPdf} disabled={exporting} className="px-3 py-2 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50">
+            Export PDF
+          </button>
+          <button onClick={handleExportExcel} disabled={exporting} className="px-3 py-2 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50">
+            Export Excel
           </button>
           <button
             data-tour="invite-button"
             onClick={() => setShowInviteModal(true)}
-            className="px-5 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-medium hover:bg-teal-700 transition-colors"
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg text-xs font-medium hover:bg-teal-700 transition-colors"
           >
             Invite School
           </button>
@@ -520,12 +635,67 @@ export default function PortfolioPage() {
         </div>
       )}
 
-      {/* View toggle */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Search, Sort, View controls */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-3">
+        <div className="relative flex-1 max-w-sm">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search schools..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-8 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          )}
+        </div>
+        <select
+          value={sortDropdown}
+          onChange={e => handleSortDropdown(e.target.value)}
+          className="text-xs border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
+        >
+          <option value="reserveDays-asc">Reserve Days (Low → High)</option>
+          <option value="reserveDays-desc">Reserve Days (High → Low)</option>
+          <option value="personnel-desc">Personnel % (High → Low)</option>
+          <option value="personnel-asc">Personnel % (Low → High)</option>
+          <option value="readiness-asc">Readiness (Low → High)</option>
+          <option value="readiness-desc">Readiness (High → Low)</option>
+          <option value="name-asc">School Name (A → Z)</option>
+          <option value="updated-asc">Last Updated (Oldest)</option>
+          <option value="updated-desc">Last Updated (Newest)</option>
+        </select>
         <div className="flex gap-1 bg-slate-100 p-0.5 rounded-lg">
           <button onClick={() => setViewMode('table')} className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${viewMode === 'table' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Table</button>
           <button onClick={() => setViewMode('cards')} className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${viewMode === 'cards' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Cards</button>
         </div>
+      </div>
+
+      {/* Filter pills */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {[
+          { key: 'all', label: 'All', count: schools.length },
+          { key: 'needsAttention', label: 'Needs Attention', count: needsAttentionCount },
+          { key: 'onTrack', label: 'On Track', count: onTrackCount },
+          { key: 'notStarted', label: 'Not Started', count: notStartedCount2 },
+          { key: 'scenariosMissing', label: 'Scenarios Missing', count: scenariosMissingCount },
+        ].map(f => (
+          <button
+            key={f.key}
+            onClick={() => setActiveFilter(f.key)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              activeFilter === f.key
+                ? 'bg-teal-600 text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            {f.label} ({f.count})
+          </button>
+        ))}
       </div>
 
       {/* TABLE VIEW */}
@@ -557,10 +727,17 @@ export default function PortfolioPage() {
                 return (
                   <tr key={s.id} className="border-b border-slate-50 hover:bg-slate-50/50">
                     <td className="px-4 py-2.5">
-                      <Link href={`/portfolio/${s.id}`} className="flex items-center gap-2 hover:text-teal-600 transition-colors">
-                        <SchoolLogo name={s.name} logoUrl={s.logoUrl} size={24} />
-                        <span className="font-medium text-slate-800">{s.name}</span>
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link href={`/portfolio/${s.id}`} className="flex items-center gap-2 hover:text-teal-600 transition-colors">
+                          <SchoolLogo name={s.name} logoUrl={s.logoUrl} size={24} />
+                          <span className="font-medium text-slate-800">{s.name}</span>
+                        </Link>
+                        {s.notes.length > 0 && (
+                          <button onClick={() => setNotesModal(s.id)} className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 hover:bg-teal-100 hover:text-teal-600" title="View notes">
+                            {s.notes.length}
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="text-center px-2 py-2.5">
                       {s.onboardingComplete ? <StatusBadge status={s.status} /> : <span className="text-[10px] text-slate-400">Setup incomplete</span>}
@@ -724,48 +901,16 @@ export default function PortfolioPage() {
                 )}
 
                 {/* Notes */}
-                <div {...(idx === 0 ? { 'data-tour': 'notes-panel' } : {})} className="border-t border-slate-100 p-4">
+                <div className="border-t border-slate-100 px-5 py-3">
                   <button
-                    onClick={() => setExpandedNotes((prev) => ({ ...prev, [school.id]: !prev[school.id] }))}
-                    className="text-xs font-medium text-slate-500 hover:text-slate-700 mb-2 flex items-center gap-1"
+                    onClick={() => setNotesModal(school.id)}
+                    className="text-xs font-medium text-slate-500 hover:text-teal-600 flex items-center gap-1.5 transition-colors"
                   >
-                    <svg className={`w-3 h-3 transition-transform ${expandedNotes[school.id] ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                     </svg>
                     Notes ({school.notes.length})
                   </button>
-                  {expandedNotes[school.id] && (
-                    <div>
-                      <div className="flex gap-2 mb-2">
-                        <input
-                          type="text"
-                          value={noteInputs[school.id] || ''}
-                          onChange={(e) => setNoteInputs((prev) => ({ ...prev, [school.id]: e.target.value }))}
-                          onKeyDown={(e) => e.key === 'Enter' && addNote(school.id)}
-                          placeholder="Add a note..."
-                          className="flex-1 text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                        />
-                        <button
-                          onClick={() => addNote(school.id)}
-                          className="text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 transition-colors"
-                        >
-                          Add
-                        </button>
-                      </div>
-                      {school.notes.length > 0 && (
-                        <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                          {school.notes.map((note) => (
-                            <div key={note.id} className="text-xs text-slate-600 bg-slate-50 rounded-lg px-3 py-2">
-                              <span>{note.content}</span>
-                              <span className="text-slate-400 ml-2">
-                                {new Date(note.created_at).toLocaleDateString()}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
 
                 {/* View details link */}
@@ -784,6 +929,78 @@ export default function PortfolioPage() {
           })}
         </div>
       ))}
+
+      {/* Recent Activity Feed */}
+      {schools.some(s => s.notes.length > 0) && (
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm mt-6">
+          <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">Recent Activity</h3>
+          <div className="space-y-2">
+            {schools
+              .flatMap(s => s.notes.map(n => ({ ...n, schoolName: s.name, schoolId: s.id })))
+              .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+              .slice(0, 10)
+              .map(n => (
+                <Link key={n.id} href={`/portfolio/${n.schoolId}`} className="flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors">
+                  <div className="w-1.5 h-1.5 rounded-full bg-teal-500 mt-1.5 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-xs text-slate-800">
+                      <span className="font-medium">{n.schoolName}</span>
+                      <span className="text-slate-400 mx-1">—</span>
+                      <span className="text-slate-600">{n.content.length > 80 ? n.content.slice(0, 80) + '...' : n.content}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">{formatDate(n.created_at)}</div>
+                  </div>
+                </Link>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* Notes Modal */}
+      {notesModal && (() => {
+        const school = schools.find(s => s.id === notesModal)
+        if (!school) return null
+        return (
+          <div className="fixed inset-0 z-50 flex items-start justify-end bg-black/30" onClick={() => setNotesModal(null)}>
+            <div className="w-full max-w-md h-full bg-white shadow-xl overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <div className="p-5 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
+                <div>
+                  <h3 className="font-semibold text-slate-800">{school.name}</h3>
+                  <p className="text-xs text-slate-500">Notes & Activity</p>
+                </div>
+                <button onClick={() => setNotesModal(null)} className="text-slate-400 hover:text-slate-600">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+              <div className="p-5">
+                <div className="flex gap-2 mb-4">
+                  <input
+                    type="text"
+                    placeholder="Add a note about this school..."
+                    value={noteInputs[school.id] || ''}
+                    onChange={e => setNoteInputs(prev => ({ ...prev, [school.id]: e.target.value }))}
+                    onKeyDown={e => e.key === 'Enter' && addNote(school.id)}
+                    className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                  <button onClick={() => addNote(school.id)} className="px-3 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 whitespace-nowrap">Save</button>
+                </div>
+                {school.notes.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-8">No notes yet. Add a note to track your review.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {school.notes.map(n => (
+                      <div key={n.id} className="border-l-2 border-teal-200 pl-3 py-1">
+                        <p className="text-sm text-slate-700">{n.content}</p>
+                        <p className="text-[10px] text-slate-400 mt-1">{formatDate(n.created_at)}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Invite Modal */}
       {showInviteModal && <InviteModal onClose={() => setShowInviteModal(false)} onSuccess={loadData} />}
