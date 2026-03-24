@@ -59,6 +59,8 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
   const [allPositions, setAllPositions] = useState<StaffingPosition[]>([])
   const [projections, setProjections] = useState<BudgetProjection[]>([])
   const [gradeExpansionPlan, setGradeExpansionPlan] = useState<GradeExpansionEntry[]>([])
+  const [notes, setNotes] = useState<Array<{ id: string; content: string; created_at: string }>>([])
+  const [noteInput, setNoteInput] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -78,12 +80,13 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
         return
       }
 
-      const [schoolRes, profileRes, posRes, projRes, gepRes] = await Promise.all([
+      const [schoolRes, profileRes, posRes, projRes, gepRes, notesRes] = await Promise.all([
         supabase.from('schools').select('name').eq('id', schoolId).single(),
         supabase.from('school_profiles').select('*').eq('school_id', schoolId).single(),
         supabase.from('staffing_positions').select('*').eq('school_id', schoolId).order('year'),
         supabase.from('budget_projections').select('*').eq('school_id', schoolId).eq('year', 1),
         supabase.from('grade_expansion_plan').select('*').eq('school_id', schoolId).order('year').order('grade_level'),
+        supabase.from('org_notes').select('id, content, created_at').eq('school_id', schoolId).order('created_at', { ascending: false }),
       ])
 
       if (schoolRes.data) setSchoolName(schoolRes.data.name)
@@ -95,6 +98,7 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
       }
       if (projRes.data) setProjections(projRes.data as BudgetProjection[])
       if (gepRes.data) setGradeExpansionPlan(gepRes.data as GradeExpansionEntry[])
+      if (notesRes.data) setNotes(notesRes.data)
       setLoading(false)
     }
     load()
@@ -174,6 +178,25 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
   ].filter(l => l.amount > 0) : projections.filter(p => p.is_revenue).map(p => ({ label: p.subcategory, amount: p.amount }))
   const totalRevenue = multiYear.length > 0 ? multiYear[0].revenue.total : summary.totalRevenue
   const opsLines = projections.filter((p) => !p.is_revenue && p.category === 'Operations')
+
+  async function handleAddNote() {
+    const content = noteInput.trim()
+    if (!content) return
+    try {
+      const res = await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schoolId, content }),
+      })
+      if (res.ok) {
+        const note = await res.json()
+        setNotes(prev => [{ id: note.id, content: note.content, created_at: note.created_at }, ...prev])
+        setNoteInput('')
+      }
+    } catch (err) {
+      console.error('Failed to save note:', err)
+    }
+  }
 
   return (
     <div data-tour="school-detail">
@@ -311,6 +334,39 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
             </tbody>
           </table>
         </div>
+      </Section>
+
+      {/* Notes */}
+      <Section title="Notes">
+        <div className="flex gap-2 mb-4">
+          <input
+            type="text"
+            placeholder="Add a note about this school..."
+            value={noteInput}
+            onChange={e => setNoteInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAddNote()}
+            className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+          />
+          <button onClick={handleAddNote} disabled={!noteInput.trim()} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50">
+            Save Note
+          </button>
+        </div>
+        {notes.length === 0 ? (
+          <p className="text-sm text-slate-400 text-center py-6">No notes yet. Add a note to track your review of this school.</p>
+        ) : (
+          <div className="space-y-3">
+            {notes.map(n => {
+              const ago = Math.floor((Date.now() - new Date(n.created_at).getTime()) / (1000 * 60))
+              const timeLabel = ago < 1 ? 'Just now' : ago < 60 ? `${ago}m ago` : ago < 1440 ? `${Math.floor(ago / 60)}h ago` : `${Math.floor(ago / 1440)}d ago`
+              return (
+                <div key={n.id} className="border-l-2 border-teal-200 pl-3 py-1">
+                  <p className="text-sm text-slate-700">{n.content}</p>
+                  <p className="text-[10px] text-slate-400 mt-1">{timeLabel}</p>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </Section>
     </div>
   )
