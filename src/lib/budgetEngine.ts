@@ -31,14 +31,17 @@ export function getGrantRevenueForYear(
   if (!sources || sources.length === 0) return 0
   let total = 0
   for (const src of sources) {
-    if (src.yearAllocations?.[year]) {
-      total += src.yearAllocations[year]
+    // If explicit year allocations exist for this source, use them (even if 0)
+    if (src.yearAllocations && year in src.yearAllocations) {
+      total += src.yearAllocations[year] || 0
     } else if (src.selectedYears?.includes(year)) {
-      // Evenly divide across selected years if no explicit allocation
-      const yearCount = src.selectedYears.length
-      total += Math.round(src.amount / yearCount)
+      // Evenly divide across selected years only if NO explicit allocations exist at all
+      if (!src.yearAllocations || Object.keys(src.yearAllocations).length === 0) {
+        const yearCount = src.selectedYears.length
+        total += Math.round(src.amount / yearCount)
+      }
+      // Otherwise, explicit allocations exist but not for this year — $0
     }
-    // If no selectedYears or yearAllocations for this year, no allocation (pre-opening only)
   }
   return total
 }
@@ -51,11 +54,13 @@ export function getGrantAllocationsForYear(
   if (!sources || sources.length === 0) return []
   return sources.map((src) => {
     let amount = 0
-    if (src.yearAllocations?.[year]) {
-      amount = src.yearAllocations[year]
+    if (src.yearAllocations && year in src.yearAllocations) {
+      amount = src.yearAllocations[year] || 0
     } else if (src.selectedYears?.includes(year)) {
-      const yearCount = src.selectedYears.length
-      amount = Math.round(src.amount / yearCount)
+      if (!src.yearAllocations || Object.keys(src.yearAllocations).length === 0) {
+        const yearCount = src.selectedYears.length
+        amount = Math.round(src.amount / yearCount)
+      }
     }
     return { source: src.source, amount, type: src.type }
   }).filter((a) => a.amount > 0)

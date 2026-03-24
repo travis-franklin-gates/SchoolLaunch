@@ -173,6 +173,24 @@ export default function GradeExpansionEditor({
     return map
   }, [openingGrades, buildoutGrades, yearNewGrades])
 
+  // Compute grades that don't fit in the 5-year window
+  const unassignedGrades = useMemo(() => {
+    const assigned = new Set(openingGrades)
+    for (let y = 2; y <= 5; y++) {
+      for (const g of (yearNewGrades.get(y) || [])) assigned.add(g)
+    }
+    return sortGrades(buildoutGrades.filter(g => !assigned.has(g)))
+  }, [openingGrades, buildoutGrades, yearNewGrades])
+
+  const lastAssignedGrade = useMemo(() => {
+    const assigned = sortGrades([...openingGrades])
+    for (let y = 2; y <= 5; y++) {
+      for (const g of (yearNewGrades.get(y) || [])) assigned.push(g)
+    }
+    const sorted = sortGrades(assigned)
+    return sorted[sorted.length - 1] || ''
+  }, [openingGrades, yearNewGrades])
+
   // Notify parent on changes
   useEffect(() => {
     onChange({
@@ -528,6 +546,15 @@ export default function GradeExpansionEditor({
             </tbody>
           </table>
         </div>
+
+        {/* Info banner for grades beyond the 5-year window */}
+        {unassignedGrades.length > 0 && (
+          <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
+            <strong>Note:</strong> Your grade expansion plan extends beyond the 5-year projection window.
+            Grade{unassignedGrades.length > 1 ? 's' : ''} {unassignedGrades.join(', ')} would be added in Year{unassignedGrades.length > 1 ? 's' : ''} {unassignedGrades.map((_, i) => 6 + i).join('-')},
+            after your first Commission re-authorization cycle. The 5-year financial model covers your buildout through Grade {lastAssignedGrade}.
+          </div>
+        )}
       </div>
     </div>
   )
