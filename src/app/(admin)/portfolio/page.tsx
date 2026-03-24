@@ -25,6 +25,14 @@ interface SchoolCard {
   onboardingComplete: boolean
   lastUpdated: string | null
   logoUrl: string | null
+  // New fields for enhanced portfolio
+  advisoryStatus: { strong: number; attention: number; risk: number } | null
+  scenarioReserveDays: { conservative: number; base: number; optimistic: number } | null
+  hasBudget: boolean
+  hasScenarios: boolean
+  hasAdvisory: boolean
+  hasAlignment: boolean
+  readinessScore: number
 }
 
 interface NoteEntry {
@@ -155,6 +163,10 @@ export default function PortfolioPage() {
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [noteInputs, setNoteInputs] = useState<Record<string, string>>({})
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({})
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
+  const [sortKey, setSortKey] = useState<string>('reserveDays')
+  const [sortAsc, setSortAsc] = useState(true)
+  const [showFpfMatrix, setShowFpfMatrix] = useState(false)
 
   const loadData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -194,12 +206,14 @@ export default function PortfolioPage() {
     const schoolIds = schoolRows.map((s) => s.id)
 
     // Load all data needed for computeMultiYearDetailed per school
-    const [profilesRes, allPosRes, projectionsRes, notesRes, gepRes] = await Promise.all([
+    const [profilesRes, allPosRes, projectionsRes, notesRes, gepRes, scenRes, alignRes] = await Promise.all([
       supabase.from('school_profiles').select('*').in('school_id', schoolIds),
       supabase.from('staffing_positions').select('*').in('school_id', schoolIds).order('year'),
       supabase.from('budget_projections').select('*').in('school_id', schoolIds).eq('year', 1),
       supabase.from('org_notes').select('id, school_id, content, created_at').in('school_id', schoolIds).order('created_at', { ascending: false }),
       supabase.from('grade_expansion_plan').select('*').in('school_id', schoolIds).order('year').order('grade_level'),
+      supabase.from('scenarios').select('school_id, name, results').in('school_id', schoolIds).eq('scenario_type', 'engine'),
+      supabase.from('alignment_reviews').select('school_id').in('school_id', schoolIds),
     ])
 
     const profiles = profilesRes.data || []
@@ -207,6 +221,8 @@ export default function PortfolioPage() {
     const projections = (projectionsRes.data || []) as BudgetProjection[]
     const notes = (notesRes.data || []) as (NoteEntry & { school_id: string })[]
     const allGep = (gepRes.data || []) as (GradeExpansionEntry & { school_id: string })[]
+    const allScenarios = (scenRes.data || []) as { school_id: string; name: string; results: { years: Record<string, { reserve_days: number }> } | null }[]
+    const allAlignments = (alignRes.data || []) as { school_id: string }[]
 
     const cards: SchoolCard[] = schoolRows.map((school) => {
       const profileRaw = profiles.find((p) => p.school_id === school.id)
@@ -248,6 +264,36 @@ export default function PortfolioPage() {
         ? timestamps.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
         : null
 
+      // Advisory status from cached results
+      const advisoryCache = profileRaw?.advisory_cache
+      let advisoryStatus: SchoolCard['advisoryStatus'] = null
+      if (advisoryCache?.agents) {
+        const agents = advisoryCache.agents as { status: string }[]
+        advisoryStatus = {
+          strong: agents.filter(a => a.status === 'strong').length,
+          attention: agents.filter(a => a.status === 'needs_attention').length,
+          risk: agents.filter(a => a.status === 'risk').length,
+        }
+      }
+
+      // Scenario data
+      const schoolScenarios = allScenarios.filter(s => s.school_id === school.id)
+      const hasScenarios = schoolScenarios.length > 0
+      let scenarioReserveDays: SchoolCard['scenarioReserveDays'] = null
+      if (hasScenarios) {
+        const getDays = (name: string) => {
+          const s = schoolScenarios.find(sc => sc.name === name)
+          return Math.max(0, s?.results?.years?.['1']?.reserve_days ?? 0)
+        }
+        scenarioReserveDays = { conservative: getDays('Conservative'), base: getDays('Base Case'), optimistic: getDays('Optimistic') }
+      }
+
+      // Readiness milestones
+      const hasBudget = schoolProjections.length > 0
+      const hasAdvisory = !!advisoryCache?.briefing
+      const hasAlignment = allAlignments.some(a => a.school_id === school.id)
+      const readinessScore = [profile?.onboarding_complete, hasBudget, hasScenarios, hasAdvisory, hasAlignment].filter(Boolean).length
+
       return {
         id: school.id,
         name: school.name,
@@ -264,6 +310,13 @@ export default function PortfolioPage() {
         onboardingComplete: profile?.onboarding_complete || false,
         lastUpdated,
         logoUrl: profile?.logo_url || null,
+        advisoryStatus,
+        scenarioReserveDays,
+        hasBudget,
+        hasScenarios,
+        hasAdvisory,
+        hasAlignment,
+        readinessScore,
       }
     })
 
@@ -315,68 +368,269 @@ export default function PortfolioPage() {
   const openingSoon = schools.filter((s) => s.plannedOpenYear === currentOpenYear || s.plannedOpenYear === nextOpenYear).length
   const needsAttention = schoolsWithData.filter((s) => s.stage1Issues >= 2).length
 
+  // Enhanced stats
+  const avgReserveDays = schoolsWithData.length > 0
+    ? Math.round(schoolsWithData.reduce((s, sc) => s + (sc.multiYear[0]?.reserveDays ?? 0), 0) / schoolsWithData.length)
+    : 0
+  const readyCount = schools.filter(s => s.readinessScore >= 4).length
+  const inProgressCount = schools.filter(s => s.readinessScore >= 1 && s.readinessScore < 4).length
+  const notStartedCount = schools.filter(s => s.readinessScore === 0).length
+
+  // Deadline calculation
+  const deadlines = [
+    { label: 'Draft Financial Plan', date: new Date('2026-05-19'), key: 'may19' },
+    { label: 'Full Proposal', date: new Date('2026-07-01'), key: 'jul1' },
+  ]
+  const now = new Date()
+  const activeDeadline = deadlines.find(d => d.date > now)
+  const daysToDeadline = activeDeadline ? Math.ceil((activeDeadline.date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0
+
+  // Table sorting
+  const sortedSchools = [...schools].sort((a, b) => {
+    const getVal = (s: SchoolCard): number => {
+      if (sortKey === 'reserveDays') return s.multiYear[0]?.reserveDays ?? -999
+      if (sortKey === 'personnel') return s.multiYear[0] && s.multiYear[0].revenue.operatingRevenue > 0 ? (s.multiYear[0].personnel.total / s.multiYear[0].revenue.operatingRevenue) * 100 : 999
+      if (sortKey === 'netPosition') return s.multiYear[0]?.net ?? -999999
+      if (sortKey === 'readiness') return s.readinessScore
+      if (sortKey === 'name') return 0
+      return 0
+    }
+    if (sortKey === 'name') return sortAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
+    const diff = getVal(a) - getVal(b)
+    return sortAsc ? diff : -diff
+  })
+
+  function handleSort(key: string) {
+    if (sortKey === key) { setSortAsc(!sortAsc) } else { setSortKey(key); setSortAsc(true) }
+  }
+
+  const SortIcon = ({ col }: { col: string }) => (
+    sortKey === col ? <span className="ml-0.5 text-[8px]">{sortAsc ? '▲' : '▼'}</span> : null
+  )
+
   return (
     <div className="animate-fade-in">
+      {/* Deadline banner */}
+      {activeDeadline && (
+        <div className={`mb-6 px-5 py-3 rounded-xl text-sm font-medium flex items-center justify-between ${
+          daysToDeadline > 30 ? 'bg-blue-50 text-blue-700 border border-blue-200'
+          : daysToDeadline > 14 ? 'bg-amber-50 text-amber-700 border border-amber-200'
+          : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          <span>Charter Continuity RFP — {activeDeadline.label} due {activeDeadline.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+          <span className="font-bold">{daysToDeadline} days remaining</span>
+        </div>
+      )}
+
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-[28px] font-semibold text-slate-900">Portfolio</h1>
           <p className="text-sm text-slate-500 mt-1">{orgName}</p>
         </div>
-        <button
-          data-tour="invite-button"
-          onClick={() => setShowInviteModal(true)}
-          className="px-5 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-medium hover:bg-teal-700 transition-colors"
-        >
-          Invite School
-        </button>
-      </div>
-
-      {/* Summary stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-          <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Schools</div>
-          <div className="text-2xl font-bold text-slate-800">{totalSchools}</div>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-          <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Meeting Stage 1</div>
-          <div className={`text-2xl font-bold ${
-            schoolsWithData.length === 0 ? 'text-slate-400'
-            : meetingStage1 === schoolsWithData.length ? 'text-emerald-600'
-            : meetingStage1 === 0 ? 'text-red-600'
-            : 'text-amber-600'
-          }`}>
-            {schoolsWithData.length > 0
-              ? `${meetingStage1} of ${schoolsWithData.length}`
-              : '—'
-            }
-            <span className="text-sm font-normal text-slate-400 ml-1">
-              {schoolsWithData.length > 0 ? 'schools' : ''}
-            </span>
-          </div>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-          <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Opening Soon</div>
-          <div className={`text-2xl font-bold ${openingSoon > 0 ? 'text-slate-800' : 'text-slate-400'}`}>
-            {openingSoon > 0 ? openingSoon : '0'}
-            <span className="text-sm font-normal text-slate-400 ml-1">
-              {openingSoon === 0 ? '— None' : openingSoon === 1 ? 'school' : 'schools'}
-            </span>
-          </div>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-          <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Needs Attention</div>
-          <div className={`text-2xl font-bold ${needsAttention > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-            {needsAttention}
-            <span className="text-sm font-normal text-slate-400 ml-1">
-              {needsAttention === 1 ? 'school' : 'schools'}
-            </span>
-          </div>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setShowFpfMatrix(!showFpfMatrix)} className="px-4 py-2 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+            {showFpfMatrix ? 'Hide FPF Matrix' : 'View FPF Matrix'}
+          </button>
+          <button
+            data-tour="invite-button"
+            onClick={() => setShowInviteModal(true)}
+            className="px-5 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-medium hover:bg-teal-700 transition-colors"
+          >
+            Invite School
+          </button>
         </div>
       </div>
 
-      {/* School cards grid */}
-      {schools.length === 0 ? (
+      {/* Enhanced Summary Tiles */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-1">Total Schools</div>
+          <div className="text-xl font-bold text-slate-800">{totalSchools}</div>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-1">FPF Compliance</div>
+          <div className={`text-xl font-bold ${meetingStage1 === schoolsWithData.length ? 'text-emerald-600' : 'text-amber-600'}`}>{meetingStage1}/{schoolsWithData.length}</div>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-1">Avg Reserve Days</div>
+          <div className={`text-xl font-bold ${avgReserveDays >= 60 ? 'text-emerald-600' : avgReserveDays >= 30 ? 'text-amber-600' : 'text-red-600'}`}>{avgReserveDays}</div>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-1">Ready</div>
+          <div className="text-xl font-bold text-emerald-600">{readyCount}</div>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-1">In Progress</div>
+          <div className="text-xl font-bold text-amber-600">{inProgressCount}</div>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-1">Needs Attention</div>
+          <div className="text-xl font-bold text-red-600">{needsAttention}</div>
+        </div>
+      </div>
+
+      {/* FPF Compliance Matrix (conditional) */}
+      {showFpfMatrix && (
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm mb-6 overflow-x-auto">
+          <div className="p-4 border-b border-slate-100">
+            <h2 className="text-sm font-semibold text-slate-800">Commission FPF Compliance Matrix</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Stage 1 thresholds for Years 1-2, Stage 2 for Years 3+</p>
+          </div>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50">
+                <th className="text-left px-3 py-2 font-semibold text-slate-600 sticky left-0 bg-slate-50">School</th>
+                {[1,2,3,4,5].map(y => (
+                  <th key={y} colSpan={4} className="text-center px-1 py-2 font-semibold text-slate-600 border-l border-slate-200">Year {y}</th>
+                ))}
+              </tr>
+              <tr className="border-b border-slate-100 bg-slate-50/50">
+                <th className="sticky left-0 bg-slate-50/50" />
+                {[1,2,3,4,5].map(y => (
+                  ['CR','DC','TM','EV'].map(m => (
+                    <th key={`${y}-${m}`} className="text-center px-1 py-1 text-[9px] text-slate-400 font-medium">{m}</th>
+                  ))
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {schoolsWithData.map(s => (
+                <tr key={s.id} className="border-b border-slate-50 hover:bg-slate-50/50">
+                  <td className="px-3 py-2 font-medium text-slate-700 sticky left-0 bg-white whitespace-nowrap">{s.name}</td>
+                  {[0,1,2,3,4].map(yi => {
+                    const measures = ['Current Ratio', 'Days of Cash', 'Total Margin', 'Enrollment Variance']
+                    return measures.map(mName => {
+                      const m = s.scorecard.measures.find(x => x.name === mName)
+                      const status = m?.statuses[yi] || 'na'
+                      const bg = status === 'meets' ? 'bg-emerald-100 text-emerald-700'
+                        : status === 'approaches' ? 'bg-amber-100 text-amber-700'
+                        : status === 'does_not_meet' ? 'bg-red-100 text-red-700'
+                        : 'bg-slate-100 text-slate-400'
+                      return (
+                        <td key={`${yi}-${mName}`} className="text-center px-0.5 py-1.5">
+                          <span className={`inline-block w-5 h-5 rounded text-[8px] font-bold leading-5 ${bg}`}>
+                            {status === 'meets' ? '✓' : status === 'approaches' ? '~' : status === 'does_not_meet' ? '✗' : '—'}
+                          </span>
+                        </td>
+                      )
+                    })
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="px-3 py-2 border-t border-slate-100 text-[10px] text-slate-400 flex gap-4">
+            <span>CR = Current Ratio · DC = Days Cash · TM = Total Margin · EV = Enrollment Variance</span>
+            <span className="ml-auto">
+              <span className="inline-block w-3 h-3 rounded bg-emerald-100 mr-0.5" /> Meets
+              <span className="inline-block w-3 h-3 rounded bg-amber-100 ml-2 mr-0.5" /> Approaching
+              <span className="inline-block w-3 h-3 rounded bg-red-100 ml-2 mr-0.5" /> Does Not Meet
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* View toggle */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex gap-1 bg-slate-100 p-0.5 rounded-lg">
+          <button onClick={() => setViewMode('table')} className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${viewMode === 'table' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Table</button>
+          <button onClick={() => setViewMode('cards')} className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${viewMode === 'cards' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Cards</button>
+        </div>
+      </div>
+
+      {/* TABLE VIEW */}
+      {viewMode === 'table' && (
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-x-auto mb-8">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50">
+                <th onClick={() => handleSort('name')} className="text-left px-4 py-3 font-semibold text-slate-600 cursor-pointer hover:text-teal-600 whitespace-nowrap">School<SortIcon col="name" /></th>
+                <th className="text-center px-2 py-3 font-semibold text-slate-600 whitespace-nowrap">Status</th>
+                <th className="text-center px-2 py-3 font-semibold text-slate-600 whitespace-nowrap">Y1 Enroll</th>
+                <th onClick={() => handleSort('reserveDays')} className="text-center px-2 py-3 font-semibold text-slate-600 cursor-pointer hover:text-teal-600 whitespace-nowrap">Reserve Days<SortIcon col="reserveDays" /></th>
+                <th onClick={() => handleSort('personnel')} className="text-center px-2 py-3 font-semibold text-slate-600 cursor-pointer hover:text-teal-600 whitespace-nowrap">Personnel %<SortIcon col="personnel" /></th>
+                <th onClick={() => handleSort('netPosition')} className="text-center px-2 py-3 font-semibold text-slate-600 cursor-pointer hover:text-teal-600 whitespace-nowrap">Net Position<SortIcon col="netPosition" /></th>
+                <th className="text-center px-2 py-3 font-semibold text-slate-600 whitespace-nowrap">FPF</th>
+                <th className="text-center px-2 py-3 font-semibold text-slate-600 whitespace-nowrap">Advisory</th>
+                <th onClick={() => handleSort('readiness')} className="text-center px-2 py-3 font-semibold text-slate-600 cursor-pointer hover:text-teal-600 whitespace-nowrap">Ready<SortIcon col="readiness" /></th>
+                <th className="text-center px-2 py-3 font-semibold text-slate-600 whitespace-nowrap">Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedSchools.map(s => {
+                const y1 = s.multiYear[0]
+                const days = y1?.reserveDays ?? 0
+                const pct = y1 && y1.revenue.operatingRevenue > 0 ? (y1.personnel.total / y1.revenue.operatingRevenue) * 100 : 0
+                const net = y1?.net ?? 0
+                const daysAgo = s.lastUpdated ? Math.floor((Date.now() - new Date(s.lastUpdated).getTime()) / (1000 * 60 * 60 * 24)) : 999
+
+                return (
+                  <tr key={s.id} className="border-b border-slate-50 hover:bg-slate-50/50">
+                    <td className="px-4 py-2.5">
+                      <Link href={`/portfolio/${s.id}`} className="flex items-center gap-2 hover:text-teal-600 transition-colors">
+                        <SchoolLogo name={s.name} logoUrl={s.logoUrl} size={24} />
+                        <span className="font-medium text-slate-800">{s.name}</span>
+                      </Link>
+                    </td>
+                    <td className="text-center px-2 py-2.5">
+                      {s.onboardingComplete ? <StatusBadge status={s.status} /> : <span className="text-[10px] text-slate-400">Setup incomplete</span>}
+                    </td>
+                    <td className="text-center px-2 py-2.5 text-slate-700">{s.enrollmentY1 || '—'}</td>
+                    <td className={`text-center px-2 py-2.5 font-medium ${s.onboardingComplete ? reserveColor(days) : 'text-slate-400'}`}>
+                      {s.onboardingComplete ? `${days}` : '—'}
+                    </td>
+                    <td className={`text-center px-2 py-2.5 font-medium ${s.onboardingComplete ? personnelColor(pct) : 'text-slate-400'}`}>
+                      {s.onboardingComplete ? `${pct.toFixed(1)}%` : '—'}
+                    </td>
+                    <td className={`text-center px-2 py-2.5 font-medium ${net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {s.onboardingComplete ? fmt(net) : '—'}
+                    </td>
+                    <td className="text-center px-2 py-2.5">
+                      {s.onboardingComplete ? <ReadinessBadge issues={s.stage1Issues} /> : <span className="text-[10px] text-slate-400">—</span>}
+                    </td>
+                    <td className="text-center px-2 py-2.5">
+                      {s.advisoryStatus ? (
+                        <span className="text-[10px]">
+                          {s.advisoryStatus.strong > 0 && <span className="text-emerald-600 font-medium">{s.advisoryStatus.strong}S</span>}
+                          {s.advisoryStatus.attention > 0 && <span className="text-amber-600 font-medium ml-1">{s.advisoryStatus.attention}A</span>}
+                          {s.advisoryStatus.risk > 0 && <span className="text-red-600 font-medium ml-1">{s.advisoryStatus.risk}R</span>}
+                        </span>
+                      ) : <span className="text-[10px] text-slate-400">—</span>}
+                    </td>
+                    <td className="text-center px-2 py-2.5">
+                      <span className={`text-xs font-medium ${s.readinessScore >= 4 ? 'text-emerald-600' : s.readinessScore >= 2 ? 'text-amber-600' : 'text-slate-400'}`}>
+                        {s.readinessScore}/5
+                      </span>
+                    </td>
+                    <td className={`text-center px-2 py-2.5 text-xs ${daysAgo > 14 ? 'text-red-500' : daysAgo > 7 ? 'text-amber-600' : 'text-slate-500'}`}>
+                      {daysAgo < 999 ? `${daysAgo}d ago` : '—'}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="bg-slate-50 border-t border-slate-200">
+                <td className="px-4 py-2 font-semibold text-slate-600 text-xs">Portfolio Average</td>
+                <td />
+                <td className="text-center text-xs text-slate-600">{schoolsWithData.length > 0 ? Math.round(schoolsWithData.reduce((s, sc) => s + sc.enrollmentY1, 0) / schoolsWithData.length) : '—'}</td>
+                <td className={`text-center text-xs font-medium ${reserveColor(avgReserveDays)}`}>{avgReserveDays}</td>
+                <td className="text-center text-xs text-slate-600">
+                  {schoolsWithData.length > 0 ? `${(schoolsWithData.reduce((s, sc) => {
+                    const y = sc.multiYear[0]
+                    return s + (y && y.revenue.operatingRevenue > 0 ? (y.personnel.total / y.revenue.operatingRevenue) * 100 : 0)
+                  }, 0) / schoolsWithData.length).toFixed(1)}%` : '—'}
+                </td>
+                <td colSpan={5} />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+
+      {/* CARD VIEW */}
+      {viewMode === 'cards' && (schools.length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-xl p-12 text-center">
           <p className="text-slate-500">No schools in your portfolio yet.</p>
           <p className="text-sm text-slate-400 mt-1">Click &ldquo;Invite School&rdquo; to get started.</p>
@@ -442,8 +696,36 @@ export default function PortfolioPage() {
                         value={`${breakEven} students`}
                       />
                     </div>
-                    <div className="text-[11px] text-slate-400">
+                    <div className="text-[11px] text-slate-400 mb-2">
                       Last updated: {formatDate(school.lastUpdated)}
+                    </div>
+                    {/* Advisory status */}
+                    {school.advisoryStatus ? (
+                      <div className="text-[10px] mb-1">
+                        <span className="text-slate-400 mr-1">Advisory:</span>
+                        {school.advisoryStatus.strong > 0 && <span className="text-emerald-600 font-medium">{school.advisoryStatus.strong} Strong</span>}
+                        {school.advisoryStatus.attention > 0 && <span className="text-amber-600 font-medium ml-1">· {school.advisoryStatus.attention} Attention</span>}
+                        {school.advisoryStatus.risk > 0 && <span className="text-red-600 font-medium ml-1">· {school.advisoryStatus.risk} Risk</span>}
+                      </div>
+                    ) : <div className="text-[10px] text-slate-400 mb-1">Advisory: Not Run</div>}
+                    {/* Scenario summary */}
+                    {school.scenarioReserveDays ? (
+                      <div className="text-[10px] mb-1">
+                        <span className="text-slate-400 mr-1">Scenarios:</span>
+                        <span className={reserveColor(school.scenarioReserveDays.conservative)}>{school.scenarioReserveDays.conservative}d Con</span>
+                        <span className="text-slate-400 mx-0.5">·</span>
+                        <span className={reserveColor(school.scenarioReserveDays.base)}>{school.scenarioReserveDays.base}d Base</span>
+                        <span className="text-slate-400 mx-0.5">·</span>
+                        <span className={reserveColor(school.scenarioReserveDays.optimistic)}>{school.scenarioReserveDays.optimistic}d Opt</span>
+                      </div>
+                    ) : <div className="text-[10px] text-slate-400 mb-1">Scenarios: Not Started</div>}
+                    {/* Readiness */}
+                    <div className="text-[10px]">
+                      <span className="text-slate-400 mr-1">Ready:</span>
+                      {[school.onboardingComplete, school.hasBudget, school.hasScenarios, school.hasAdvisory, school.hasAlignment].map((done, i) => (
+                        <span key={i} className={`inline-block w-2 h-2 rounded-full mr-0.5 ${done ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+                      ))}
+                      <span className="text-slate-500 ml-1">{school.readinessScore}/5</span>
                     </div>
                   </div>
                 ) : (
@@ -512,7 +794,7 @@ export default function PortfolioPage() {
             )
           })}
         </div>
-      )}
+      ))}
 
       {/* Invite Modal */}
       {showInviteModal && <InviteModal onClose={() => setShowInviteModal(false)} onSuccess={loadData} />}

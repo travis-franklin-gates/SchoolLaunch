@@ -7,7 +7,9 @@ import { createClient } from '@/lib/supabase/client'
 import {
   computeSummaryFromProjections,
   computeMultiYearDetailed,
+  computeFPFScorecard,
   computeCashFlow,
+  computeCarryForward,
   getGrantRevenueForYear,
   MONTHS,
   type BudgetSummary,
@@ -15,7 +17,7 @@ import {
   type CashFlowMonth,
 } from '@/lib/budgetEngine'
 import { calcCommissionRevenue } from '@/lib/calculations'
-import type { SchoolProfile, StaffingPosition, BudgetProjection, FinancialAssumptions, StartupFundingSource } from '@/lib/types'
+import type { SchoolProfile, StaffingPosition, BudgetProjection, GradeExpansionEntry, FinancialAssumptions, StartupFundingSource } from '@/lib/types'
 import { getAssumptions } from '@/lib/types'
 
 function fmt(n: number) {
@@ -54,7 +56,9 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
   const [schoolName, setSchoolName] = useState('')
   const [profile, setProfile] = useState<SchoolProfile | null>(null)
   const [positions, setPositions] = useState<StaffingPosition[]>([])
+  const [allPositions, setAllPositions] = useState<StaffingPosition[]>([])
   const [projections, setProjections] = useState<BudgetProjection[]>([])
+  const [gradeExpansionPlan, setGradeExpansionPlan] = useState<GradeExpansionEntry[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -74,17 +78,23 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
         return
       }
 
-      const [schoolRes, profileRes, posRes, projRes] = await Promise.all([
+      const [schoolRes, profileRes, posRes, projRes, gepRes] = await Promise.all([
         supabase.from('schools').select('name').eq('id', schoolId).single(),
         supabase.from('school_profiles').select('*').eq('school_id', schoolId).single(),
-        supabase.from('staffing_positions').select('*').eq('school_id', schoolId).eq('year', 1),
+        supabase.from('staffing_positions').select('*').eq('school_id', schoolId).order('year'),
         supabase.from('budget_projections').select('*').eq('school_id', schoolId).eq('year', 1),
+        supabase.from('grade_expansion_plan').select('*').eq('school_id', schoolId).order('year').order('grade_level'),
       ])
 
       if (schoolRes.data) setSchoolName(schoolRes.data.name)
       if (profileRes.data) setProfile(profileRes.data as SchoolProfile)
-      if (posRes.data) setPositions(posRes.data as StaffingPosition[])
+      if (posRes.data) {
+        const all = posRes.data as StaffingPosition[]
+        setAllPositions(all)
+        setPositions(all.filter(p => p.year === 1))
+      }
       if (projRes.data) setProjections(projRes.data as BudgetProjection[])
+      if (gepRes.data) setGradeExpansionPlan(gepRes.data as GradeExpansionEntry[])
       setLoading(false)
     }
     load()
@@ -108,22 +118,61 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
     pct_hicap: profile.pct_hicap,
   }
   const summary = computeSummaryFromProjections(projections, positions, assumptions, y1Grant, revenueProfile)
+
+  // Use computeCarryForward for beginning cash — same as school_ceo dashboard
+  const preOpenCash = computeCarryForward(profile)
   const rev = calcCommissionRevenue(profile.target_enrollment_y1, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
   const apportionment = rev.regularEd + rev.sped + rev.facilitiesRev
-  const cashFlow = computeCashFlow(summary, apportionment)
-  const multiYear = computeMultiYearDetailed(profile, positions, projections, assumptions, 0, undefined, undefined, profile.startup_funding as StartupFundingSource[] | null)
+  const cashFlow = computeCashFlow(summary, apportionment, preOpenCash)
 
-  const rc = reserveColor(summary.reserveDays)
-  const surplusColor = summary.netPosition >= 0
+  // Use same multi-year calculation as school_ceo dashboard with carry-forward and all positions
+  const multiYear = computeMultiYearDetailed(
+    profile, positions, projections, assumptions, preOpenCash,
+    gradeExpansionPlan.length > 0 ? gradeExpansionPlan : undefined,
+    allPositions, profile.startup_funding as StartupFundingSource[] | null
+  )
+  const scorecard = computeFPFScorecard(multiYear, preOpenCash, false)
+
+  // Use scorecard Days of Cash (same as school_ceo dashboard) instead of summary.reserveDays
+  const daysOfCash = scorecard.measures.find(m => m.name === 'Days of Cash')?.values[0] ?? 0
+  const rc = reserveColor(daysOfCash as number)
+  // Use multiYear Y1 values (same source of truth as school_ceo dashboard)
+  const y1Net = multiYear.length > 0 ? multiYear[0].net : summary.netPosition
+  const y1Personnel = multiYear.length > 0 ? multiYear[0].personnel.total : summary.totalPersonnel
+  const y1OpRev = multiYear.length > 0 ? multiYear[0].revenue.operatingRevenue : summary.operatingRevenue
+  const personnelPct = y1OpRev > 0 ? (y1Personnel / y1OpRev) * 100 : 0
+  const breakEvenEnroll = multiYear.length > 0 && multiYear[0].revenue.total > 0
+    ? Math.ceil(multiYear[0].totalExpenses / (multiYear[0].revenue.total / multiYear[0].enrollment))
+    : summary.breakEvenEnrollment
+
+  const surplusColor = y1Net >= 0
     ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' }
     : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' }
-  const personnelColor = summary.personnelPctRevenue <= 78
+  const personnelColor = personnelPct <= 78
     ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' }
-    : summary.personnelPctRevenue <= 85
+    : personnelPct <= 85
       ? { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' }
       : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' }
 
-  const revenueLines = projections.filter((p) => p.is_revenue)
+  // Build revenue display from live-calculated multiYear data (matches school_ceo dashboard)
+  const y1Rev = multiYear.length > 0 ? multiYear[0].revenue : null
+  const liveRevenueLines = y1Rev ? [
+    { label: 'Regular Ed Apportionment', amount: y1Rev.regularEd },
+    { label: 'SPED Apportionment', amount: y1Rev.sped },
+    { label: 'State Special Education', amount: y1Rev.stateSped },
+    { label: 'Facilities Revenue', amount: y1Rev.facilitiesRev },
+    { label: 'Levy Equity', amount: y1Rev.levyEquity },
+    { label: 'Title I', amount: y1Rev.titleI },
+    { label: 'IDEA', amount: y1Rev.idea },
+    { label: 'LAP', amount: y1Rev.lap },
+    { label: 'LAP High Poverty', amount: y1Rev.lapHighPoverty },
+    { label: 'TBIP', amount: y1Rev.tbip },
+    { label: 'HiCap', amount: y1Rev.hicap },
+    { label: 'Food Service (NSLP)', amount: y1Rev.foodServiceRev },
+    { label: 'Transportation (State)', amount: y1Rev.transportationRev },
+    { label: 'Interest Income', amount: y1Rev.interestIncome },
+  ].filter(l => l.amount > 0) : projections.filter(p => p.is_revenue).map(p => ({ label: p.subcategory, amount: p.amount }))
+  const totalRevenue = multiYear.length > 0 ? multiYear[0].revenue.total : summary.totalRevenue
   const opsLines = projections.filter((p) => !p.is_revenue && p.category === 'Operations')
 
   return (
@@ -140,17 +189,17 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
 
       {/* Health tiles */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <HealthTile label="Year-End Reserve" value={`${summary.reserveDays} days`} colorClass={rc} />
-        <HealthTile label="Personnel % of Revenue" value={`${summary.personnelPctRevenue.toFixed(1)}%`} colorClass={personnelColor} />
-        <HealthTile label="Year 1 Surplus/Deficit" value={fmt(summary.netPosition)} colorClass={surplusColor} />
-        <HealthTile label="Break-Even Enrollment" value={`${summary.breakEvenEnrollment} students`} />
+        <HealthTile label="Days of Cash Y1" value={`${daysOfCash} days`} colorClass={rc} />
+        <HealthTile label="Personnel % of Revenue" value={`${personnelPct.toFixed(1)}%`} colorClass={personnelColor} />
+        <HealthTile label="Year 1 Net Position" value={fmt(y1Net)} colorClass={surplusColor} />
+        <HealthTile label="Break-Even Enrollment" value={`${breakEvenEnroll} students`} />
       </div>
 
       {/* Revenue */}
       <Section title="Revenue">
         <SimpleTable
-          rows={revenueLines.map((r) => [r.subcategory, fmt(r.amount)])}
-          footer={['Total Revenue', fmt(summary.totalRevenue)]}
+          rows={liveRevenueLines.map((r) => [r.label, fmt(r.amount)])}
+          footer={['Total Revenue', fmt(totalRevenue)]}
         />
       </Section>
 
@@ -250,7 +299,7 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
                 { label: 'Total Personnel', values: multiYear.map((r) => fmt(r.personnel.total)) },
                 { label: 'Total Operations', values: multiYear.map((r) => fmt(r.operations.total)) },
                 { label: 'Net Position', values: multiYear.map((r) => fmt(r.net)), bold: true },
-                { label: 'Reserve Days', values: multiYear.map((r) => `${r.reserveDays} days`), bold: true },
+                { label: 'Days Cash', values: multiYear.map((r) => `${r.reserveDays} days`), bold: true },
               ].map((row) => (
                 <tr key={row.label} className="border-b border-slate-100">
                   <td className={`px-4 py-2 ${row.bold ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>{row.label}</td>

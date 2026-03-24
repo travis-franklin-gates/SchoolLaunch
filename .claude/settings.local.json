@@ -52,7 +52,9 @@
       "Bash(ls \"C:/users/travisfr/schoollaunch/src/hooks/usePermissions\"*)",
       "mcp__supabase__get_project_url",
       "Bash(ls C:/users/travisfr/schoollaunch/src/app/\\\\\\(authenticated\\\\\\)/dashboard/scenarios/)",
-      "Bash(ls -la \"C:/users/travisfr/schoollaunch/src/app/\\(authenticated\\)/dashboard/scenarios/page.tsx\")"
+      "Bash(ls -la \"C:/users/travisfr/schoollaunch/src/app/\\(authenticated\\)/dashboard/scenarios/page.tsx\")",
+      "mcp__plugin_playwright_playwright__browser_resize",
+      "Bash(wc:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
