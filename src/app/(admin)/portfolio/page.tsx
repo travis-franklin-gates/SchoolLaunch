@@ -376,14 +376,8 @@ export default function PortfolioPage() {
   const inProgressCount = schools.filter(s => s.readinessScore >= 1 && s.readinessScore < 4).length
   const notStartedCount = schools.filter(s => s.readinessScore === 0).length
 
-  // Deadline calculation
-  const deadlines = [
-    { label: 'Draft Financial Plan', date: new Date('2026-05-19'), key: 'may19' },
-    { label: 'Full Proposal', date: new Date('2026-07-01'), key: 'jul1' },
-  ]
-  const now = new Date()
-  const activeDeadline = deadlines.find(d => d.date > now)
-  const daysToDeadline = activeDeadline ? Math.ceil((activeDeadline.date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0
+  // Deadline banner (date TBD)
+  const showDeadlineBanner = true
 
   // Table sorting
   const sortedSchools = [...schools].sort((a, b) => {
@@ -411,14 +405,9 @@ export default function PortfolioPage() {
   return (
     <div className="animate-fade-in">
       {/* Deadline banner */}
-      {activeDeadline && (
-        <div className={`mb-6 px-5 py-3 rounded-xl text-sm font-medium flex items-center justify-between ${
-          daysToDeadline > 30 ? 'bg-blue-50 text-blue-700 border border-blue-200'
-          : daysToDeadline > 14 ? 'bg-amber-50 text-amber-700 border border-amber-200'
-          : 'bg-red-50 text-red-700 border border-red-200'
-        }`}>
-          <span>Charter Continuity RFP — {activeDeadline.label} due {activeDeadline.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-          <span className="font-bold">{daysToDeadline} days remaining</span>
+      {showDeadlineBanner && (
+        <div className="mb-6 px-5 py-3 rounded-xl text-sm font-medium flex items-center justify-between bg-blue-50 text-blue-700 border border-blue-200">
+          <span>Charter Continuity RFP — Submission Deadline: TBD</span>
         </div>
       )}
 
@@ -578,7 +567,7 @@ export default function PortfolioPage() {
                     </td>
                     <td className="text-center px-2 py-2.5 text-slate-700">{s.enrollmentY1 || '—'}</td>
                     <td className={`text-center px-2 py-2.5 font-medium ${s.onboardingComplete ? reserveColor(days) : 'text-slate-400'}`}>
-                      {s.onboardingComplete ? `${days}` : '—'}
+                      {s.onboardingComplete ? `${days}d` : '—'}
                     </td>
                     <td className={`text-center px-2 py-2.5 font-medium ${s.onboardingComplete ? personnelColor(pct) : 'text-slate-400'}`}>
                       {s.onboardingComplete ? `${pct.toFixed(1)}%` : '—'}
@@ -615,7 +604,7 @@ export default function PortfolioPage() {
                 <td className="px-4 py-2 font-semibold text-slate-600 text-xs">Portfolio Average</td>
                 <td />
                 <td className="text-center text-xs text-slate-600">{schoolsWithData.length > 0 ? Math.round(schoolsWithData.reduce((s, sc) => s + sc.enrollmentY1, 0) / schoolsWithData.length) : '—'}</td>
-                <td className={`text-center text-xs font-medium ${reserveColor(avgReserveDays)}`}>{avgReserveDays}</td>
+                <td className={`text-center text-xs font-medium ${reserveColor(avgReserveDays)}`}>{avgReserveDays}d</td>
                 <td className="text-center text-xs text-slate-600">
                   {schoolsWithData.length > 0 ? `${(schoolsWithData.reduce((s, sc) => {
                     const y = sc.multiYear[0]
@@ -712,7 +701,7 @@ export default function PortfolioPage() {
                     {school.scenarioReserveDays ? (
                       <div className="text-[10px] mb-1">
                         <span className="text-slate-400 mr-1">Scenarios:</span>
-                        <span className={reserveColor(school.scenarioReserveDays.conservative)}>{school.scenarioReserveDays.conservative}d Con</span>
+                        <span className={reserveColor(school.scenarioReserveDays.conservative)}>{school.scenarioReserveDays.conservative}d{school.scenarioReserveDays.conservative === 0 ? ' ⚠' : ''} Con</span>
                         <span className="text-slate-400 mx-0.5">·</span>
                         <span className={reserveColor(school.scenarioReserveDays.base)}>{school.scenarioReserveDays.base}d Base</span>
                         <span className="text-slate-400 mx-0.5">·</span>
