@@ -330,10 +330,14 @@ export async function POST(request: Request) {
       scenRows.push([])
     }
 
-    scenRows.push(['FPF COMPLIANCE (Year 1)', ...scenarios.map(s => s.name)])
-    for (const fpf of ['fpf_current_ratio', 'fpf_days_cash', 'fpf_total_margin', 'fpf_enrollment_variance']) {
-      const label = fpf.replace('fpf_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-      scenRows.push([label, ...scenarios.map(s => String(s.results?.years?.['1']?.[fpf] || 'N/A'))])
+    scenRows.push(['FPF COMPLIANCE (5-Year)', ...scenarios.map(s => s.name)])
+    scenRows.push(['', ...scenarios.map(() => 'Years 1-2: Stage 1 | Years 3-5: Stage 2')])
+    for (let y = 1; y <= 5; y++) {
+      scenRows.push([`Year ${y} (Stage ${y <= 2 ? '1' : '2'})`, ...scenarios.map(s => s.name)])
+      for (const fpf of ['fpf_current_ratio', 'fpf_days_cash', 'fpf_total_margin', 'fpf_enrollment_variance']) {
+        const label = fpf.replace('fpf_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+        scenRows.push([label, ...scenarios.map(s => String(s.results?.years?.[String(y)]?.[fpf] || 'N/A'))])
+      }
     }
 
     const scenSheet = XLSX.utils.aoa_to_sheet(scenRows)

@@ -28,6 +28,15 @@ export interface ScenarioYearResult {
   fpf_days_cash: string
   fpf_enrollment_variance: string
   fpf_total_margin: string
+  // Expense breakdown
+  facility_cost: number
+  // Revenue breakdown
+  regular_ed_revenue: number
+  sped_revenue: number
+  facilities_revenue: number
+  federal_categorical: number
+  startup_grants: number
+  other_revenue: number
 }
 
 export interface ScenarioResults {
@@ -130,6 +139,10 @@ export function computeScenarioProjections(
     const fpfDaysCash = scorecard.measures.find(m => m.name === 'Days of Cash')?.statuses[i] || 'na'
     const fpfTotalMargin = scorecard.measures.find(m => m.name === 'Total Margin')?.statuses[i] || 'na'
 
+    const federalCategorical = r.revenue.titleI + r.revenue.idea + r.revenue.lap +
+      r.revenue.lapHighPoverty + r.revenue.tbip + r.revenue.hicap
+    const otherRevenue = r.revenue.foodServiceRev + r.revenue.transportationRev + r.revenue.interestIncome
+
     years[y] = {
       enrollment: r.enrollment,
       total_revenue: r.revenue.total,
@@ -148,6 +161,13 @@ export function computeScenarioProjections(
       fpf_days_cash: fpfDaysCash,
       fpf_enrollment_variance: 'meets', // scenario enrollment = budget
       fpf_total_margin: fpfTotalMargin,
+      facility_cost: r.operations.facilities,
+      regular_ed_revenue: r.revenue.regularEd,
+      sped_revenue: r.revenue.sped + r.revenue.stateSped,
+      facilities_revenue: r.revenue.facilitiesRev,
+      federal_categorical: federalCategorical,
+      startup_grants: r.revenue.grantRevenue,
+      other_revenue: otherRevenue,
     }
   }
 

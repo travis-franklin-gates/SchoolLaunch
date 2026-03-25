@@ -126,7 +126,7 @@ interface NarrativePayload {
   scenarios?: {
     name: string
     assumptions: { enrollment_fill_rate: number; per_pupil_funding_adjustment: number; personnel_cost_adjustment: number; facility_cost_monthly: number; startup_capital: number }
-    results: { years: Record<string, { enrollment: number; total_revenue: number; total_expenses: number; net_position: number; reserve_days: number; personnel_pct: number; fpf_days_cash: string; fpf_total_margin: string }> } | null
+    results: { years: Record<string, { enrollment: number; total_revenue: number; total_expenses: number; net_position: number; reserve_days: number; personnel_pct: number; fpf_current_ratio: string; fpf_days_cash: string; fpf_total_margin: string; fpf_enrollment_variance: string }> } | null
     ai_analysis?: string | null
   }[]
 }
@@ -820,17 +820,17 @@ ${scenarios && scenarios.length > 0 ? `
       <td style="padding:8px 12px;color:#1E293B;">FPF Compliance (Y1)</td>
       ${scenarios.map(s => {
         const y1 = s.results?.years?.['1']
-        const passing = [y1?.fpf_days_cash, y1?.fpf_total_margin].filter(v => v === 'meets' || v === 'approaches').length + 2
+        const passing = [y1?.fpf_current_ratio, y1?.fpf_days_cash, y1?.fpf_total_margin, y1?.fpf_enrollment_variance].filter(v => v === 'meets' || v === 'approaches').length
         return `<td style="padding:8px 12px;text-align:right;">${passing}/4 pass</td>`
       }).join('')}
     </tr>
   </tbody>
 </table>
 
-${scenarios[0]?.ai_analysis ? `
+${(scenarios.find(s => s.ai_analysis)?.ai_analysis) ? `
 <div style="background:#F8FAFC;border-radius:8px;padding:16px;margin-top:12px;">
-  <div style="font-size:11px;color:#64748B;text-transform:uppercase;font-weight:600;margin-bottom:8px;">AI Scenario Analysis</div>
-  <div style="font-size:12px;color:#334155;line-height:1.7;white-space:pre-wrap;">${scenarios[0].ai_analysis}</div>
+  <div style="font-size:11px;color:#64748B;text-transform:uppercase;font-weight:600;margin-bottom:8px;">AI Cross-Scenario Analysis</div>
+  <div style="font-size:12px;color:#334155;line-height:1.7;white-space:pre-wrap;">${scenarios.find(s => s.ai_analysis)?.ai_analysis}</div>
 </div>
 ` : ''}
 

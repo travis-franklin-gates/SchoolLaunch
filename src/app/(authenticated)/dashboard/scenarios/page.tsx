@@ -21,6 +21,10 @@ const SCENARIO_COLORS: Record<string, { accent: string; bg: string; border: stri
   Optimistic: { accent: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', pill: 'bg-emerald-100 text-emerald-700' },
 }
 
+function assumptionsHash(scenarios: { assumptions: ScenarioAssumptions }[]): string {
+  return scenarios.map(s => Object.values(s.assumptions).join(',')).join('|')
+}
+
 function scenarioLabel(s: { name: string; assumptions: ScenarioAssumptions }) {
   return `${s.name} (${Math.round(s.assumptions.enrollment_fill_rate * 100)}% Fill)`
 }
@@ -61,13 +65,15 @@ function Delta({ value, base, suffix = '', invert = false }: { value: number; ba
   const diff = value - base
   if (Math.abs(diff) < 0.5 && !suffix) return null
   if (Math.abs(diff) < 0.05 && suffix === '%') return null
+  const isZero = Math.abs(diff) < 0.5 && (suffix === ' students' || suffix === ' days') || Math.abs(diff) < 0.05 && suffix === '%' || Math.abs(diff) < 0.5 && !suffix
   const favorable = invert ? diff < 0 : diff > 0
   const sign = diff >= 0 ? '+' : ''
   const formatted = suffix === '%' ? `${sign}${diff.toFixed(1)}%`
     : suffix === ' days' ? `${sign}${Math.round(diff)} days`
     : suffix === ' students' ? `${sign}${Math.round(diff)} students`
     : fmtDelta(diff)
-  return <div className={`text-[10px] ${favorable ? 'text-emerald-600' : 'text-red-500'}`}>{formatted}</div>
+  const color = isZero ? 'text-slate-400' : favorable ? 'text-emerald-600' : 'text-red-500'
+  return <div className={`text-[10px] ${color}`}>{formatted}</div>
 }
 
 export default function ScenariosPage() {
@@ -81,6 +87,7 @@ export default function ScenariosPage() {
   const [stale, setStale] = useState(false)
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
+  const [aiAssumptionsHash, setAiAssumptionsHash] = useState<string | null>(null)
   const [mobileScenario, setMobileScenario] = useState('Base Case')
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -97,6 +104,9 @@ export default function ScenariosPage() {
     if (data && data.length > 0) {
       setScenarios(data as ScenarioRecord[])
       setAiAnalysis(data[0]?.ai_analysis || null)
+      if (data[0]?.ai_analysis && !aiAssumptionsHash) {
+        setAiAssumptionsHash(assumptionsHash(data as ScenarioRecord[]))
+      }
       // Check staleness
       const totalFte = positions.reduce((s, p) => s + p.fte, 0)
       const totalPersonnel = positions.reduce((s, p) => s + p.fte * p.annual_salary, 0)
@@ -194,10 +204,11 @@ export default function ScenariosPage() {
           text += decoder.decode(value, { stream: true })
           setAiAnalysis(text)
         }
-        // Save to first scenario record
+        // Save to first scenario record and store assumptions hash
         if (scenarios[0]) {
           await supabase.from('scenarios').update({ ai_analysis: text }).eq('id', scenarios[0].id)
         }
+        setAiAssumptionsHash(assumptionsHash(scenarios))
       }
     } catch (err) {
       console.error('AI analysis failed:', err)
@@ -208,6 +219,7 @@ export default function ScenariosPage() {
   const activeScenario = scenarios.find(s => s.name === activeTab)
   const baseScenario = scenarios.find(s => s.name === 'Base Case')
   const hasResults = scenarios.some(s => s.results)
+  const aiIsStale = aiAnalysis && aiAssumptionsHash && assumptionsHash(scenarios) !== aiAssumptionsHash
 
   function toggleGroup(group: string) {
     setExpandedGroups(prev => ({ ...prev, [group]: !prev[group] }))
@@ -425,44 +437,23 @@ export default function ScenariosPage() {
             </div>
           )}
 
-          {/* FPF Compliance */}
+          {/* FPF Compliance — 5-year grid for active scenario */}
           <GroupHeader label="Commission FPF Compliance" group="fpf" expanded={expandedGroups.fpf} onToggle={toggleGroup} />
           {expandedGroups.fpf && (
-            <div className="px-5 py-4">
-              <div className="grid grid-cols-4 gap-4">
-                <div className="text-xs text-slate-500 space-y-2 pt-6">
-                  <div>Current Ratio</div>
-                  <div>Days Cash</div>
-                  <div>Total Margin</div>
-                  <div>Enrollment Variance</div>
-                  <div className="pt-2 font-semibold text-slate-700">Summary</div>
-                </div>
-                {scenarios.map(s => {
-                  const y1 = s.results?.years?.['1']
-                  const metrics = [
-                    { status: y1?.fpf_current_ratio || 'na' },
-                    { status: y1?.fpf_days_cash || 'na' },
-                    { status: y1?.fpf_total_margin || 'na' },
-                    { status: y1?.fpf_enrollment_variance || 'na' },
-                  ]
-                  const passing = metrics.filter(m => m.status === 'meets' || m.status === 'approaches').length
-                  return (
-                    <div key={s.id} className="text-xs space-y-2 text-center">
-                      <div className="text-[10px] text-slate-400 font-medium uppercase pb-1">Year 1</div>
-                      {metrics.map((m, i) => <div key={i}>{fpfBadge(m.status)}</div>)}
-                      <div className="pt-2 font-semibold text-slate-700">{passing}/4 pass</div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+            <FPFComplianceGrid scenarios={scenarios} activeTab={activeTab} />
           )}
 
           {/* Revenue Breakdown */}
           <GroupHeader label="Revenue Breakdown" group="revenue" expanded={expandedGroups.revenue} onToggle={toggleGroup} />
           {expandedGroups.revenue && (
             <>
-              <ComparisonRow label="Total Revenue" scenarios={scenarios} getValue={y1 => y1?.total_revenue ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
+              <ComparisonRow label="Regular Ed Revenue" scenarios={scenarios} getValue={y1 => y1?.regular_ed_revenue ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
+              <ComparisonRow label="SPED Revenue" scenarios={scenarios} getValue={y1 => y1?.sped_revenue ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
+              <ComparisonRow label="Facilities Revenue" scenarios={scenarios} getValue={y1 => y1?.facilities_revenue ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
+              <ComparisonRow label="Federal & Categorical" scenarios={scenarios} getValue={y1 => y1?.federal_categorical ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
+              <ComparisonRow label="Startup Grants" scenarios={scenarios} getValue={y1 => y1?.startup_grants ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
+              <ComparisonRow label="Other Revenue" scenarios={scenarios} getValue={y1 => y1?.other_revenue ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
+              <ComparisonRow label="Total Revenue" scenarios={scenarios} getValue={y1 => y1?.total_revenue ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} highlight />
             </>
           )}
 
@@ -471,7 +462,7 @@ export default function ScenariosPage() {
           {expandedGroups.expenses && (
             <>
               <ComparisonRow label="Total Personnel" scenarios={scenarios} getValue={y1 => y1?.total_personnel ?? 0} format={fmt} baseY1={baseY1} invert />
-              <ComparisonRow label="Facility Costs" scenarios={scenarios} getValue={y1 => (y1 as any)?.facility_cost ?? 0} format={fmt} baseY1={baseY1} invert />
+              <ComparisonRow label="Facility Costs" scenarios={scenarios} getValue={y1 => y1?.facility_cost ?? 0} format={fmt} baseY1={baseY1} invert />
               <ComparisonRow label="Total Operations" scenarios={scenarios} getValue={y1 => y1?.total_operations ?? 0} format={fmt} baseY1={baseY1} invert />
               <ComparisonRow label="Total Expenses" scenarios={scenarios} getValue={y1 => y1?.total_expenses ?? 0} format={fmt} baseY1={baseY1} invert highlight />
             </>
@@ -492,6 +483,14 @@ export default function ScenariosPage() {
               {aiLoading ? 'Analyzing...' : aiAnalysis ? 'Refresh Analysis' : 'Get AI Analysis of Scenarios'}
             </button>
           </div>
+          {aiIsStale && (
+            <div className="mb-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-sm text-amber-700 flex items-center justify-between">
+              <span>Scenario assumptions have changed since this analysis was generated.</span>
+              <button onClick={handleAiAnalysis} disabled={aiLoading} className="font-medium underline hover:text-amber-900 ml-4 whitespace-nowrap">
+                Refresh Analysis
+              </button>
+            </div>
+          )}
           {aiAnalysis ? (
             <div className="text-sm text-slate-700 leading-relaxed space-y-3">
               {aiAnalysis.split('\n\n').filter(Boolean).map((para, i) => (
@@ -581,6 +580,101 @@ function GroupHeader({ label, group, expanded, onToggle }: { label: string; grou
         {label}
       </div>
     </button>
+  )
+}
+
+const FPF_METRICS: { key: string; label: string; stage1: string; stage2: string }[] = [
+  { key: 'fpf_current_ratio', label: 'Current Ratio', stage1: '≥ 1.0', stage2: '≥ 1.1' },
+  { key: 'fpf_days_cash', label: 'Days Cash on Hand', stage1: '≥ 30 days', stage2: '≥ 60 days' },
+  { key: 'fpf_total_margin', label: 'Total Margin', stage1: '≥ 0%', stage2: '≥ 0%' },
+  { key: 'fpf_enrollment_variance', label: 'Enrollment Variance', stage1: '≥ 95%', stage2: '≥ 95%' },
+]
+
+const FPF_VALUE_KEYS: Record<string, string> = {
+  fpf_current_ratio: 'current_ratio',
+  fpf_days_cash: 'reserve_days',
+  fpf_total_margin: 'total_margin',
+  fpf_enrollment_variance: '',
+}
+
+function fpfValueDisplay(yr: ScenarioYearResult | undefined, metricKey: string): string {
+  if (!yr) return '-'
+  switch (metricKey) {
+    case 'fpf_current_ratio': return yr.current_ratio?.toFixed(2) ?? '-'
+    case 'fpf_days_cash': return `${Math.round(yr.reserve_days)} days`
+    case 'fpf_total_margin': return `${yr.total_margin?.toFixed(1)}%`
+    case 'fpf_enrollment_variance': return 'On Target'
+    default: return '-'
+  }
+}
+
+function FPFComplianceGrid({ scenarios, activeTab }: { scenarios: ScenarioRecord[]; activeTab: string }) {
+  const years = [1, 2, 3, 4, 5]
+
+  return (
+    <div className="px-5 py-4 overflow-x-auto">
+      {scenarios.map(s => {
+        const colors = SCENARIO_COLORS[s.name] || SCENARIO_COLORS['Base Case']
+        return (
+          <div key={s.id} className="mb-5 last:mb-0">
+            <div className={`text-xs font-semibold uppercase tracking-wide mb-2 ${colors.accent}`}>{s.name}</div>
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr>
+                  <th className="text-left py-1.5 px-2 text-slate-500 font-medium w-[140px]">Metric</th>
+                  {years.map(y => {
+                    const isStage2 = y >= 3
+                    return (
+                      <th key={y} className={`text-center py-1.5 px-1 font-medium ${isStage2 ? 'bg-slate-50' : ''} ${y === 3 ? 'border-l-2 border-slate-300' : ''}`}>
+                        <div className="text-slate-600">Y{y}</div>
+                        <div className="text-[9px] text-slate-400 font-normal">{isStage2 ? 'Stage 2' : 'Stage 1'}</div>
+                      </th>
+                    )
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {FPF_METRICS.map(metric => (
+                  <tr key={metric.key} className="border-t border-slate-100">
+                    <td className="py-1.5 px-2 text-slate-600">
+                      {metric.label}
+                    </td>
+                    {years.map(y => {
+                      const yr = s.results?.years?.[String(y)]
+                      const status = yr ? (yr as unknown as Record<string, string>)[metric.key] || 'na' : 'na'
+                      const isStage2 = y >= 3
+                      const threshold = isStage2 ? metric.stage2 : metric.stage1
+                      const valueStr = fpfValueDisplay(yr, metric.key)
+                      return (
+                        <td key={y} className={`text-center py-1.5 px-1 ${isStage2 ? 'bg-slate-50' : ''} ${y === 3 ? 'border-l-2 border-slate-300' : ''}`}>
+                          <div>{fpfBadge(status)}</div>
+                          <div className="text-[9px] text-slate-400 mt-0.5">{valueStr}</div>
+                          <div className="text-[8px] text-slate-300">{threshold}</div>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+                <tr className="border-t-2 border-slate-200">
+                  <td className="py-1.5 px-2 font-semibold text-slate-700">Summary</td>
+                  {years.map(y => {
+                    const yr = s.results?.years?.[String(y)]
+                    const statuses = FPF_METRICS.map(m => yr ? (yr as unknown as Record<string, string>)[m.key] || 'na' : 'na')
+                    const passing = statuses.filter(st => st === 'meets' || st === 'approaches').length
+                    const isStage2 = y >= 3
+                    return (
+                      <td key={y} className={`text-center py-1.5 px-1 font-semibold text-slate-700 ${isStage2 ? 'bg-slate-50' : ''} ${y === 3 ? 'border-l-2 border-slate-300' : ''}`}>
+                        {passing}/4
+                      </td>
+                    )
+                  })}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
