@@ -19,6 +19,7 @@ interface MultiYearRow {
     hicap: number
     foodServiceRev: number
     transportationRev: number
+    smallSchoolEnhancement: number
     interestIncome: number
     grantRevenue: number
     operatingRevenue: number
@@ -159,6 +160,7 @@ export async function POST(request: Request) {
     ['3.0', 'State & Local', 'State Special Education', 'Per Pupil-SPED', 0, ...multiYear.map((r) => r.revenue.stateSped)],
     ['4.0', 'State & Local', 'Facilities Per Pupil', 'Per Pupil', 0, ...multiYear.map((r) => r.revenue.facilitiesRev)],
     ['5.0', 'State & Local', 'Levy Equity', 'Per Pupil (AAFTE)', 0, ...multiYear.map((r) => r.revenue.levyEquity)],
+    ['5.1', 'State & Local', 'Small School Enhancement', 'Grade Band AAFTE', 0, ...multiYear.map((r) => r.revenue.smallSchoolEnhancement)],
     ['6.0', 'Federal', 'Title I', 'Per Pupil-FRL', 0, ...multiYear.map((r) => r.revenue.titleI)],
     ['7.0', 'Federal', 'IDEA (Federal Special Ed)', 'Per Pupil-IEP', 0, ...multiYear.map((r) => r.revenue.idea)],
     ['8.0', 'State Categorical', 'LAP (Learning Assistance)', 'Per Pupil-FRL', 0, ...multiYear.map((r) => r.revenue.lap)],
@@ -210,6 +212,7 @@ export async function POST(request: Request) {
     ['State Special Education', 0, ...multiYear.map((r) => r.revenue.stateSped)],
     ['Facilities Revenue', 0, ...multiYear.map((r) => r.revenue.facilitiesRev)],
     ['Levy Equity', 0, ...multiYear.map((r) => r.revenue.levyEquity)],
+    ['Small School Enhancement', 0, ...multiYear.map((r) => r.revenue.smallSchoolEnhancement)],
     ['Title I', 0, ...multiYear.map((r) => r.revenue.titleI)],
     ['IDEA (Federal Special Ed)', 0, ...multiYear.map((r) => r.revenue.idea)],
     ['LAP', 0, ...multiYear.map((r) => r.revenue.lap)],

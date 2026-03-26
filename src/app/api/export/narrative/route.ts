@@ -269,6 +269,7 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
   const lapHighPov = revenueProjections.find((p) => p.subcategory === 'LAP High Poverty')?.amount || 0
   const tbip = revenueProjections.find((p) => p.subcategory === 'TBIP')?.amount || 0
   const hicap = revenueProjections.find((p) => p.subcategory === 'HiCap')?.amount || 0
+  const smallSchoolEnhancement = revenueProjections.find((p) => p.subcategory === 'Small School Enhancement')?.amount || 0
   const totalRev = baseSummary.totalRevenue || 1
 
   const barSegments = [
@@ -283,6 +284,7 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
     { label: 'LAP High Pov', amount: lapHighPov, color: '#27AE60' },
     { label: 'TBIP', amount: tbip, color: '#3498DB' },
     { label: 'HiCap', amount: hicap, color: '#9B59B6' },
+    { label: 'Small School Enh', amount: smallSchoolEnhancement, color: '#E67E22' },
   ].filter((s) => s.amount > 0)
 
   let barX = 0
@@ -335,6 +337,7 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
       case 'LAP High Poverty': return `${enrollment} × ${fmtDollars(assumptions.lap_high_poverty_per_pupil || 374)}`
       case 'TBIP': return `${enrollment} × ${profile.pct_ell}% ELL × ${fmtDollars(assumptions.tbip_per_pupil || 1600)}`
       case 'HiCap': return `${enrollment} × ${profile.pct_hicap}% HiCap × ${fmtDollars(assumptions.hicap_per_pupil || 730)}`
+      case 'Small School Enhancement': return 'Grade band AAFTE below prototypical minimums (K-6: 60, 7-8: 20, 9-12: 60)'
       default: return ''
     }
   }

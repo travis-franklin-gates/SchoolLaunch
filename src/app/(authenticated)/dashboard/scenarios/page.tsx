@@ -450,6 +450,7 @@ export default function ScenariosPage() {
               <ComparisonRow label="Regular Ed Revenue" scenarios={scenarios} getValue={y1 => y1?.regular_ed_revenue ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
               <ComparisonRow label="SPED Revenue" scenarios={scenarios} getValue={y1 => y1?.sped_revenue ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
               <ComparisonRow label="Facilities Revenue" scenarios={scenarios} getValue={y1 => y1?.facilities_revenue ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
+              <ComparisonRow label="Small School Enhancement" scenarios={scenarios} getValue={y1 => y1?.small_school_enhancement ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
               <ComparisonRow label="Federal & Categorical" scenarios={scenarios} getValue={y1 => y1?.federal_categorical ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
               <ComparisonRow label="Startup Grants" scenarios={scenarios} getValue={y1 => y1?.startup_grants ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
               <ComparisonRow label="Other Revenue" scenarios={scenarios} getValue={y1 => y1?.other_revenue ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />

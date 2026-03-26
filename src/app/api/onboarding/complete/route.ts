@@ -5,6 +5,7 @@ import {
   calcCommissionRevenue,
   calcBenefits,
   calcAuthorizerFeeCommission,
+  calcSmallSchoolEnhancementFromGrades,
 } from '@/lib/calculations'
 import { getAssumptions } from '@/lib/types'
 
@@ -59,7 +60,10 @@ export async function POST(request: Request) {
 
   // --- Calculate revenue (Commission-aligned) ---
   const rev = calcCommissionRevenue(enrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
-  const stateApport = rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev
+  const smallSchoolEnhancement = calcSmallSchoolEnhancementFromGrades(
+    enrollment, profile.opening_grades || [], assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0
+  )
+  const stateApport = rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev + smallSchoolEnhancement
 
   // --- Calculate operations costs ---
   console.log('[onboarding/complete] facility mode:', operations.facilityMode, 'facilityMonthly:', operations.facilityMonthly)
@@ -187,6 +191,7 @@ export async function POST(request: Request) {
     { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'State Special Education', amount: rev.stateSped, is_revenue: true },
     { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Facilities Revenue', amount: rev.facilitiesRev, is_revenue: true },
     { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Levy Equity', amount: rev.levyEquity, is_revenue: true },
+    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Small School Enhancement', amount: smallSchoolEnhancement, is_revenue: true },
     { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Title I', amount: rev.titleI, is_revenue: true },
     { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'IDEA', amount: rev.idea, is_revenue: true },
     { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'LAP', amount: rev.lap, is_revenue: true },

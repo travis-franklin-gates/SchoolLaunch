@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useScenario } from '@/lib/ScenarioContext'
-import { calcCommissionRevenue, calcAAFTE } from '@/lib/calculations'
+import { calcCommissionRevenue, calcAAFTE, calcSmallSchoolEnhancement, calcSmallSchoolEnhancementFromGrades, SMALL_SCHOOL_THRESHOLDS } from '@/lib/calculations'
 import { getGrantAllocationsForYear } from '@/lib/budgetEngine'
 import { createClient } from '@/lib/supabase/client'
 import type { StartupFundingSource } from '@/lib/types'
@@ -33,7 +33,7 @@ interface RevenueRow {
 export default function RevenuePage() {
   const { canEdit } = usePermissions()
   const {
-    schoolData: { schoolId, profile, loading, reload },
+    schoolData: { schoolId, profile, loading, reload, gradeExpansionPlan },
     assumptions,
     isModified,
     scenarioInputs,
@@ -120,6 +120,26 @@ export default function RevenuePage() {
   const baseRev = useMemo(() => calcCommissionRevenue(baseEnrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions), [baseEnrollment, profile, assumptions])
   const scenarioRev = useMemo(() => calcCommissionRevenue(scenarioEnrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions), [scenarioEnrollment, profile, assumptions])
 
+  // Small School Enhancement — compute from grade expansion plan if available, else opening grades
+  const baseSSE = useMemo(() => {
+    if (gradeExpansionPlan && gradeExpansionPlan.length > 0) {
+      return calcSmallSchoolEnhancement(gradeExpansionPlan, 1, aaftePct, assumptions.regular_ed_per_pupil, regionFactor, 1, assumptions.revenue_cola_pct)
+    }
+    const activeGrades = profile.opening_grades || []
+    return calcSmallSchoolEnhancementFromGrades(baseEnrollment, activeGrades, aaftePct, assumptions.regular_ed_per_pupil, regionFactor)
+  }, [gradeExpansionPlan, baseEnrollment, profile.opening_grades, aaftePct, assumptions, regionFactor])
+
+  const scenarioSSE = useMemo(() => {
+    if (gradeExpansionPlan && gradeExpansionPlan.length > 0) {
+      // Scale students_per_section proportionally for scenario enrollment
+      const ratio = baseEnrollment > 0 ? scenarioEnrollment / baseEnrollment : 1
+      const scaledPlan = gradeExpansionPlan.map(e => ({ ...e, students_per_section: Math.round(e.students_per_section * ratio) }))
+      return calcSmallSchoolEnhancement(scaledPlan, 1, aaftePct, assumptions.regular_ed_per_pupil, regionFactor, 1, assumptions.revenue_cola_pct)
+    }
+    const activeGrades = profile.opening_grades || []
+    return calcSmallSchoolEnhancementFromGrades(scenarioEnrollment, activeGrades, aaftePct, assumptions.regular_ed_per_pupil, regionFactor)
+  }, [gradeExpansionPlan, baseEnrollment, scenarioEnrollment, profile.opening_grades, aaftePct, assumptions, regionFactor])
+
   // Grant allocations for Year 1 — derived from local fundingSources (live edits) not profile.startup_funding (stale until save)
   const grantRows = useMemo(() => {
     const allocations = getGrantAllocationsForYear(fundingSources, 1)
@@ -186,6 +206,17 @@ export default function RevenuePage() {
       calculated: baseRev.facilitiesRev,
       scenarioCalc: scenarioRev.facilitiesRev,
       override: overrides['Facilities Revenue'] ?? null,
+    },
+    {
+      label: 'Small School Enhancement',
+      group: 'State & Local',
+      formula: baseSSE > 0
+        ? `Enhancement for grade bands below prototypical minimums (K-6: ${SMALL_SCHOOL_THRESHOLDS.k6}, 7-8: ${SMALL_SCHOOL_THRESHOLDS.ms}, 9-12: ${SMALL_SCHOOL_THRESHOLDS.hs} AAFTE)`
+        : `All grade bands exceed minimums (K-6: ${SMALL_SCHOOL_THRESHOLDS.k6}, 7-8: ${SMALL_SCHOOL_THRESHOLDS.ms}, 9-12: ${SMALL_SCHOOL_THRESHOLDS.hs} AAFTE)`,
+      calculated: baseSSE,
+      scenarioCalc: scenarioSSE,
+      override: overrides['Small School Enhancement'] ?? null,
+      helperNote: 'Additional funding when enrollment is below prototypical minimums per grade band.',
     },
     // Federal (not regionalized)
     {

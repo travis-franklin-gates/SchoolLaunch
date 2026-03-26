@@ -9,7 +9,7 @@ import {
   type ScenarioInputs,
   type BudgetSummary,
 } from '@/lib/budgetEngine'
-import { calcCommissionRevenue } from '@/lib/calculations'
+import { calcCommissionRevenue, calcSmallSchoolEnhancement, calcSmallSchoolEnhancementFromGrades } from '@/lib/calculations'
 import type { FinancialAssumptions } from '@/lib/types'
 import { getAssumptions } from '@/lib/types'
 
@@ -109,9 +109,20 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
   const isModified = scenario !== null
 
   const baseRev = calcCommissionRevenue(profile.target_enrollment_y1, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
-  const baseApportionment = baseRev.regularEd + baseRev.sped + baseRev.facilitiesRev
+  const baseSSE = gradeExpansionPlan && gradeExpansionPlan.length > 0
+    ? calcSmallSchoolEnhancement(gradeExpansionPlan, 1, assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0, 1, assumptions.revenue_cola_pct)
+    : calcSmallSchoolEnhancementFromGrades(profile.target_enrollment_y1, profile.opening_grades || [], assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0)
+  const baseApportionment = baseRev.regularEd + baseRev.sped + baseRev.facilitiesRev + baseSSE
   const scenarioRev = calcCommissionRevenue(scenarioInputs.enrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
-  const scenarioApportionment = scenarioRev.regularEd + scenarioRev.sped + scenarioRev.facilitiesRev
+  const scenarioSSE = (() => {
+    if (gradeExpansionPlan && gradeExpansionPlan.length > 0) {
+      const ratio = profile.target_enrollment_y1 > 0 ? scenarioInputs.enrollment / profile.target_enrollment_y1 : 1
+      const scaledPlan = gradeExpansionPlan.map(e => ({ ...e, students_per_section: Math.round(e.students_per_section * ratio) }))
+      return calcSmallSchoolEnhancement(scaledPlan, 1, assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0, 1, assumptions.revenue_cola_pct)
+    }
+    return calcSmallSchoolEnhancementFromGrades(scenarioInputs.enrollment, profile.opening_grades || [], assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0)
+  })()
+  const scenarioApportionment = scenarioRev.regularEd + scenarioRev.sped + scenarioRev.facilitiesRev + scenarioSSE
 
   function updateScenario(partial: Partial<ScenarioInputs>) {
     setScenario((prev) => ({

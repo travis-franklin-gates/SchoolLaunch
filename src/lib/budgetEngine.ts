@@ -6,6 +6,7 @@ import {
   calcAuthorizerFee,
   calcCommissionRevenue,
   calcAuthorizerFeeCommission,
+  calcSmallSchoolEnhancement,
   PER_PUPIL_RATE,
   LEVY_EQUITY_RATE,
 } from './calculations'
@@ -384,6 +385,7 @@ export interface MultiYearDetailedRow {
     hicap: number
     foodServiceRev: number
     transportationRev: number
+    smallSchoolEnhancement: number
     interestIncome: number
     grantRevenue: number
     operatingRevenue: number
@@ -483,6 +485,10 @@ export function computeMultiYearDetailed(
 
     // Revenue — Commission-aligned with COLA
     const rev = calcCommissionRevenue(enr, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions, y)
+    // Small School Enhancement — uses grade expansion plan for grade-band enrollment
+    const smallSchoolEnhancement = hasExpansion
+      ? calcSmallSchoolEnhancement(gradeExpansionPlan!, y, assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0, y, assumptions.revenue_cola_pct)
+      : 0
     // Interest income on prior year ending cash balance
     const priorCash = cumulativeNet
     const interestIncome = y === 1
@@ -490,10 +496,10 @@ export function computeMultiYearDetailed(
       : Math.round(Math.max(0, priorCash) * interestRate)
     // Grant revenue for this year from startup funding allocations
     const yearGrantRevenue = getGrantRevenueForYear(startupFunding, y)
-    const operatingRevenue = rev.total + interestIncome // rev.total already includes foodServiceRev + transportationRev
+    const operatingRevenue = rev.total + smallSchoolEnhancement + interestIncome // rev.total already includes foodServiceRev + transportationRev
     const totalRevenue = operatingRevenue + yearGrantRevenue
-    // State apportionment = regularEd + sped + stateSped + facilitiesRev (for authorizer fee)
-    const stateApport = rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev
+    // State apportionment = regularEd + sped + stateSped + facilitiesRev + smallSchoolEnhancement (for authorizer fee + OSPI cash flow)
+    const stateApport = rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev + smallSchoolEnhancement
 
     // Personnel — use year-specific positions if available, else auto-scale
     const yearPositions = allPositions?.filter((p) => p.year === y)
@@ -622,11 +628,12 @@ export function computeMultiYearDetailed(
         hicap: rev.hicap,
         foodServiceRev: rev.foodServiceRev,
         transportationRev: rev.transportationRev,
+        smallSchoolEnhancement,
         interestIncome,
         grantRevenue: yearGrantRevenue,
         operatingRevenue,
         total: totalRevenue,
-        apportionment: rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev,
+        apportionment: rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev + smallSchoolEnhancement,
       },
       personnel: {
         certificated: certCost,

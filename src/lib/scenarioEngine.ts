@@ -34,6 +34,7 @@ export interface ScenarioYearResult {
   regular_ed_revenue: number
   sped_revenue: number
   facilities_revenue: number
+  small_school_enhancement: number
   federal_categorical: number
   startup_grants: number
   other_revenue: number
@@ -165,6 +166,7 @@ export function computeScenarioProjections(
       regular_ed_revenue: r.revenue.regularEd,
       sped_revenue: r.revenue.sped + r.revenue.stateSped,
       facilities_revenue: r.revenue.facilitiesRev,
+      small_school_enhancement: r.revenue.smallSchoolEnhancement,
       federal_categorical: federalCategorical,
       startup_grants: r.revenue.grantRevenue,
       other_revenue: otherRevenue,

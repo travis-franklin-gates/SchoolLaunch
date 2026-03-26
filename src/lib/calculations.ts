@@ -1,4 +1,4 @@
-import type { FinancialAssumptions } from './types'
+import type { FinancialAssumptions, GradeExpansionEntry } from './types'
 import { DEFAULT_ASSUMPTIONS } from './types'
 
 // Re-export defaults for backward compatibility
@@ -99,6 +99,7 @@ export interface CommissionRevenue {
   hicap: number
   foodServiceRev: number
   transportationRev: number
+  smallSchoolEnhancement: number
   total: number
   aafte: number
   headcount: number
@@ -156,9 +157,117 @@ export function calcCommissionRevenue(
   const foodServiceRev = assumptions.food_service_offered ? headcount * foodServiceRevRate : 0
   const transportationRev = assumptions.transportation_offered ? headcount * transportRevRate : 0
 
-  const total = regularEd + sped + stateSped + facilitiesRev + levyEquity + titleI + idea + lap + lapHighPoverty + tbip + hicap + foodServiceRev + transportationRev
+  // smallSchoolEnhancement is computed externally via calcSmallSchoolEnhancement() because it needs grade-band enrollment data
+  const smallSchoolEnhancement = 0
 
-  return { regularEd, sped, stateSped, facilitiesRev, levyEquity, titleI, idea, lap, lapHighPoverty, tbip, hicap, foodServiceRev, transportationRev, total, aafte, headcount }
+  const total = regularEd + sped + stateSped + facilitiesRev + levyEquity + titleI + idea + lap + lapHighPoverty + tbip + hicap + foodServiceRev + transportationRev + smallSchoolEnhancement
+
+  return { regularEd, sped, stateSped, facilitiesRev, levyEquity, titleI, idea, lap, lapHighPoverty, tbip, hicap, foodServiceRev, transportationRev, smallSchoolEnhancement, total, aafte, headcount }
+}
+
+// --- Small School Enhancement ---
+
+/** Minimum AAFTE thresholds by grade band (WA prototypical school funding model) */
+export const SMALL_SCHOOL_THRESHOLDS = {
+  k6: 60,   // Elementary: K-6
+  ms: 20,   // Middle: 7-8
+  hs: 60,   // High: 9-12
+}
+
+/** Grade band classification for Small School Enhancement */
+function gradeToGradeBand(grade: string): 'k6' | 'ms' | 'hs' | null {
+  const g = grade.toUpperCase()
+  if (g === 'K' || (parseInt(g) >= 1 && parseInt(g) <= 6)) return 'k6'
+  if (parseInt(g) >= 7 && parseInt(g) <= 8) return 'ms'
+  if (parseInt(g) >= 9 && parseInt(g) <= 12) return 'hs'
+  return null
+}
+
+/**
+ * Calculate Small School Enhancement revenue for a given year.
+ * Returns the enhancement amount based on grade-band AAFTE vs statutory minimums.
+ *
+ * @param gradeExpansionPlan Full grade expansion plan (all years)
+ * @param year The year to calculate for (1-5)
+ * @param aaftePct AAFTE percentage (e.g. 95)
+ * @param perPupilRate Regular Ed per-pupil rate (base, before COLA)
+ * @param regionFactor Regionalization factor
+ * @param colaYear Year for COLA calculation (same as revenue year)
+ * @param colaPct Revenue COLA percentage (e.g. 3)
+ */
+export function calcSmallSchoolEnhancement(
+  gradeExpansionPlan: GradeExpansionEntry[],
+  year: number,
+  aaftePct: number,
+  perPupilRate: number,
+  regionFactor: number = 1.0,
+  colaYear: number = 1,
+  colaPct: number = 3,
+): number {
+  const yearEntries = gradeExpansionPlan.filter(e => e.year === year)
+  if (yearEntries.length === 0) return 0
+
+  const colaMult = Math.pow(1 + colaPct / 100, colaYear - 1)
+  const effectiveRate = Math.round(perPupilRate * regionFactor * colaMult)
+
+  // Sum headcount by grade band
+  const bandHeadcount: Record<string, number> = { k6: 0, ms: 0, hs: 0 }
+  for (const entry of yearEntries) {
+    const band = gradeToGradeBand(entry.grade_level)
+    if (band) {
+      bandHeadcount[band] += entry.sections * entry.students_per_section
+    }
+  }
+
+  let totalEnhancement = 0
+  for (const [band, headcount] of Object.entries(bandHeadcount)) {
+    if (headcount <= 0) continue // School doesn't serve this grade band
+    const aafte = Math.floor(headcount * aaftePct / 100)
+    const threshold = SMALL_SCHOOL_THRESHOLDS[band as keyof typeof SMALL_SCHOOL_THRESHOLDS]
+    if (aafte < threshold) {
+      totalEnhancement += (threshold - aafte) * effectiveRate
+    }
+  }
+
+  return totalEnhancement
+}
+
+/**
+ * Calculate Small School Enhancement for Year 1 using flat enrollment + opening grades.
+ * Used by Revenue tab where grade expansion plan may not be available.
+ */
+export function calcSmallSchoolEnhancementFromGrades(
+  headcount: number,
+  activeGrades: string[],
+  aaftePct: number,
+  perPupilRate: number,
+  regionFactor: number = 1.0,
+): number {
+  if (activeGrades.length === 0 || headcount <= 0) return 0
+
+  const effectiveRate = Math.round(perPupilRate * regionFactor)
+
+  // Distribute headcount proportionally across grade bands based on number of grades in each band
+  const bandGradeCounts: Record<string, number> = { k6: 0, ms: 0, hs: 0 }
+  for (const grade of activeGrades) {
+    const band = gradeToGradeBand(grade)
+    if (band) bandGradeCounts[band]++
+  }
+
+  const totalGrades = activeGrades.length
+  let totalEnhancement = 0
+
+  for (const [band, gradeCount] of Object.entries(bandGradeCounts)) {
+    if (gradeCount === 0) continue
+    const bandHeadcount = Math.round(headcount * gradeCount / totalGrades)
+    const aafte = Math.floor(bandHeadcount * aaftePct / 100)
+    const threshold = SMALL_SCHOOL_THRESHOLDS[band as keyof typeof SMALL_SCHOOL_THRESHOLDS]
+    if (aafte < threshold) {
+      totalEnhancement += (threshold - aafte) * effectiveRate
+    }
+  }
+
+  return totalEnhancement
 }
 
 // --- Benefits ---

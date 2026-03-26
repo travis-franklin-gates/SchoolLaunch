@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useScenario } from '@/lib/ScenarioContext'
 import { createClient } from '@/lib/supabase/client'
-import { calcTitleI, calcIDEA, calcLAP, calcTBIP, calcHiCap } from '@/lib/calculations'
+import { calcTitleI, calcIDEA, calcLAP, calcTBIP, calcHiCap, calcSmallSchoolEnhancement, calcSmallSchoolEnhancementFromGrades, SMALL_SCHOOL_THRESHOLDS } from '@/lib/calculations'
 import type { FinancialAssumptions, GradeExpansionEntry } from '@/lib/types'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
@@ -458,6 +458,41 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Section 4a: Small School Enhancement Thresholds */}
+      {(() => {
+        const gep = gradeExpansionPlan
+        const sseAmount = gep && gep.length > 0
+          ? calcSmallSchoolEnhancement(gep, 1, fa.aafte_pct, fa.regular_ed_per_pupil, fa.regionalization_factor || 1.0, 1, fa.revenue_cola_pct)
+          : calcSmallSchoolEnhancementFromGrades(profile.target_enrollment_y1, profile.opening_grades || [], fa.aafte_pct, fa.regular_ed_per_pupil, fa.regionalization_factor || 1.0)
+        const qualifies = sseAmount > 0
+        return (
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+            <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Small School Enhancement Thresholds</h2>
+            <p className="text-xs text-slate-500 mb-4">WA prototypical school funding model minimum AAFTE by grade band. Schools below these thresholds receive additional state funding.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">K-6 Minimum (Elementary)</label>
+                <div className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-600">{SMALL_SCHOOL_THRESHOLDS.k6} AAFTE</div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">7-8 Minimum (Middle)</label>
+                <div className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-600">{SMALL_SCHOOL_THRESHOLDS.ms} AAFTE</div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">9-12 Minimum (High)</label>
+                <div className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-600">{SMALL_SCHOOL_THRESHOLDS.hs} AAFTE</div>
+              </div>
+            </div>
+            <div className={`rounded-lg px-4 py-3 text-sm ${qualifies ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : 'bg-slate-50 border border-slate-200 text-slate-600'}`}>
+              {qualifies
+                ? <>Your school <strong>qualifies</strong> for small school enhancement in Year 1 ({fmt(sseAmount)})</>
+                : <>Your school <strong>does not qualify</strong> for small school enhancement in Year 1 — all grade bands exceed their minimums</>
+              }
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Section 4b: Expense Assumptions */}
       <div data-tour="expense-assumptions" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
