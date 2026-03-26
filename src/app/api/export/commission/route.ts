@@ -258,24 +258,59 @@ export async function POST(request: Request) {
   const plSheet = XLSX.utils.aoa_to_sheet(plRows)
   XLSX.utils.book_append_sheet(wb, plSheet, 'P&L')
 
-  // --- Tab 5: CASH FLOW ---
-  // Simplified annual cash flow view
-  const cfRows: (string | number)[][] = [
-    ['Cash Flow Summary', ...yearHeaders],
-    ['Beginning Cash', startingCash, ...multiYear.map((r, i) => i === 0 ? startingCash : multiYear[i - 1].cumulativeNet + startingCash - multiYear[i - 1].net + multiYear.slice(0, i).reduce((s, x) => s + x.net, 0))],
-    ['Total Revenue', 0, ...multiYear.map((r) => r.revenue.total)],
-    ['Total Expenses', 0, ...multiYear.map((r) => r.totalExpenses)],
-    ['Net Cash Flow', 0, ...multiYear.map((r) => r.net)],
+  // --- Tab 5: CASH FLOW (Monthly Year 1 + Annual Summary) ---
+  const ospiSchedule = [
+    { month: 'Sep', pct: 9 }, { month: 'Oct', pct: 8 }, { month: 'Nov', pct: 5 },
+    { month: 'Dec', pct: 9 }, { month: 'Jan', pct: 8.5 }, { month: 'Feb', pct: 9 },
+    { month: 'Mar', pct: 9 }, { month: 'Apr', pct: 9 }, { month: 'May', pct: 5 },
+    { month: 'Jun', pct: 6 }, { month: 'Jul', pct: 12.5 }, { month: 'Aug', pct: 10 },
   ]
-  // Compute ending cash properly
-  let runningCash = startingCash
-  const endingCashRow: (string | number)[] = ['Ending Cash']
-  endingCashRow.push(startingCash) // Year 0
-  for (const row of multiYear) {
-    runningCash += row.net
-    endingCashRow.push(runningCash)
+  const y1Row = multiYear[0]
+  const y1AnnualRev = y1Row?.revenue?.total ?? 0
+  const y1AnnualExp = y1Row?.totalExpenses ?? 0
+  const monthlyExp = Math.round(y1AnnualExp / 12)
+
+  const cfRows: (string | number | null)[][] = [
+    ['Monthly Cash Flow — Year 1 (OSPI Apportionment Schedule)'],
+    [],
+    ['Month', ...ospiSchedule.map(m => m.month)],
+    ['OSPI %', ...ospiSchedule.map(m => `${m.pct}%`)],
+  ]
+
+  let monthCash = startingCash
+  const beginRow: (string | number)[] = ['Beginning Cash']
+  const revRow: (string | number)[] = ['Revenue']
+  const expRow: (string | number)[] = ['Expenses']
+  const netRow: (string | number)[] = ['Net Monthly']
+  const endRow: (string | number)[] = ['Ending Cash']
+
+  for (const m of ospiSchedule) {
+    beginRow.push(Math.round(monthCash))
+    const monthRev = Math.round(y1AnnualRev * m.pct / 100)
+    revRow.push(monthRev)
+    expRow.push(monthlyExp)
+    netRow.push(monthRev - monthlyExp)
+    monthCash += monthRev - monthlyExp
+    endRow.push(Math.round(monthCash))
   }
-  cfRows.push(endingCashRow)
+  cfRows.push(beginRow, revRow, expRow, netRow, endRow)
+  cfRows.push([])
+
+  // Annual summary (Years 0-5)
+  cfRows.push(['Annual Cash Flow Summary', ...yearHeaders])
+  let runningCash = startingCash
+  const annualBeginRow: (string | number)[] = ['Beginning Cash', startingCash]
+  const annualEndRow: (string | number)[] = ['Ending Cash', startingCash]
+  for (let i = 0; i < multiYear.length; i++) {
+    annualBeginRow.push(runningCash)
+    runningCash += multiYear[i].net
+    annualEndRow.push(runningCash)
+  }
+  cfRows.push(annualBeginRow)
+  cfRows.push(['Total Revenue', 0, ...multiYear.map((r) => r.revenue.total)])
+  cfRows.push(['Total Expenses', 0, ...multiYear.map((r) => r.totalExpenses)])
+  cfRows.push(['Net Cash Flow', 0, ...multiYear.map((r) => r.net)])
+  cfRows.push(annualEndRow)
   cfRows.push(['Days of Cash', '', ...multiYear.map((r) => r.reserveDays)])
 
   const cfSheet = XLSX.utils.aoa_to_sheet(cfRows)

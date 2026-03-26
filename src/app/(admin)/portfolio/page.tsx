@@ -28,6 +28,7 @@ interface SchoolCard {
   // New fields for enhanced portfolio
   advisoryStatus: { strong: number; attention: number; risk: number } | null
   scenarioReserveDays: { conservative: number; base: number; optimistic: number } | null
+  scenarioAssumptions: Array<{ name: string; assumptions: Record<string, number>; y1ReserveDays: number }> | null
   hasBudget: boolean
   hasScenarios: boolean
   hasAdvisory: boolean
@@ -217,7 +218,7 @@ export default function PortfolioPage() {
       supabase.from('budget_projections').select('*').in('school_id', schoolIds).eq('year', 1),
       supabase.from('org_notes').select('id, school_id, content, created_at').in('school_id', schoolIds).order('created_at', { ascending: false }),
       supabase.from('grade_expansion_plan').select('*').in('school_id', schoolIds).order('year').order('grade_level'),
-      supabase.from('scenarios').select('school_id, name, results').in('school_id', schoolIds).eq('scenario_type', 'engine'),
+      supabase.from('scenarios').select('school_id, name, assumptions, results').in('school_id', schoolIds).eq('scenario_type', 'engine'),
       supabase.from('alignment_reviews').select('school_id').in('school_id', schoolIds),
     ])
 
@@ -226,7 +227,7 @@ export default function PortfolioPage() {
     const projections = (projectionsRes.data || []) as BudgetProjection[]
     const notes = (notesRes.data || []) as (NoteEntry & { school_id: string })[]
     const allGep = (gepRes.data || []) as (GradeExpansionEntry & { school_id: string })[]
-    const allScenarios = (scenRes.data || []) as { school_id: string; name: string; results: { years: Record<string, { reserve_days: number }> } | null }[]
+    const allScenarios = (scenRes.data || []) as { school_id: string; name: string; assumptions: Record<string, number>; results: { years: Record<string, { reserve_days: number }> } | null }[]
     const allAlignments = (alignRes.data || []) as { school_id: string }[]
 
     const cards: SchoolCard[] = schoolRows.map((school) => {
@@ -285,12 +286,18 @@ export default function PortfolioPage() {
       const schoolScenarios = allScenarios.filter(s => s.school_id === school.id)
       const hasScenarios = schoolScenarios.length > 0
       let scenarioReserveDays: SchoolCard['scenarioReserveDays'] = null
+      let scenarioAssumptions: SchoolCard['scenarioAssumptions'] = null
       if (hasScenarios) {
         const getDays = (name: string) => {
           const s = schoolScenarios.find(sc => sc.name === name)
           return Math.max(0, s?.results?.years?.['1']?.reserve_days ?? 0)
         }
         scenarioReserveDays = { conservative: getDays('Conservative'), base: getDays('Base Case'), optimistic: getDays('Optimistic') }
+        scenarioAssumptions = schoolScenarios.map(sc => ({
+          name: sc.name,
+          assumptions: sc.assumptions || {},
+          y1ReserveDays: Math.max(0, sc.results?.years?.['1']?.reserve_days ?? 0),
+        }))
       }
 
       // Readiness milestones
@@ -317,6 +324,7 @@ export default function PortfolioPage() {
         logoUrl: profile?.logo_url || null,
         advisoryStatus,
         scenarioReserveDays,
+        scenarioAssumptions,
         hasBudget,
         hasScenarios,
         hasAdvisory,
@@ -374,11 +382,11 @@ export default function PortfolioPage() {
         advisoryStatus: s.advisoryStatus ? `${s.advisoryStatus.strong}S ${s.advisoryStatus.attention}A ${s.advisoryStatus.risk}R` : 'Not Run',
         onboardingComplete: s.onboardingComplete,
         multiYear: s.multiYear.map(r => ({ year: r.year, revenue: r.revenue.total, expenses: r.totalExpenses, net: r.net, reserveDays: r.reserveDays })),
-        scenarios: s.scenarioReserveDays ? [
-          { name: 'Conservative', assumptions: {}, y1ReserveDays: s.scenarioReserveDays.conservative },
-          { name: 'Base Case', assumptions: {}, y1ReserveDays: s.scenarioReserveDays.base },
-          { name: 'Optimistic', assumptions: {}, y1ReserveDays: s.scenarioReserveDays.optimistic },
-        ] : null,
+        scenarios: s.scenarioAssumptions ? s.scenarioAssumptions.map(sc => ({
+          name: sc.name,
+          assumptions: sc.assumptions,
+          y1ReserveDays: sc.y1ReserveDays,
+        })) : null,
       }
     })
   }

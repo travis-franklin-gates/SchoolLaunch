@@ -286,6 +286,7 @@ export default function DashboardPage() {
         conservativeSummary,
         cashFlow: cashFlowData,
         multiYear,
+        scorecard,
         advisory: advisoryForPdf || undefined,
         scenarios: scenarioData && scenarioData.length > 0 ? scenarioData : undefined,
       }

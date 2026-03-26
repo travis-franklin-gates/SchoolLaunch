@@ -56,7 +56,8 @@
       "mcp__plugin_playwright_playwright__browser_resize",
       "Bash(wc:*)",
       "Bash(npx playwright:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "mcp__plugin_playwright_playwright__browser_tabs"
     ]
   },
   "enableAllProjectMcpServers": true,

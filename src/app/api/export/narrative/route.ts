@@ -110,6 +110,17 @@ interface NarrativePayload {
   }
   cashFlow: CashFlowMonth[]
   multiYear: MultiYearRow[]
+  scorecard?: {
+    measures: {
+      name: string
+      formula: string
+      values: (number | null)[]
+      stage1Target: string
+      stage2Target: string
+      statuses: string[]
+      note?: string
+    }[]
+  }
   advisory?: {
     briefing: string
     agents: {
@@ -186,7 +197,7 @@ export async function POST(request: NextRequest) {
   const data: NarrativePayload = await request.json()
   const {
     schoolName, profile, assumptions, positions, projections,
-    baseSummary, conservativeSummary, cashFlow, multiYear, advisory, scenarios,
+    baseSummary, conservativeSummary, cashFlow, multiYear, scorecard, advisory, scenarios,
   } = data
 
   const enrollment = profile.target_enrollment_y1
@@ -201,17 +212,30 @@ export async function POST(request: NextRequest) {
   const teacherCount = positions.filter((p) => p.category === 'certificated' && /teacher/i.test(p.title)).reduce((s, p) => s + p.fte, 0)
   const studentTeacherRatio = teacherCount > 0 ? Math.round(enrollment / teacherCount) : 0
 
+  // Derive Executive Summary values from multiYear engine (source of truth)
+  const y1 = multiYear[0]
+  const y1Revenue = y1?.revenue?.total ?? baseSummary.totalRevenue
+  const y1Personnel = y1?.personnel?.total ?? baseSummary.totalPersonnel
+  const y1Operations = y1?.operations?.total ?? baseSummary.totalOperations
+  const y1Expenses = y1?.totalExpenses ?? baseSummary.totalExpenses
+  const y1Net = y1?.net ?? baseSummary.netPosition
+  const y1EndingCash = y1?.cumulativeNet ?? y1Net
+  const y1DailyExpense = y1Expenses / 365
+  const y1ReserveDays = y1?.reserveDays ?? (y1DailyExpense > 0 ? Math.round(y1EndingCash / y1DailyExpense) : 0)
+  const y1PerPupilRev = enrollment > 0 ? y1Revenue / enrollment : 0
+  const y1BreakEven = y1PerPupilRev > 0 ? Math.ceil(y1Expenses / y1PerPupilRev) : 0
+
   // Build school context for AI calls
   const schoolContext = `School: ${schoolName}
 Grade configuration: ${profile.grade_config}, Region: ${profile.region}
 Year 1 enrollment: ${enrollment} students, Max class size: ${profile.max_class_size}
 Demographics: ${profile.pct_frl}% FRL, ${profile.pct_iep}% IEP, ${profile.pct_ell}% ELL, ${profile.pct_hicap}% HiCap
-Total Revenue: ${fmtDollars(baseSummary.totalRevenue)}
-Total Personnel: ${fmtDollars(baseSummary.totalPersonnel)} (${baseSummary.personnelPctRevenue.toFixed(1)}% of revenue)
-Total Operations: ${fmtDollars(baseSummary.totalOperations)}
-Net Position: ${fmtDollars(baseSummary.netPosition)}
-Reserve Days: ${baseSummary.reserveDays}
-Break-Even Enrollment: ${baseSummary.breakEvenEnrollment} students
+Total Revenue: ${fmtDollars(y1Revenue)}
+Total Personnel: ${fmtDollars(y1Personnel)} (${baseSummary.personnelPctRevenue.toFixed(1)}% of revenue)
+Total Operations: ${fmtDollars(y1Operations)}
+Net Position: ${fmtDollars(y1Net)}
+Reserve Days: ${y1ReserveDays}
+Break-Even Enrollment: ${y1BreakEven} students
 Facility Cost: ${baseSummary.facilityPct.toFixed(1)}% of revenue
 Staff: ${totalFte} FTE total, ${teacherCount} teachers, ${studentTeacherRatio}:1 student-teacher ratio
 Conservative (90% enrollment): Revenue ${fmtDollars(conservativeSummary.totalRevenue)}, Net ${fmtDollars(conservativeSummary.netPosition)}, Reserve Days ${conservativeSummary.reserveDays}
@@ -496,15 +520,15 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
 <h2>Executive Summary</h2>
 
 <div class="metric-cards">
-  <div class="metric-card" style="background:${baseSummary.netPosition >= 0 ? '#ECFDF5' : '#FEF2F2'};">
+  <div class="metric-card" style="background:${y1Net >= 0 ? '#ECFDF5' : '#FEF2F2'};">
     <div class="label">Year 1 Net Position</div>
-    <div class="value" style="color:${baseSummary.netPosition >= 0 ? '#0F6E56' : '#D85A30'};">${fmtCompact(baseSummary.netPosition)}</div>
-    <div class="sub">${baseSummary.netPosition >= 0 ? 'Surplus' : 'Deficit'}</div>
+    <div class="value" style="color:${y1Net >= 0 ? '#0F6E56' : '#D85A30'};">${fmtCompact(y1Net)}</div>
+    <div class="sub">${y1Net >= 0 ? 'Surplus' : 'Deficit'}</div>
   </div>
-  <div class="metric-card" style="background:${metricCardBg(baseSummary.reserveDays)};">
+  <div class="metric-card" style="background:${metricCardBg(y1ReserveDays)};">
     <div class="label">Reserve Days</div>
-    <div class="value" style="color:${reserveColor(baseSummary.reserveDays)};">${baseSummary.reserveDays}</div>
-    <div class="sub">${baseSummary.reserveDays >= 30 ? 'Meets Stage 1' : baseSummary.reserveDays >= 21 ? 'Approaches Stage 1' : 'Below Stage 1'} &bull; Stage 2: 60 days</div>
+    <div class="value" style="color:${reserveColor(y1ReserveDays)};">${y1ReserveDays}</div>
+    <div class="sub">${y1ReserveDays >= 30 ? 'Meets Stage 1' : y1ReserveDays >= 21 ? 'Approaches Stage 1' : 'Below Stage 1'} &bull; Stage 2: 60 days</div>
   </div>
   <div class="metric-card" style="background:${baseSummary.personnelPctRevenue >= 72 && baseSummary.personnelPctRevenue <= 78 ? '#ECFDF5' : baseSummary.personnelPctRevenue <= 80 ? '#FFFBEB' : '#FEF2F2'};">
     <div class="label">Personnel % of Revenue</div>
@@ -513,13 +537,13 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
   </div>
   <div class="metric-card">
     <div class="label">Break-Even Enrollment</div>
-    <div class="value" style="color:#1B2A4A;">${baseSummary.breakEvenEnrollment}</div>
+    <div class="value" style="color:#1B2A4A;">${y1BreakEven}</div>
     <div class="sub">Target: ${enrollment} students</div>
   </div>
 </div>
 
 <div class="narrative">
-  ${executiveSummary ? executiveSummary.split('\n\n').map((p: string) => `<p>${p.trim()}</p>`).join('') : `<p>${schoolName} projects Year 1 revenue of ${fmtDollars(baseSummary.totalRevenue)} based on ${enrollment} enrolled students at ${fmtDollars(assumptions.per_pupil_rate)} per-pupil state apportionment plus categorical grants. Total Year 1 expenses are projected at ${fmtDollars(baseSummary.totalExpenses)}, resulting in a net position of ${fmtDollars(baseSummary.netPosition)} and ${baseSummary.reserveDays} reserve days of operating cash.</p><p>Under a conservative enrollment scenario (90% of target, ${conservativeEnrollment} students), net position ${conservativeSummary.netPosition >= 0 ? 'remains positive at ' + fmtDollars(conservativeSummary.netPosition) : 'shifts to a deficit of ' + fmtDollars(Math.abs(conservativeSummary.netPosition))}, indicating ${conservativeSummary.netPosition >= 0 ? 'meaningful financial resilience' : 'limited margin for enrollment shortfalls'}.</p>`}
+  ${executiveSummary ? executiveSummary.split('\n\n').map((p: string) => `<p>${p.trim()}</p>`).join('') : `<p>${schoolName} projects Year 1 revenue of ${fmtDollars(y1Revenue)} based on ${enrollment} enrolled students at ${fmtDollars(assumptions.per_pupil_rate)} per-pupil state apportionment plus categorical grants. Total Year 1 expenses are projected at ${fmtDollars(y1Expenses)}, resulting in a net position of ${fmtDollars(y1Net)} and ${y1ReserveDays} reserve days of operating cash.</p><p>Under a conservative enrollment scenario (90% of target, ${conservativeEnrollment} students), net position ${conservativeSummary.netPosition >= 0 ? 'remains positive at ' + fmtDollars(conservativeSummary.netPosition) : 'shifts to a deficit of ' + fmtDollars(Math.abs(conservativeSummary.netPosition))}, indicating ${conservativeSummary.netPosition >= 0 ? 'meaningful financial resilience' : 'limited margin for enrollment shortfalls'}.</p>`}
 </div>
 
 <div class="page-footer">SchoolLaunch Financial Plan &bull; ${schoolName} &bull; Generated ${dateStr}</div>
@@ -540,7 +564,7 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
     ${revenueProjections.map((p) =>
       `<tr><td>${p.subcategory}</td><td style="text-align:right;font-size:11px;color:#64748B;">${revenueFormula(p.subcategory)}</td><td style="text-align:right;">${fmtDollars(p.amount)}</td></tr>`
     ).join('')}
-    <tr class="total-row"><td>Total Revenue</td><td></td><td style="text-align:right;">${fmtDollars(baseSummary.totalRevenue)}</td></tr>
+    <tr class="total-row"><td>Total Revenue</td><td></td><td style="text-align:right;">${fmtDollars(y1Revenue)}</td></tr>
   </tbody>
 </table>
 
@@ -703,6 +727,45 @@ ${cashFlow.some((m) => m.cumulativeBalance < 0)
 
 <div class="page-footer">SchoolLaunch Financial Plan &bull; ${schoolName} &bull; Generated ${dateStr}</div>
 
+${scorecard?.measures ? `
+<!-- PAGE: Commission FPF Scorecard -->
+<div class="page-break"></div>
+<h2>Commission Financial Performance Framework</h2>
+<p style="font-size:12px;color:#64748B;margin-bottom:16px;">Years 1-2 evaluated against Stage 1 thresholds (lenient). Years 3-5 evaluated against Stage 2 thresholds (strict).</p>
+
+<table style="width:100%;border-collapse:collapse;font-size:11px;">
+  <thead>
+    <tr style="background:#F8FAFC;border-bottom:2px solid #E2E8F0;">
+      <th style="text-align:left;padding:6px 8px;color:#64748B;">Measure</th>
+      ${multiYear.map((r, i) => {
+        const isStage2 = r.year >= 3
+        return `<th style="text-align:center;padding:6px 4px;color:#64748B;${isStage2 ? 'background:#F1F5F9;' : ''}${r.year === 3 ? 'border-left:2px solid #94A3B8;' : ''}">Y${r.year}<br><span style="font-size:9px;font-weight:normal;">Stage ${isStage2 ? '2' : '1'}</span></th>`
+      }).join('')}
+      <th style="text-align:center;padding:6px 4px;color:#64748B;font-size:10px;">S1 Target</th>
+      <th style="text-align:center;padding:6px 4px;color:#64748B;font-size:10px;">S2 Target</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${scorecard.measures.filter(m => !m.note).map(m => `
+    <tr style="border-bottom:1px solid #F1F5F9;">
+      <td style="padding:6px 8px;color:#334155;font-weight:500;">${m.name}</td>
+      ${m.values.map((v, i) => {
+        const status = m.statuses[i]
+        const isStage2 = (i + 1) >= 3
+        const bg = status === 'meets' ? '#ECFDF5' : status === 'approaches' ? '#FFFBEB' : status === 'does_not_meet' ? '#FEF2F2' : '#F8FAFC'
+        const color = status === 'meets' ? '#065F46' : status === 'approaches' ? '#92400E' : status === 'does_not_meet' ? '#991B1B' : '#94A3B8'
+        const display = v === null ? 'N/A' : typeof v === 'number' ? (m.name.includes('Ratio') || m.name.includes('Asset') ? v.toFixed(2) : m.name.includes('Margin') ? `${v.toFixed(1)}%` : m.name.includes('Days') ? `${v}d` : m.name.includes('Variance') ? `${v}%` : m.name.includes('Cash Flow') || m.name.includes('Revenue') ? fmtCompact(v) : String(v)) : String(v)
+        return `<td style="text-align:center;padding:6px 4px;background:${bg};color:${color};font-weight:600;${isStage2 ? '' : ''}${(i + 1) === 3 ? 'border-left:2px solid #94A3B8;' : ''}">${display}</td>`
+      }).join('')}
+      <td style="text-align:center;padding:6px 4px;font-size:10px;color:#64748B;">${m.stage1Target}</td>
+      <td style="text-align:center;padding:6px 4px;font-size:10px;color:#64748B;">${m.stage2Target}</td>
+    </tr>`).join('')}
+  </tbody>
+</table>
+
+<div class="page-footer">SchoolLaunch Financial Plan &bull; ${schoolName} &bull; Generated ${dateStr}</div>
+` : ''}
+
 <!-- PAGE 8: Startup Funding -->
 <div class="page-break"></div>
 <h2>Pre-Opening Budget &amp; Funding Sources</h2>
@@ -760,10 +823,10 @@ ${securedFunding < totalFunding * 0.5 ? `<div class="callout warning"><strong>Fu
   </thead>
   <tbody>
     <tr><td>Revenue Enrollment</td><td style="text-align:right;">${enrollment}</td><td style="text-align:right;">${conservativeEnrollment}</td><td style="text-align:right;color:#D85A30;">-${enrollment - conservativeEnrollment}</td></tr>
-    <tr><td>Total Revenue</td><td style="text-align:right;">${fmtDollars(baseSummary.totalRevenue)}</td><td style="text-align:right;">${fmtDollars(conservativeSummary.totalRevenue)}</td><td style="text-align:right;color:#D85A30;">${fmtDollars(conservativeSummary.totalRevenue - baseSummary.totalRevenue)}</td></tr>
-    <tr><td>Total Expenses</td><td style="text-align:right;">${fmtDollars(baseSummary.totalExpenses)}</td><td style="text-align:right;">${fmtDollars(conservativeSummary.totalExpenses)}</td><td style="text-align:right;">${fmtDollars(conservativeSummary.totalExpenses - baseSummary.totalExpenses)}</td></tr>
-    <tr class="total-row"><td>Net Position</td><td style="text-align:right;color:${baseSummary.netPosition >= 0 ? '#0F6E56' : '#D85A30'};">${fmtDollars(baseSummary.netPosition)}</td><td style="text-align:right;color:${conservativeSummary.netPosition >= 0 ? '#0F6E56' : '#D85A30'};">${fmtDollars(conservativeSummary.netPosition)}</td><td style="text-align:right;color:#D85A30;">${fmtDollars(conservativeSummary.netPosition - baseSummary.netPosition)}</td></tr>
-    <tr class="total-row"><td>Reserve Days</td><td style="text-align:right;color:${reserveColor(baseSummary.reserveDays)};">${baseSummary.reserveDays}</td><td style="text-align:right;color:${reserveColor(conservativeSummary.reserveDays)};">${conservativeSummary.reserveDays}</td><td style="text-align:right;color:#D85A30;">${conservativeSummary.reserveDays - baseSummary.reserveDays}</td></tr>
+    <tr><td>Total Revenue</td><td style="text-align:right;">${fmtDollars(y1Revenue)}</td><td style="text-align:right;">${fmtDollars(conservativeSummary.totalRevenue)}</td><td style="text-align:right;color:#D85A30;">${fmtDollars(conservativeSummary.totalRevenue - y1Revenue)}</td></tr>
+    <tr><td>Total Expenses</td><td style="text-align:right;">${fmtDollars(y1Expenses)}</td><td style="text-align:right;">${fmtDollars(conservativeSummary.totalExpenses)}</td><td style="text-align:right;">${fmtDollars(conservativeSummary.totalExpenses - y1Expenses)}</td></tr>
+    <tr class="total-row"><td>Net Position</td><td style="text-align:right;color:${y1Net >= 0 ? '#0F6E56' : '#D85A30'};">${fmtDollars(y1Net)}</td><td style="text-align:right;color:${conservativeSummary.netPosition >= 0 ? '#0F6E56' : '#D85A30'};">${fmtDollars(conservativeSummary.netPosition)}</td><td style="text-align:right;color:#D85A30;">${fmtDollars(conservativeSummary.netPosition - y1Net)}</td></tr>
+    <tr class="total-row"><td>Reserve Days</td><td style="text-align:right;color:${reserveColor(y1ReserveDays)};">${y1ReserveDays}</td><td style="text-align:right;color:${reserveColor(conservativeSummary.reserveDays)};">${conservativeSummary.reserveDays}</td><td style="text-align:right;color:#D85A30;">${conservativeSummary.reserveDays - y1ReserveDays}</td></tr>
   </tbody>
 </table>
 
