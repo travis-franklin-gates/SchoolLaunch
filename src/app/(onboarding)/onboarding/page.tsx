@@ -11,6 +11,7 @@ import StepDemographics from '@/components/onboarding/StepDemographics'
 import StepStaffing from '@/components/onboarding/StepStaffing'
 import StepOperations, { defaultOperationsData } from '@/components/onboarding/StepOperations'
 import type { GrowthPreset, StartupFundingSource, GradeExpansionEntry, EnrollmentMode } from '@/lib/types'
+import type { Pathway } from '@/lib/stateConfig'
 
 const STEPS = [
   { label: 'School Identity', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
@@ -55,6 +56,11 @@ interface WizardData {
   buildoutGrades: string[]
   retentionRate: number
   expansionPlan: GradeExpansionEntry[]
+  // Generic pathway fields
+  state: string
+  schoolType: 'charter' | 'private' | 'micro'
+  pathway: Pathway
+  fiscalYearStartMonth: number
 }
 
 const initialWizardData: WizardData = {
@@ -81,6 +87,11 @@ const initialWizardData: WizardData = {
   buildoutGrades: [],
   retentionRate: 100,
   expansionPlan: [],
+  // Generic pathway fields — default to WA charter
+  state: 'WA',
+  schoolType: 'charter',
+  pathway: 'wa_charter',
+  fiscalYearStartMonth: 9,
 }
 
 function fmt(n: number) {
@@ -114,10 +125,10 @@ export default function OnboardingPage() {
 
       setSchoolId(roleData.school_id)
 
-      // Load school name
+      // Load school name and pathway fields
       const { data: school } = await supabase
         .from('schools')
-        .select('name')
+        .select('name, pathway, state, school_type')
         .eq('id', roleData.school_id)
         .single()
 
@@ -179,6 +190,11 @@ export default function OnboardingPage() {
                 salary: p.annual_salary,
               }))
             : prev.positions,
+          // Pathway fields from schools table
+          state: school?.state || prev.state,
+          schoolType: (school?.school_type as 'charter' | 'private' | 'micro') || prev.schoolType,
+          pathway: (school?.pathway as Pathway) || prev.pathway,
+          fiscalYearStartMonth: profile?.fiscal_year_start_month || prev.fiscalYearStartMonth,
         }))
       }
 
@@ -190,7 +206,9 @@ export default function OnboardingPage() {
   const saveStep1 = useCallback(async (stepData: {
     schoolName: string; region: string; plannedOpenYear: number;
     foundingGrades: string[]; buildoutGrades: string[]; gradeConfig: string;
-    regionalizationFactor: number
+    regionalizationFactor: number;
+    state: string; schoolType: 'charter' | 'private' | 'micro';
+    pathway: Pathway; fiscalYearStartMonth: number
   }) => {
     if (!schoolId) return
     setData((prev) => ({
@@ -201,9 +219,19 @@ export default function OnboardingPage() {
       gradeConfig: stepData.gradeConfig,
       openingGrades: stepData.foundingGrades,
       buildoutGrades: stepData.buildoutGrades,
+      state: stepData.state,
+      schoolType: stepData.schoolType,
+      pathway: stepData.pathway,
+      fiscalYearStartMonth: stepData.fiscalYearStartMonth,
     }))
 
-    await supabase.from('schools').update({ name: stepData.schoolName }).eq('id', schoolId)
+    // Update schools table with pathway fields
+    await supabase.from('schools').update({
+      name: stepData.schoolName,
+      pathway: stepData.pathway,
+      state: stepData.state,
+      school_type: stepData.schoolType,
+    }).eq('id', schoolId)
 
     // Read existing financial_assumptions to merge regionalization_factor
     const { data: existingProfile } = await supabase
@@ -223,6 +251,7 @@ export default function OnboardingPage() {
       opening_grades: stepData.foundingGrades,
       buildout_grades: stepData.buildoutGrades,
       financial_assumptions: updatedFa,
+      fiscal_year_start_month: stepData.fiscalYearStartMonth,
     }, { onConflict: 'school_id' })
 
     setStep(1)
@@ -584,6 +613,9 @@ export default function OnboardingPage() {
             plannedOpenYear: data.plannedOpenYear,
             foundingGrades: data.openingGrades,
             buildoutGrades: data.buildoutGrades,
+            state: data.state,
+            schoolType: data.schoolType,
+            fiscalYearStartMonth: data.fiscalYearStartMonth,
           }}
           onNext={saveStep1}
         />

@@ -6,6 +6,7 @@ import { TourProvider } from '@/components/tour/TourContext'
 import TourRunner from '@/components/tour/TourRunner'
 import HelpButton from '@/components/tour/HelpButton'
 import TourBanner from '@/components/tour/TourBanner'
+import { StateConfigProvider } from '@/contexts/StateConfigContext'
 
 export default function AuthenticatedLayout({
   children,
@@ -13,18 +14,20 @@ export default function AuthenticatedLayout({
   children: React.ReactNode
 }) {
   return (
-    <TourProvider>
-      <div className="min-h-screen" style={{ background: 'var(--bg-page)' }}>
-        <Sidebar />
-        <main className="md:ml-60 p-4 md:p-8 pt-16 md:pt-8">
-          <TourBanner />
-          {children}
-        </main>
-        <HelpButton />
-        <Suspense fallback={null}>
-          <TourRunner />
-        </Suspense>
-      </div>
-    </TourProvider>
+    <StateConfigProvider>
+      <TourProvider>
+        <div className="min-h-screen" style={{ background: 'var(--bg-page)' }}>
+          <Sidebar />
+          <main className="md:ml-60 p-4 md:p-8 pt-16 md:pt-8">
+            <TourBanner />
+            {children}
+          </main>
+          <HelpButton />
+          <Suspense fallback={null}>
+            <TourRunner />
+          </Suspense>
+        </div>
+      </TourProvider>
+    </StateConfigProvider>
   )
 }

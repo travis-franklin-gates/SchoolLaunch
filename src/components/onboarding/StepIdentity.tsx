@@ -3,11 +3,34 @@
 import { useState, useMemo } from 'react'
 import { ALL_GRADES, sortGrades, gradeIndex, deriveGradeConfig } from '@/lib/gradeExpansion'
 import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
+import { US_STATES, derivePathway, getStateConfig } from '@/lib/stateConfig'
+import type { Pathway } from '@/lib/stateConfig'
 
 const COUNTY_KEYS = Object.keys(REGIONALIZATION_FACTORS)
 
 const currentYear = new Date().getFullYear()
 const YEARS = Array.from({ length: 4 }, (_, i) => currentYear + i)
+
+const SCHOOL_TYPES = [
+  { value: 'charter' as const, label: 'Charter School', description: 'Publicly funded, independently operated' },
+  { value: 'private' as const, label: 'Private School', description: 'Tuition-funded independent school' },
+  { value: 'micro' as const, label: 'Micro School', description: 'Small-format, typically under 150 students' },
+]
+
+const FISCAL_YEAR_MONTHS = [
+  { value: 1, label: 'January' },
+  { value: 2, label: 'February' },
+  { value: 3, label: 'March' },
+  { value: 4, label: 'April' },
+  { value: 5, label: 'May' },
+  { value: 6, label: 'June' },
+  { value: 7, label: 'July' },
+  { value: 8, label: 'August' },
+  { value: 9, label: 'September' },
+  { value: 10, label: 'October' },
+  { value: 11, label: 'November' },
+  { value: 12, label: 'December' },
+]
 
 interface Props {
   initialData: {
@@ -16,6 +39,9 @@ interface Props {
     plannedOpenYear: number
     foundingGrades: string[]
     buildoutGrades: string[]
+    state?: string
+    schoolType?: 'charter' | 'private' | 'micro'
+    fiscalYearStartMonth?: number
   }
   onNext: (data: {
     schoolName: string
@@ -25,11 +51,17 @@ interface Props {
     buildoutGrades: string[]
     gradeConfig: string
     regionalizationFactor: number
+    state: string
+    schoolType: 'charter' | 'private' | 'micro'
+    pathway: Pathway
+    fiscalYearStartMonth: number
   }) => void
 }
 
 export default function StepIdentity({ initialData, onNext }: Props) {
   const [schoolName, setSchoolName] = useState(initialData.schoolName)
+  const [selectedState, setSelectedState] = useState(initialData.state || 'WA')
+  const [schoolType, setSchoolType] = useState<'charter' | 'private' | 'micro'>(initialData.schoolType || 'charter')
   // Map old region labels to county keys for backward compat
   const initialCountyKey = COUNTY_KEYS.includes(initialData.region)
     ? initialData.region
@@ -43,6 +75,17 @@ export default function StepIdentity({ initialData, onNext }: Props) {
     initialData.buildoutGrades.length > 0 ? initialData.buildoutGrades : []
   )
   const [touched, setTouched] = useState(false)
+
+  // Derive pathway from current selections
+  const pathway = derivePathway(selectedState, schoolType)
+  const isWaCharter = pathway === 'wa_charter'
+  const config = getStateConfig(pathway)
+
+  // Fiscal year start month for non-WA pathways
+  const defaultFiscalMonth = schoolType === 'charter' ? 7 : 9
+  const [fiscalYearStartMonth, setFiscalYearStartMonth] = useState(
+    initialData.fiscalYearStartMonth || defaultFiscalMonth
+  )
 
   const nameError = touched && schoolName.trim().length < 3 ? 'School name must be at least 3 characters' : null
   const gradesError = touched && foundingGrades.length === 0 ? 'Select at least one founding grade' : null
@@ -97,12 +140,16 @@ export default function StepIdentity({ initialData, onNext }: Props) {
     if (foundingGrades.length === 0 || buildoutGrades.length === 0) return
     onNext({
       schoolName: schoolName.trim(),
-      region,
+      region: isWaCharter ? region : '',
       plannedOpenYear,
       foundingGrades,
       buildoutGrades,
       gradeConfig: deriveGradeConfig(buildoutGrades),
-      regionalizationFactor: REGIONALIZATION_FACTORS[region]?.factor ?? 1.0,
+      regionalizationFactor: isWaCharter ? (REGIONALIZATION_FACTORS[region]?.factor ?? 1.0) : 1.0,
+      state: selectedState,
+      schoolType,
+      pathway,
+      fiscalYearStartMonth: isWaCharter ? 9 : fiscalYearStartMonth,
     })
   }
 
@@ -111,6 +158,51 @@ export default function StepIdentity({ initialData, onNext }: Props) {
       <p className="text-sm text-slate-500">
         Tell us about your school. This information shapes the financial model.
       </p>
+
+      {/* State Selection */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">State</label>
+        <select
+          value={selectedState}
+          onChange={(e) => setSelectedState(e.target.value)}
+          className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 bg-white"
+        >
+          {US_STATES.map((s) => (
+            <option key={s.code} value={s.code}>{s.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* School Type Selection */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-2">School Type</label>
+        <div className="grid grid-cols-3 gap-3">
+          {SCHOOL_TYPES.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => {
+                setSchoolType(t.value)
+                // Update fiscal year default when switching types
+                if (t.value === 'charter') setFiscalYearStartMonth(7)
+                else setFiscalYearStartMonth(9)
+              }}
+              className={`px-3 py-3 rounded-lg border-2 text-left transition-all ${
+                schoolType === t.value
+                  ? 'border-teal-600 bg-teal-50'
+                  : 'border-slate-200 bg-white hover:border-slate-300'
+              }`}
+            >
+              <div className={`text-sm font-medium ${schoolType === t.value ? 'text-teal-700' : 'text-slate-700'}`}>
+                {t.label}
+              </div>
+              <div className={`text-xs mt-0.5 ${schoolType === t.value ? 'text-teal-600' : 'text-slate-400'}`}>
+                {t.description}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">School Name *</label>
@@ -126,21 +218,43 @@ export default function StepIdentity({ initialData, onNext }: Props) {
         {nameError && <p className="text-xs text-red-600 mt-1">{nameError}</p>}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">WA County / Region</label>
-        <select
-          value={region}
-          onChange={(e) => setRegion(e.target.value)}
-          className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 bg-white"
-        >
-          {COUNTY_KEYS.map((key) => (
-            <option key={key} value={key}>{REGIONALIZATION_FACTORS[key].label}</option>
-          ))}
-        </select>
-        <p className="text-xs text-slate-400 mt-1">
-          County sets the regionalization factor ({REGIONALIZATION_FACTORS[region]?.factor.toFixed(3) ?? '1.000'}×) which adjusts state funding rates based on your school&apos;s location.
-        </p>
-      </div>
+      {/* WA County/Region — only for WA Charter pathway */}
+      {isWaCharter && (
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">WA County / Region</label>
+          <select
+            value={region}
+            onChange={(e) => setRegion(e.target.value)}
+            className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 bg-white"
+          >
+            {COUNTY_KEYS.map((key) => (
+              <option key={key} value={key}>{REGIONALIZATION_FACTORS[key].label}</option>
+            ))}
+          </select>
+          <p className="text-xs text-slate-400 mt-1">
+            County sets the regionalization factor ({REGIONALIZATION_FACTORS[region]?.factor.toFixed(3) ?? '1.000'}×) which adjusts state funding rates based on your school&apos;s location.
+          </p>
+        </div>
+      )}
+
+      {/* Fiscal Year Start Month — only for non-WA pathways */}
+      {!isWaCharter && (
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Fiscal Year Start Month</label>
+          <select
+            value={fiscalYearStartMonth}
+            onChange={(e) => setFiscalYearStartMonth(Number(e.target.value))}
+            className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 bg-white"
+          >
+            {FISCAL_YEAR_MONTHS.map((m) => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
+          <p className="text-xs text-slate-400 mt-1">
+            When your school&apos;s fiscal year begins. Most charter schools use July; most private schools use September.
+          </p>
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">Planned Opening Year</label>
