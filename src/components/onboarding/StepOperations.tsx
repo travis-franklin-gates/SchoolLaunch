@@ -452,7 +452,7 @@ export default function StepOperations({
           />
           <div>
             <label htmlFor="foodProgram" className="text-sm font-medium text-slate-700">Food Program</label>
-            <p className="text-xs text-slate-400">If enabled, assumes net neutral (federal reimbursement offsets cost)</p>
+            <p className="text-xs text-slate-400">{isWaCharter || config.pathway === 'generic_charter' ? 'If enabled, assumes net neutral (federal reimbursement offsets cost)' : 'If enabled, adds food service as a budget line item. Adjust the per-student cost in your dashboard.'}</p>
           </div>
         </div>
       )}

@@ -176,51 +176,82 @@ export default function StepDemographics({ enrollment, region, initialData, path
 
         <div>
           <div className="bg-slate-50 rounded-xl p-5 sticky top-4">
-            <h3 className="text-sm font-semibold text-slate-800 mb-4">Demographic-Driven Revenue</h3>
-            <p className="text-xs text-slate-400 mb-4">Based on {enrollment} students</p>
-            <div className="space-y-2">
-              {/* Special Education group */}
-              <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide pt-1">Special Education</div>
-              <GrantRow label="State Special Education" value={rev.stateSped} />
-              <GrantRow label="SPED Apportionment" value={rev.sped} />
-              <GrantRow label="IDEA (Federal)" value={rev.idea} />
+            {isOptional ? (
+              /* Private/Micro: no categorical grant lines */
+              <>
+                <h3 className="text-sm font-semibold text-slate-800 mb-4">Demographics Impact</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Private schools typically do not receive categorical public funding (Title I, IDEA, etc.). Demographics you enter here help the advisory panel provide more relevant staffing and program recommendations.
+                </p>
+                {pctIep > 0 && (
+                  <div className="mt-4 bg-teal-50 border border-teal-100 rounded-lg px-3 py-2">
+                    <p className="text-xs text-teal-700">
+                      IEP at {pctIep}% — budget for learning support staff or contracted special education services.
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* WA Charter and Generic Charter: show grant estimates */
+              <>
+                <h3 className="text-sm font-semibold text-slate-800 mb-4">Demographic-Driven Revenue</h3>
+                <p className="text-xs text-slate-400 mb-4">Based on {enrollment} students</p>
+                <div className="space-y-2">
+                  {isWaCharter && (
+                    <>
+                      {/* WA-specific Special Education group */}
+                      <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide pt-1">Special Education</div>
+                      <GrantRow label="State Special Education" value={rev.stateSped} />
+                      <GrantRow label="SPED Apportionment" value={rev.sped} />
+                    </>
+                  )}
 
-              {/* Other Categorical group */}
-              <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide pt-2">Other Categorical</div>
-              <GrantRow label="Title I" value={rev.titleI} note={pctFrl <= 40 ? '(requires >40% FRL)' : undefined} />
-              <GrantRow label="LAP" value={rev.lap} />
-              <GrantRow label="LAP High Poverty" value={rev.lapHighPoverty} />
-              <GrantRow label="TBIP (Bilingual)" value={rev.tbip} />
-              <GrantRow label="Highly Capable" value={rev.hicap} />
+                  {/* Federal programs — available to all charter types */}
+                  <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide pt-1">{isWaCharter ? '' : 'Federal Programs'}</div>
+                  <GrantRow label="IDEA (Federal)" value={rev.idea} />
+                  <GrantRow label="Title I" value={rev.titleI} note={pctFrl <= 40 ? '(requires >40% FRL)' : undefined} />
 
-              <div className="border-t border-slate-200 pt-3 mt-3">
-                <div className="flex justify-between font-semibold text-slate-800">
-                  <span>Total Demographic Revenue</span>
-                  <span>{fmt(demographicRevenue)}</span>
+                  {isWaCharter && (
+                    <>
+                      {/* WA-specific state categorical */}
+                      <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide pt-2">State Categorical</div>
+                      <GrantRow label="LAP" value={rev.lap} />
+                      <GrantRow label="LAP High Poverty" value={rev.lapHighPoverty} />
+                      <GrantRow label="TBIP (Bilingual)" value={rev.tbip} />
+                      <GrantRow label="Highly Capable" value={rev.hicap} />
+                    </>
+                  )}
+
+                  <div className="border-t border-slate-200 pt-3 mt-3">
+                    <div className="flex justify-between font-semibold text-slate-800">
+                      <span>Total Demographic Revenue</span>
+                      <span>{fmt(demographicRevenue)}</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {demoPct}% of total estimated revenue
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-slate-400 mt-1">
-                  {demoPct}% of total estimated revenue
-                </p>
-              </div>
-            </div>
 
-            {/* Compliance callouts */}
-            {titleIWarning && (
-              <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                <p className="text-xs text-amber-700">
-                  FRL at {pctFrl}% — just below the 40% Title I threshold. A small increase unlocks {fmt(Math.round(enrollment * (pctFrl / 100) * 880))}.
-                </p>
-              </div>
-            )}
-            {highIep && (
-              <div className="mt-4 bg-teal-50 border border-teal-100 rounded-lg px-3 py-2">
-                <p className="text-xs text-teal-700">
-                  IEP at {pctIep}% — above typical ({regionDefaults.iep}%). Budget for additional special education staff and contracted services.
-                </p>
+                {/* Compliance callouts */}
+                {titleIWarning && (
+                  <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    <p className="text-xs text-amber-700">
+                      FRL at {pctFrl}% — just below the 40% Title I threshold. A small increase unlocks {fmt(Math.round(enrollment * (pctFrl / 100) * 880))}.
+                    </p>
+                  </div>
+                )}
+                {highIep && (
+                  <div className="mt-4 bg-teal-50 border border-teal-100 rounded-lg px-3 py-2">
+                    <p className="text-xs text-teal-700">
+                      IEP at {pctIep}% — above typical ({regionDefaults.iep}%). Budget for additional special education staff and contracted services.
+                    </p>
               </div>
             )}
 
             <p className="text-xs text-slate-400 mt-4 italic">These are estimates only. Actual awards vary.</p>
+              </>
+            )}
           </div>
         </div>
       </div>
