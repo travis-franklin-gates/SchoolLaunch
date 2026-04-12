@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import Link from 'next/link'
 
 type View = 'login' | 'forgot' | 'verify' | 'reset'
 
@@ -327,6 +328,15 @@ export default function LoginPage() {
               >
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
+
+              <div className="text-center mt-1">
+                <Link
+                  href="/signup"
+                  className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
+                >
+                  Don&apos;t have an account? <span className="text-teal-600 font-medium">Sign up</span>
+                </Link>
+              </div>
             </form>
           )}
 

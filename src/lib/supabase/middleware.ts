@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_ROUTES = ['/login', '/invite', '/auth/confirm']
+const PUBLIC_ROUTES = ['/login', '/signup', '/invite', '/auth/confirm']
 
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname
