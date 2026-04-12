@@ -243,11 +243,9 @@ export default function DashboardPage() {
     : totalMarginPct >= -5
     ? { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-l-amber-500' }
     : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
-  const totalMarginSubtitle = totalMarginPct >= 0
-    ? 'Meets Stage 2'
-    : totalMarginPct >= -5
-    ? 'Meets Stage 1'
-    : 'Below Stage 1'
+  const totalMarginSubtitle = isWaCharter
+    ? (totalMarginPct >= 0 ? 'Meets Stage 2' : totalMarginPct >= -5 ? 'Meets Stage 1' : 'Below Stage 1')
+    : (totalMarginPct > 5 ? 'Healthy' : totalMarginPct >= 0 ? 'Watch' : 'Needs attention')
 
   const conservativeEnrollment = Math.floor(profile.target_enrollment_y1 * 0.9)
 
@@ -396,7 +394,9 @@ export default function DashboardPage() {
         <HealthTile
           label="Days of Cash Y1 End"
           value={`${daysOfCash} days`}
-          subtitle={daysOfCash >= 60 ? 'Meets Stage 2' : daysOfCash >= 30 ? 'Meets Stage 1' : daysOfCash >= 21 ? 'Approaches Stage 1' : 'Below Stage 1 minimum'}
+          subtitle={isWaCharter
+            ? (daysOfCash >= 60 ? 'Meets Stage 2' : daysOfCash >= 30 ? 'Meets Stage 1' : daysOfCash >= 21 ? 'Approaches Stage 1' : 'Below Stage 1 minimum')
+            : (daysOfCash >= 60 ? 'Healthy' : daysOfCash >= 30 ? 'Watch' : 'Needs attention')}
           colorClass={rc}
         />
         <HealthTile
@@ -641,7 +641,14 @@ export default function DashboardPage() {
             <tr className="bg-slate-50/60">
               <td colSpan={2} className="px-5 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Revenue</td>
             </tr>
-            <BudgetRow label="Operating Revenue" value={multiYear.length > 0 ? multiYear[0].revenue.operatingRevenue : baseSummary.operatingRevenue} />
+            {!isWaCharter && multiYear.length > 0 && pathwayConfig.revenue_model === 'tuition' ? (
+              <>
+                <BudgetRow label="Net Tuition Revenue" value={multiYear[0].revenue.regularEd} />
+                {multiYear[0].revenue.interestIncome > 0 && <BudgetRow label="Interest Income" value={multiYear[0].revenue.interestIncome} />}
+              </>
+            ) : (
+              <BudgetRow label="Operating Revenue" value={multiYear.length > 0 ? multiYear[0].revenue.operatingRevenue : baseSummary.operatingRevenue} />
+            )}
             {(multiYear.length > 0 ? multiYear[0].revenue.grantRevenue : baseSummary.grantRevenue) > 0 && (
               <BudgetRow label="Startup Grants (Year 1)" value={multiYear.length > 0 ? multiYear[0].revenue.grantRevenue : baseSummary.grantRevenue} />
             )}
@@ -746,9 +753,9 @@ function ScenarioSummaryCard({ schoolId }: { schoolId: string }) {
                 <>
                   <div className={`text-xl font-bold ${days >= 60 ? 'text-emerald-600' : days >= 30 ? 'text-amber-600' : 'text-red-600'}`}>{days} days</div>
                   <div className="mt-0.5">
-                    {status === 'meets' ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">Meets Stage 1</span>
+                    {status === 'meets' ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">On Track</span>
                       : status === 'approaches' ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Approaching</span>
-                      : <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">Does Not Meet</span>}
+                      : <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">At Risk</span>}
                   </div>
                 </>
               )}

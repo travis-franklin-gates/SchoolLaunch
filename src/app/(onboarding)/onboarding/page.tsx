@@ -216,6 +216,11 @@ export default function OnboardingPage() {
     pathway: Pathway; fiscalYearStartMonth: number
   }) => {
     if (!schoolId) return
+    // Set tuition/aid defaults from config when pathway is tuition-based
+    const stepConfig = getStateConfig(stepData.pathway)
+    const tuitionDefaults = stepConfig.revenue_model === 'tuition'
+      ? { tuitionRate: stepConfig.tuition_rate_default ?? 0, financialAidPct: stepConfig.financial_aid_pct_default ?? 0 }
+      : {}
     setData((prev) => ({
       ...prev,
       schoolName: stepData.schoolName,
@@ -228,6 +233,7 @@ export default function OnboardingPage() {
       schoolType: stepData.schoolType,
       pathway: stepData.pathway,
       fiscalYearStartMonth: stepData.fiscalYearStartMonth,
+      ...tuitionDefaults,
     }))
 
     // Update schools table with pathway fields
