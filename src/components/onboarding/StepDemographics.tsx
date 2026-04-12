@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react'
 import { calcCommissionRevenue } from '@/lib/calculations'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
+import type { Pathway } from '@/lib/stateConfig'
+import { getStateConfig } from '@/lib/stateConfig'
 
 const REGIONAL_DEFAULTS: Record<string, { frl: number; iep: number; ell: number; hicap: number }> = {
   'king_county': { frl: 35, iep: 14, ell: 15, hicap: 7 },
@@ -29,7 +31,9 @@ interface Props {
     pctEll: number
     pctHicap: number
   }
+  pathway?: Pathway
   onNext: (data: { pctFrl: number; pctIep: number; pctEll: number; pctHicap: number }) => void
+  onSkip?: () => void
   onBack: () => void
 }
 
@@ -37,7 +41,12 @@ function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 }
 
-export default function StepDemographics({ enrollment, region, initialData, onNext, onBack }: Props) {
+export default function StepDemographics({ enrollment, region, initialData, pathway, onNext, onSkip, onBack }: Props) {
+  const config = getStateConfig(pathway)
+  const isWaCharter = config.pathway === 'wa_charter'
+  const isOptional = config.pathway === 'generic_private' || config.pathway === 'generic_micro'
+  const showRegionalDefaults = isWaCharter && !!region
+
   const [pctFrl, setPctFrl] = useState(initialData.pctFrl ?? 50)
   const [pctIep, setPctIep] = useState(initialData.pctIep ?? 12)
   const [pctEll, setPctEll] = useState(initialData.pctEll ?? 10)
@@ -73,17 +82,39 @@ export default function StepDemographics({ enrollment, region, initialData, onNe
 
   return (
     <form onSubmit={handleNext} className="space-y-6 max-w-2xl">
+      {/* Optional banner for private/micro */}
+      {isOptional && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+          <p className="text-sm text-blue-800">
+            Demographics are optional for {config.display_name.toLowerCase()}s. If your school will apply for any public funding (e.g., Title I services, IDEA passthrough), enter your estimates below. Otherwise, skip this step.
+          </p>
+          {onSkip && (
+            <button
+              type="button"
+              onClick={onSkip}
+              className="mt-2 text-sm font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 px-4 py-1.5 rounded-lg transition-colors"
+            >
+              Skip This Step
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="flex items-start justify-between">
         <p className="text-sm text-slate-500 max-w-md">
-          Student demographics determine categorical grant eligibility. Use your community assessment data or start with regional averages.
+          {isOptional
+            ? 'If you expect to serve students with IEPs or apply for federal grants, enter your demographic estimates below.'
+            : 'Student demographics determine categorical grant eligibility. Use your community assessment data or start with regional averages.'}
         </p>
-        <button
-          type="button"
-          onClick={() => setShowRegionalHint(!showRegionalHint)}
-          className="text-xs text-teal-600 hover:text-teal-800 font-medium whitespace-nowrap ml-4"
-        >
-          Use {formatRegionName(region)} defaults
-        </button>
+        {showRegionalDefaults && (
+          <button
+            type="button"
+            onClick={() => setShowRegionalHint(!showRegionalHint)}
+            className="text-xs text-teal-600 hover:text-teal-800 font-medium whitespace-nowrap ml-4"
+          >
+            Use {formatRegionName(region)} defaults
+          </button>
+        )}
       </div>
 
       {showRegionalHint && (
@@ -208,6 +239,15 @@ export default function StepDemographics({ enrollment, region, initialData, onNe
         >
           Continue
         </button>
+        {isOptional && onSkip && (
+          <button
+            type="button"
+            onClick={onSkip}
+            className="px-6 py-2.5 rounded-lg font-medium text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            Skip
+          </button>
+        )}
       </div>
     </form>
   )
@@ -244,7 +284,7 @@ function SliderField({
       />
       <div className="flex justify-between text-xs text-slate-400">
         <span>{min}%</span>
-        <span className="text-slate-400">Regional avg: {regional}%</span>
+        {regional > 0 && <span className="text-slate-400">Avg: {regional}%</span>}
         <span>{max}%</span>
       </div>
     </div>

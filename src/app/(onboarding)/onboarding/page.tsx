@@ -9,9 +9,10 @@ import StepIdentity from '@/components/onboarding/StepIdentity'
 import StepEnrollment from '@/components/onboarding/StepEnrollment'
 import StepDemographics from '@/components/onboarding/StepDemographics'
 import StepStaffing from '@/components/onboarding/StepStaffing'
-import StepOperations, { defaultOperationsData } from '@/components/onboarding/StepOperations'
+import StepOperations, { defaultOperationsData, getDefaultOperationsData } from '@/components/onboarding/StepOperations'
 import type { GrowthPreset, StartupFundingSource, GradeExpansionEntry, EnrollmentMode } from '@/lib/types'
 import type { Pathway } from '@/lib/stateConfig'
+import { getStateConfig } from '@/lib/stateConfig'
 
 const STEPS = [
   { label: 'School Identity', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
@@ -61,6 +62,8 @@ interface WizardData {
   schoolType: 'charter' | 'private' | 'micro'
   pathway: Pathway
   fiscalYearStartMonth: number
+  tuitionRate: number
+  financialAidPct: number
 }
 
 const initialWizardData: WizardData = {
@@ -92,6 +95,8 @@ const initialWizardData: WizardData = {
   schoolType: 'charter',
   pathway: 'wa_charter',
   fiscalYearStartMonth: 9,
+  tuitionRate: 0,
+  financialAidPct: 0,
 }
 
 function fmt(n: number) {
@@ -266,6 +271,8 @@ export default function OnboardingPage() {
     buildoutGrades?: string[]
     retentionRate?: number
     expansionPlan?: GradeExpansionEntry[]
+    tuitionRate?: number
+    financialAidPct?: number
   }) => {
     if (!schoolId) return
     setData((prev) => ({
@@ -276,6 +283,8 @@ export default function OnboardingPage() {
       retentionRate: stepData.retentionRate ?? prev.retentionRate,
       expansionPlan: stepData.expansionPlan || prev.expansionPlan,
       enrollmentMode: stepData.enrollmentMode,
+      tuitionRate: stepData.tuitionRate ?? prev.tuitionRate,
+      financialAidPct: stepData.financialAidPct ?? prev.financialAidPct,
     }))
 
     const profileUpdate: Record<string, unknown> = {
@@ -287,6 +296,10 @@ export default function OnboardingPage() {
       target_enrollment_y5: stepData.enrollmentY5,
       max_class_size: stepData.maxClassSize,
     }
+
+    // Save tuition data for private/micro pathways
+    if (stepData.tuitionRate != null) profileUpdate.tuition_rate = stepData.tuitionRate
+    if (stepData.financialAidPct != null) profileUpdate.financial_aid_pct = stepData.financialAidPct
 
     if (stepData.enrollmentMode === 'grade_expansion' && stepData.openingGrades) {
       profileUpdate.opening_grades = stepData.openingGrades
@@ -328,6 +341,12 @@ export default function OnboardingPage() {
     setStep(3)
   }, [schoolId, supabase])
 
+  const skipDemographics = useCallback(() => {
+    // Leave demographics at 0 and advance to staffing
+    setData((prev) => ({ ...prev, pctFrl: 0, pctIep: 0, pctEll: 0, pctHicap: 0 }))
+    setStep(3)
+  }, [])
+
   const saveStep4 = useCallback(async (positions: WizardData['positions']) => {
     if (!schoolId) return
     setData((prev) => ({ ...prev, positions }))
@@ -355,18 +374,22 @@ export default function OnboardingPage() {
     setStep(4)
   }, [schoolId, supabase])
 
-  const completeOnboarding = useCallback(async (opsData: WizardData['operations'], startupFunding: StartupFundingSource[]) => {
+  const completeOnboarding = useCallback(async (opsData: WizardData['operations'], startupFunding: StartupFundingSource[], customRevenue?: { key: string; label: string; amount: number }[]) => {
     if (!schoolId) return
     setSaving(true)
     setError(null)
     setData((prev) => ({ ...prev, operations: opsData, startupFunding }))
 
     try {
-      // Save startup funding to profile
-      await supabase.from('school_profiles').upsert({
+      // Save startup funding and custom revenue lines to profile
+      const profileUpdate: Record<string, unknown> = {
         school_id: schoolId,
         startup_funding: startupFunding,
-      }, { onConflict: 'school_id' })
+      }
+      if (customRevenue) {
+        profileUpdate.custom_revenue_lines = customRevenue
+      }
+      await supabase.from('school_profiles').upsert(profileUpdate, { onConflict: 'school_id' })
 
       const res = await fetch('/api/onboarding/complete', {
         method: 'POST',
@@ -399,20 +422,28 @@ export default function OnboardingPage() {
     ? data.expansionPlan.filter(e => e.year === 1).reduce((sum, e) => sum + e.sections, 0)
     : Math.ceil(data.enrollmentY1 / data.maxClassSize)
 
-  // Calculate total personnel cost for operations step
+  // Pathway config
+  const pathwayConfig = getStateConfig(data.pathway)
+
+  // Calculate total personnel cost for operations step — pathway-aware benefits
   const totalPersonnelCost = data.positions.reduce((sum, p) => {
     const sal = p.fte * p.salary
-    return sum + sal + calcBenefits(sal)
+    return sum + sal + Math.round(sal * pathwayConfig.benefits_load)
   }, 0)
 
-  // Completion summary metrics
+  // Completion summary metrics — pathway-aware
   const completionMetrics = useMemo(() => {
-    const rev = calcCommissionRevenue(data.enrollmentY1, data.pctFrl, data.pctIep, data.pctEll, data.pctHicap, DEFAULT_ASSUMPTIONS)
-    const totalRevenue = rev.total
+    let totalRevenue: number
+    if (pathwayConfig.revenue_model === 'tuition') {
+      totalRevenue = data.enrollmentY1 * data.tuitionRate * (1 - data.financialAidPct)
+    } else {
+      const rev = calcCommissionRevenue(data.enrollmentY1, data.pctFrl, data.pctIep, data.pctEll, data.pctHicap, DEFAULT_ASSUMPTIONS)
+      totalRevenue = rev.total
+    }
     const totalFte = data.positions.reduce((s, p) => s + p.fte, 0)
     const personnelPct = totalRevenue > 0 ? ((totalPersonnelCost / totalRevenue) * 100).toFixed(1) : '0'
     return { totalRevenue, totalPersonnelCost, totalFte, personnelPct }
-  }, [data, totalPersonnelCost])
+  }, [data, totalPersonnelCost, pathwayConfig])
 
   if (loading) {
     return (
@@ -532,9 +563,9 @@ export default function OnboardingPage() {
             Let&apos;s build your school&apos;s financial model
           </p>
           <p className="text-sm text-slate-600 leading-relaxed mb-4">
-            In the next few minutes, you&apos;ll set up the foundation of your charter school&apos;s financial plan.
+            In the next few minutes, you&apos;ll set up the foundation of your {data.pathway === 'wa_charter' ? 'charter school' : pathwayConfig.display_name.toLowerCase()}&apos;s financial plan.
             We&apos;ll walk you through five steps: your school identity, enrollment plan, student demographics,
-            staffing, and operations. Every answer you provide generates a Commission-aligned financial model
+            staffing, and operations. Every answer you provide generates a {data.pathway === 'wa_charter' ? 'Commission-aligned' : 'comprehensive'} financial model
             that you can refine on your dashboard.
           </p>
           <p className="text-xs text-slate-400 mb-8">
@@ -630,12 +661,15 @@ export default function OnboardingPage() {
             enrollmentY3: data.enrollmentY3,
             enrollmentY4: data.enrollmentY4,
             growthPreset: data.growthPreset,
+            tuitionRate: data.tuitionRate,
+            financialAidPct: data.financialAidPct * 100,
           }}
           gradeConfig={data.gradeConfig}
           pctFrl={data.pctFrl}
           pctIep={data.pctIep}
           pctEll={data.pctEll}
           pctHicap={data.pctHicap}
+          pathway={data.pathway}
           initialOpeningGrades={data.openingGrades.length > 0 ? data.openingGrades : undefined}
           initialBuildoutGrades={data.buildoutGrades.length > 0 ? data.buildoutGrades : undefined}
           initialRetentionRate={data.retentionRate}
@@ -655,7 +689,9 @@ export default function OnboardingPage() {
             pctEll: data.pctEll,
             pctHicap: data.pctHicap,
           }}
+          pathway={data.pathway}
           onNext={saveStep3}
+          onSkip={skipDemographics}
           onBack={() => setStep(1)}
         />
       )}
@@ -670,6 +706,9 @@ export default function OnboardingPage() {
           pctIep={data.pctIep}
           pctEll={data.pctEll}
           pctHicap={data.pctHicap}
+          pathway={data.pathway}
+          tuitionRate={data.tuitionRate}
+          financialAidPct={data.financialAidPct}
           initialPositions={data.positions}
           onNext={saveStep4}
           onBack={() => setStep(2)}
@@ -684,6 +723,9 @@ export default function OnboardingPage() {
           pctIep={data.pctIep}
           pctEll={data.pctEll}
           pctHicap={data.pctHicap}
+          pathway={data.pathway}
+          tuitionRate={data.tuitionRate}
+          financialAidPct={data.financialAidPct}
           initialData={data.operations}
           startupFunding={data.startupFunding}
           onComplete={completeOnboarding}

@@ -6,6 +6,8 @@ import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import type { GrowthPreset, GradeExpansionEntry, EnrollmentMode } from '@/lib/types'
 import { expansionToEnrollmentArray } from '@/lib/gradeExpansion'
 import GradeExpansionEditor from '@/components/GradeExpansionEditor'
+import type { Pathway, StateConfig } from '@/lib/stateConfig'
+import { getStateConfig } from '@/lib/stateConfig'
 
 const GRADE_ENROLLMENT_DEFAULTS: Record<string, { classSize: number }> = {
   'K-5': { classSize: 24 },
@@ -26,12 +28,15 @@ interface Props {
     enrollmentY3: number
     enrollmentY4: number
     growthPreset: GrowthPreset
+    tuitionRate?: number
+    financialAidPct?: number
   }
   gradeConfig: string
   pctFrl: number
   pctIep: number
   pctEll: number
   pctHicap: number
+  pathway?: Pathway
   initialOpeningGrades?: string[]
   initialBuildoutGrades?: string[]
   initialRetentionRate?: number
@@ -49,19 +54,31 @@ interface Props {
     buildoutGrades?: string[]
     retentionRate?: number
     expansionPlan?: GradeExpansionEntry[]
+    tuitionRate?: number
+    financialAidPct?: number
   }) => void
   onBack: () => void
 }
 
 export default function StepEnrollment({
   initialData, gradeConfig, pctFrl, pctIep, pctEll, pctHicap,
+  pathway,
   initialOpeningGrades, initialBuildoutGrades, initialRetentionRate, initialExpansionPlan,
   onNext, onBack,
 }: Props) {
+  const config = getStateConfig(pathway)
+  const isTuitionBased = config.revenue_model === 'tuition'
+  const isCharter = config.pathway === 'wa_charter' || config.pathway === 'generic_charter'
+
   const defaults = GRADE_ENROLLMENT_DEFAULTS[gradeConfig] || GRADE_ENROLLMENT_DEFAULTS['K-5']
+  const configClassSize = config.students_per_section_default
   const [mode, setMode] = useState<EnrollmentMode>('grade_expansion')
 
-  const [maxClassSize, setMaxClassSize] = useState(initialData.maxClassSize || defaults.classSize)
+  const [maxClassSize, setMaxClassSize] = useState(initialData.maxClassSize || configClassSize || defaults.classSize)
+
+  // Tuition inputs for private/micro pathways
+  const [tuitionRate, setTuitionRate] = useState(initialData.tuitionRate ?? config.tuition_rate_default ?? 0)
+  const [financialAidPct, setFinancialAidPct] = useState(initialData.financialAidPct ?? ((config.financial_aid_pct_default ?? 0) * 100))
 
   // Grade expansion state
   const [expansionResult, setExpansionResult] = useState<{
@@ -102,14 +119,24 @@ export default function StepEnrollment({
     : Math.ceil(effectiveY1 / maxClassSize)
 
   const revenuePreview = useMemo(() => {
+    if (isTuitionBased) {
+      // Private/Micro: tuition × enrollment × (1 - aid%)
+      const grossTuition = effectiveY1 * tuitionRate
+      const aidDiscount = grossTuition * (financialAidPct / 100)
+      const netTuition = grossTuition - aidDiscount
+      return { baseRevenue: netTuition, totalGrants: 0, total: netTuition }
+    }
+    // Charter pathways: use Commission revenue calculation
     const rev = calcCommissionRevenue(effectiveY1, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS)
     const baseRevenue = rev.regularEd + rev.sped + rev.facilitiesRev + rev.levyEquity
     const totalGrants = rev.titleI + rev.idea + rev.lap + rev.tbip + rev.hicap
     return { baseRevenue, totalGrants, total: rev.total }
-  }, [effectiveY1, pctFrl, pctIep, pctEll, pctHicap])
+  }, [effectiveY1, pctFrl, pctIep, pctEll, pctHicap, isTuitionBased, tuitionRate, financialAidPct])
 
   function handleNext(e: React.FormEvent) {
     e.preventDefault()
+
+    const tuitionFields = isTuitionBased ? { tuitionRate, financialAidPct: financialAidPct / 100 } : {}
 
     if (expansionResult) {
       const arr = expansionToEnrollmentArray(expansionResult.plan, expansionResult.retentionRate)
@@ -126,6 +153,7 @@ export default function StepEnrollment({
         buildoutGrades: expansionResult.buildoutGrades,
         retentionRate: expansionResult.retentionRate,
         expansionPlan: expansionResult.plan,
+        ...tuitionFields,
       })
     } else {
       onNext({
@@ -137,6 +165,7 @@ export default function StepEnrollment({
         enrollmentY5: expansionEnrollments.y5,
         growthPreset: 'moderate',
         enrollmentMode: mode,
+        ...tuitionFields,
       })
     }
   }
@@ -220,6 +249,47 @@ export default function StepEnrollment({
         </>
       )}
 
+      {/* Tuition inputs — private/micro only */}
+      {isTuitionBased && (
+        <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+          <h3 className="text-sm font-semibold text-slate-700">Tuition Configuration</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-slate-500 mb-1">Annual Tuition Per Student</label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-slate-400">$</span>
+                <input
+                  type="number"
+                  value={tuitionRate}
+                  onChange={(e) => setTuitionRate(Number(e.target.value))}
+                  className="w-full pl-7 pr-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-500 mb-1">Financial Aid Discount %</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={financialAidPct}
+                  onChange={(e) => setFinancialAidPct(Number(e.target.value))}
+                  min={0}
+                  max={100}
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
+                />
+                <span className="absolute right-3 top-2.5 text-slate-400">%</span>
+              </div>
+            </div>
+          </div>
+          {effectiveY1 > 0 && (
+            <p className="text-xs text-slate-500">
+              {effectiveY1} students x {fmt(tuitionRate)} = {fmt(effectiveY1 * tuitionRate)} gross
+              {financialAidPct > 0 && <> less {financialAidPct}% aid = <strong className="text-teal-600">{fmt(effectiveY1 * tuitionRate * (1 - financialAidPct / 100))}</strong> net tuition</>}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Revenue preview */}
       <div className="bg-slate-50 rounded-xl p-4 flex flex-wrap gap-6">
         <div>
@@ -227,13 +297,17 @@ export default function StepEnrollment({
           <p className="text-lg font-semibold text-slate-800">{sectionsY1}</p>
         </div>
         <div>
-          <p className="text-xs text-slate-500">Est. Base Revenue</p>
+          <p className="text-xs text-slate-500">
+            {isTuitionBased ? 'Est. Tuition Revenue' : config.pathway === 'generic_charter' ? 'Est. Per-Pupil Revenue' : 'Est. Base Revenue'}
+          </p>
           <p className="text-lg font-semibold text-slate-800">{fmt(revenuePreview.baseRevenue)}</p>
         </div>
-        <div>
-          <p className="text-xs text-slate-500">Est. Grants</p>
-          <p className="text-lg font-semibold text-slate-800">{fmt(revenuePreview.totalGrants)}</p>
-        </div>
+        {isCharter && (
+          <div>
+            <p className="text-xs text-slate-500">Est. Grants</p>
+            <p className="text-lg font-semibold text-slate-800">{fmt(revenuePreview.totalGrants)}</p>
+          </div>
+        )}
         <div>
           <p className="text-xs text-slate-500">Total Revenue</p>
           <p className="text-lg font-semibold text-teal-600">{fmt(revenuePreview.total)}</p>

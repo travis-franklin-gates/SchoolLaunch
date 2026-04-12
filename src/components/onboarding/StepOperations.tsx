@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react'
 import { calcCommissionRevenue, calcAuthorizerFeeCommission } from '@/lib/calculations'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import type { StartupFundingSource } from '@/lib/types'
+import type { Pathway } from '@/lib/stateConfig'
+import { getStateConfig } from '@/lib/stateConfig'
 
 interface OperationsData {
   facilityMode: 'sqft' | 'flat'
@@ -25,9 +27,12 @@ interface Props {
   pctIep: number
   pctEll: number
   pctHicap: number
+  pathway?: Pathway
+  tuitionRate?: number
+  financialAidPct?: number
   initialData: OperationsData
   startupFunding: StartupFundingSource[]
-  onComplete: (data: OperationsData, funding: StartupFundingSource[]) => void
+  onComplete: (data: OperationsData, funding: StartupFundingSource[], customRevenue?: { key: string; label: string; amount: number }[]) => void
   onBack: () => void
   saving: boolean
 }
@@ -47,6 +52,24 @@ export const defaultOperationsData: OperationsData = {
   foodProgram: true,
   insurance: 18000,
   miscPct: 2,
+}
+
+export function getDefaultOperationsData(pathway?: Pathway): OperationsData {
+  if (!pathway || pathway === 'wa_charter') return defaultOperationsData
+  const config = getStateConfig(pathway)
+  const od = config.operations_defaults
+  return {
+    facilityMode: 'flat',
+    facilitySqft: 15000,
+    facilityCostPerSqft: 18,
+    facilityMonthly: pathway === 'generic_micro' ? 5000 : 15000,
+    suppliesPerPupil: od.supplies_per_student ?? 200,
+    contractedPerPupil: od.contracted_services_per_student ?? 150,
+    technologyPerPupil: od.technology_per_student ?? 180,
+    foodProgram: pathway !== 'generic_micro',
+    insurance: od.insurance_annual ?? 18000,
+    miscPct: od.contingency_pct ?? 2,
+  }
 }
 
 const ALL_YEARS = [0, 1, 2, 3, 4]
@@ -120,18 +143,36 @@ export default function StepOperations({
   pctIep,
   pctEll,
   pctHicap,
+  pathway,
+  tuitionRate,
+  financialAidPct,
   initialData,
   startupFunding,
   onComplete,
   onBack,
   saving,
 }: Props) {
+  const config = getStateConfig(pathway)
+  const isCharter = config.pathway === 'wa_charter' || config.pathway === 'generic_charter'
+  const isWaCharter = config.pathway === 'wa_charter'
+  const isMicro = config.pathway === 'generic_micro'
+  const isTuitionBased = config.revenue_model === 'tuition'
+  const showAuthorizerFee = isCharter
+  const showFoodProgram = !isMicro
+
   const [facilityMode, setFacilityMode] = useState(initialData.facilityMode)
   const [facilitySqft, setFacilitySqft] = useState(initialData.facilitySqft)
   const [facilityCostPerSqft, setFacilityCostPerSqft] = useState(initialData.facilityCostPerSqft)
   const [facilityMonthly, setFacilityMonthly] = useState(initialData.facilityMonthly)
-  const [foodProgram, setFoodProgram] = useState(initialData.foodProgram)
+  const [foodProgram, setFoodProgram] = useState(showFoodProgram ? initialData.foodProgram : false)
   const [facilityEstimate, setFacilityEstimate] = useState(false)
+
+  // Additional revenue inputs for generic pathways
+  const [perPupilRate, setPerPupilRate] = useState(config.pathway === 'generic_charter'
+    ? (config.revenue_lines.find(l => l.key === 'per_pupil_funding')?.default_rate ?? 10000)
+    : 0)
+  const [registrationFees, setRegistrationFees] = useState(isTuitionBased ? (config.pathway === 'generic_micro' ? 250 : 500) : 0)
+  const [fundraisingAmount, setFundraisingAmount] = useState(0)
 
   const [funding, setFunding] = useState<FundingRow[]>(
     (startupFunding.length > 0 ? startupFunding : DEFAULT_STARTUP_SOURCES).map((f) => ({
@@ -141,28 +182,48 @@ export default function StepOperations({
     }))
   )
 
-  const rev = calcCommissionRevenue(enrollment, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS)
-  const stateApport = rev.regularEd + rev.sped + rev.facilitiesRev
-  const authorizerFee = calcAuthorizerFeeCommission(stateApport)
-  const totalRevenue = rev.total
+  // Revenue calculation — pathway-aware
+  const totalRevenue = useMemo(() => {
+    if (isTuitionBased) {
+      const rate = tuitionRate ?? config.tuition_rate_default ?? 0
+      const aidPct = financialAidPct ?? config.financial_aid_pct_default ?? 0
+      return enrollment * rate * (1 - aidPct) + registrationFees * enrollment + fundraisingAmount
+    }
+    if (config.pathway === 'generic_charter') {
+      return enrollment * perPupilRate + fundraisingAmount
+    }
+    const rev = calcCommissionRevenue(enrollment, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS)
+    return rev.total
+  }, [enrollment, pctFrl, pctIep, pctEll, pctHicap, config, tuitionRate, financialAidPct, perPupilRate, registrationFees, fundraisingAmount, isTuitionBased])
+
+  const authorizerFee = useMemo(() => {
+    if (!showAuthorizerFee) return 0
+    if (isWaCharter) {
+      const rev = calcCommissionRevenue(enrollment, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS)
+      return calcAuthorizerFeeCommission(rev.regularEd + rev.sped + rev.facilitiesRev)
+    }
+    // Generic charter: default 0% authorizer fee (editable in dashboard later)
+    return Math.round(totalRevenue * config.authorizer_fee)
+  }, [enrollment, pctFrl, pctIep, pctEll, pctHicap, showAuthorizerFee, isWaCharter, totalRevenue, config])
 
   const estimatedFacilityAnnual = Math.round(totalRevenue * 0.15)
   const estimatedFacilityMonthly = Math.round(estimatedFacilityAnnual / 12)
 
+  const opsData = initialData
   const costs = useMemo(() => {
     const facility = facilityEstimate
       ? estimatedFacilityAnnual
       : facilityMode === 'sqft'
         ? facilitySqft * facilityCostPerSqft
         : facilityMonthly * 12
-    const supplies = defaultOperationsData.suppliesPerPupil * enrollment
-    const contracted = defaultOperationsData.contractedPerPupil * enrollment
-    const technology = defaultOperationsData.technologyPerPupil * enrollment
-    const insurance = defaultOperationsData.insurance
+    const supplies = opsData.suppliesPerPupil * enrollment
+    const contracted = opsData.contractedPerPupil * enrollment
+    const technology = opsData.technologyPerPupil * enrollment
+    const insurance = opsData.insurance
     const subtotal = facility + supplies + contracted + technology + authorizerFee + insurance + totalPersonnelCost
-    const misc = Math.round(subtotal * (defaultOperationsData.miscPct / 100))
+    const misc = Math.round(subtotal * (opsData.miscPct / 100))
     return { facility, supplies, contracted, technology, authorizerFee, insurance, misc }
-  }, [facilityMode, facilitySqft, facilityCostPerSqft, facilityMonthly, enrollment, authorizerFee, totalPersonnelCost, facilityEstimate, estimatedFacilityAnnual])
+  }, [facilityMode, facilitySqft, facilityCostPerSqft, facilityMonthly, enrollment, authorizerFee, totalPersonnelCost, facilityEstimate, estimatedFacilityAnnual, opsData])
 
   const totalOps = costs.facility + costs.supplies + costs.contracted + costs.technology + costs.authorizerFee + costs.insurance + costs.misc
   const totalExpenses = totalPersonnelCost + totalOps
@@ -270,7 +331,18 @@ export default function StepOperations({
         selectedYears,
         yearAllocations,
       }))
-    onComplete(fullData, cleanFunding)
+    // Build custom revenue lines for generic pathways
+    const customRevenue: { key: string; label: string; amount: number }[] = []
+    if (config.pathway === 'generic_charter' && perPupilRate > 0) {
+      customRevenue.push({ key: 'per_pupil_funding', label: 'Per-Pupil Funding', amount: perPupilRate * enrollment })
+    }
+    if (isTuitionBased && registrationFees > 0) {
+      customRevenue.push({ key: 'registration_fees', label: 'Registration Fees', amount: registrationFees * enrollment })
+    }
+    if (fundraisingAmount > 0) {
+      customRevenue.push({ key: 'fundraising', label: 'Fundraising/Donations', amount: fundraisingAmount })
+    }
+    onComplete(fullData, cleanFunding, customRevenue.length > 0 ? customRevenue : undefined)
   }
 
   return (
@@ -368,20 +440,95 @@ export default function StepOperations({
         )}
       </div>
 
-      {/* Food program */}
-      <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl p-4">
-        <input
-          type="checkbox"
-          id="foodProgram"
-          checked={foodProgram}
-          onChange={(e) => setFoodProgram(e.target.checked)}
-          className="w-4 h-4 accent-teal-600"
-        />
-        <div>
-          <label htmlFor="foodProgram" className="text-sm font-medium text-slate-700">Food Program</label>
-          <p className="text-xs text-slate-400">If enabled, assumes net neutral (federal reimbursement offsets cost)</p>
+      {/* Food program — hidden for micro */}
+      {showFoodProgram && (
+        <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl p-4">
+          <input
+            type="checkbox"
+            id="foodProgram"
+            checked={foodProgram}
+            onChange={(e) => setFoodProgram(e.target.checked)}
+            className="w-4 h-4 accent-teal-600"
+          />
+          <div>
+            <label htmlFor="foodProgram" className="text-sm font-medium text-slate-700">Food Program</label>
+            <p className="text-xs text-slate-400">If enabled, assumes net neutral (federal reimbursement offsets cost)</p>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Revenue Configuration — generic pathways only */}
+      {!isWaCharter && (
+        <div className="bg-white border border-slate-200 rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-slate-800 mb-3">Revenue Configuration</h3>
+          {config.pathway === 'generic_charter' && (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Per-Pupil Public Funding Rate (annual)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-slate-400">$</span>
+                  <input
+                    type="number"
+                    value={perPupilRate}
+                    onChange={(e) => setPerPupilRate(Number(e.target.value))}
+                    className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  />
+                </div>
+                <p className="text-xs text-slate-400 mt-1">Primary per-pupil funding from your state. {enrollment} students x {fmt(perPupilRate)} = {fmt(enrollment * perPupilRate)}</p>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Fundraising / Donations (annual)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-slate-400">$</span>
+                  <input
+                    type="number"
+                    value={fundraisingAmount}
+                    onChange={(e) => setFundraisingAmount(Number(e.target.value))}
+                    className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  />
+                </div>
+              </div>
+              {config.authorizer_fee_editable && (
+                <p className="text-xs text-slate-500 italic">Authorizer fee: {(config.authorizer_fee * 100).toFixed(0)}% — editable in Settings after onboarding.</p>
+              )}
+            </div>
+          )}
+          {isTuitionBased && (
+            <div className="space-y-3">
+              <div className="bg-slate-50 rounded-lg p-3">
+                <p className="text-sm text-slate-700">
+                  Tuition Revenue: {enrollment} students x {fmt(tuitionRate ?? config.tuition_rate_default ?? 0)} = {fmt(enrollment * (tuitionRate ?? config.tuition_rate_default ?? 0))}
+                  {(financialAidPct ?? 0) > 0 && <span className="text-slate-500"> (less {((financialAidPct ?? 0) * 100).toFixed(0)}% financial aid)</span>}
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Registration / Enrollment Fees (per student)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-slate-400">$</span>
+                  <input
+                    type="number"
+                    value={registrationFees}
+                    onChange={(e) => setRegistrationFees(Number(e.target.value))}
+                    className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Fundraising / Annual Fund</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-slate-400">$</span>
+                  <input
+                    type="number"
+                    value={fundraisingAmount}
+                    onChange={(e) => setFundraisingAmount(Number(e.target.value))}
+                    className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Startup Funding */}
       <div className="bg-white border border-slate-200 rounded-xl p-5">

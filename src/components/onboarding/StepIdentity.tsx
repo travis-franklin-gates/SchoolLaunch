@@ -81,11 +81,16 @@ export default function StepIdentity({ initialData, onNext }: Props) {
   const isWaCharter = pathway === 'wa_charter'
   const config = getStateConfig(pathway)
 
-  // Fiscal year start month for non-WA pathways
-  const defaultFiscalMonth = schoolType === 'charter' ? 7 : 9
-  const [fiscalYearStartMonth, setFiscalYearStartMonth] = useState(
-    initialData.fiscalYearStartMonth || defaultFiscalMonth
-  )
+  // Fiscal year start month — initialized from config for current pathway
+  const [fiscalYearStartMonth, setFiscalYearStartMonth] = useState(() => {
+    // If the initial pathway is already non-WA, use whatever was saved
+    const initialPathway = derivePathway(initialData.state || 'WA', initialData.schoolType || 'charter')
+    if (initialPathway !== 'wa_charter' && initialData.fiscalYearStartMonth) {
+      return initialData.fiscalYearStartMonth
+    }
+    // Otherwise use the config default for the current pathway
+    return getStateConfig(initialPathway).fiscal_year_start_month
+  })
 
   const nameError = touched && schoolName.trim().length < 3 ? 'School name must be at least 3 characters' : null
   const gradesError = touched && foundingGrades.length === 0 ? 'Select at least one founding grade' : null
@@ -164,7 +169,15 @@ export default function StepIdentity({ initialData, onNext }: Props) {
         <label className="block text-sm font-medium text-slate-700 mb-1">State</label>
         <select
           value={selectedState}
-          onChange={(e) => setSelectedState(e.target.value)}
+          onChange={(e) => {
+            const newState = e.target.value
+            setSelectedState(newState)
+            // Update fiscal year default when pathway changes
+            const newPathway = derivePathway(newState, schoolType)
+            if (newPathway !== 'wa_charter') {
+              setFiscalYearStartMonth(getStateConfig(newPathway).fiscal_year_start_month)
+            }
+          }}
           className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 bg-white"
         >
           {US_STATES.map((s) => (
@@ -183,9 +196,11 @@ export default function StepIdentity({ initialData, onNext }: Props) {
               type="button"
               onClick={() => {
                 setSchoolType(t.value)
-                // Update fiscal year default when switching types
-                if (t.value === 'charter') setFiscalYearStartMonth(7)
-                else setFiscalYearStartMonth(9)
+                // Update fiscal year default from config when switching types
+                const newPathway = derivePathway(selectedState, t.value)
+                if (newPathway !== 'wa_charter') {
+                  setFiscalYearStartMonth(getStateConfig(newPathway).fiscal_year_start_month)
+                }
               }}
               className={`px-3 py-3 rounded-lg border-2 text-left transition-all ${
                 schoolType === t.value

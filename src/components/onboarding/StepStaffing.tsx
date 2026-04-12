@@ -3,6 +3,8 @@
 import { useState, useMemo, useRef } from 'react'
 import { calcBenefits, calcCommissionRevenue } from '@/lib/calculations'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
+import type { Pathway } from '@/lib/stateConfig'
+import { getStateConfig } from '@/lib/stateConfig'
 
 interface LocalPosition {
   key: string
@@ -24,6 +26,9 @@ interface Props {
   pctIep: number
   pctEll: number
   pctHicap: number
+  pathway?: Pathway
+  tuitionRate?: number
+  financialAidPct?: number
   initialPositions: LocalPosition[]
   onNext: (positions: LocalPosition[]) => void
   onBack: () => void
@@ -117,31 +122,90 @@ export function buildDefaultPositions(enrollment: number, maxClassSize: number, 
   return positions
 }
 
-export default function StepStaffing({ enrollment, maxClassSize, sectionsY1, gradeConfig, pctFrl, pctIep, pctEll, pctHicap, initialPositions, onNext, onBack }: Props) {
+/** Build positions from stateConfig for non-WA pathways */
+function buildDefaultPositionsFromConfig(
+  pathway: Pathway,
+  enrollment: number,
+  maxClassSize: number,
+  pctIep: number,
+): LocalPosition[] {
+  const config = getStateConfig(pathway)
+  const sections = Math.ceil(enrollment / maxClassSize)
+  const positions: LocalPosition[] = []
+
+  for (const pt of config.position_types) {
+    let fte = pt.default_fte
+    // Scale per-pupil positions
+    if (pt.driver === 'per_pupil' && pt.students_per_position > 0) {
+      fte = Math.max(pt.default_fte, Math.ceil(enrollment / pt.students_per_position))
+    } else if ((pt.driver === 'per_pupil_elem' || pt.driver === 'per_pupil_ms' || pt.driver === 'per_pupil_hs') && pt.students_per_position > 0) {
+      fte = sections
+    } else if (pt.driver === 'per_pupil_sped' && pt.students_per_position > 0) {
+      fte = Math.max(1, Math.ceil((enrollment * pctIep / 100) / pt.students_per_position))
+    }
+
+    const category: 'admin' | 'certificated' | 'classified' =
+      pt.classification === 'Administrative' ? 'admin' :
+      pt.classification === 'Instructional' ? 'certificated' : 'classified'
+
+    positions.push({
+      key: nextKey(),
+      title: pt.name,
+      category,
+      fte,
+      salary: pt.default_salary,
+      positionType: pt.type,
+      classification: pt.classification,
+      driver: pt.driver,
+    })
+  }
+
+  return positions
+}
+
+export default function StepStaffing({ enrollment, maxClassSize, sectionsY1, gradeConfig, pctFrl, pctIep, pctEll, pctHicap, pathway, tuitionRate, financialAidPct, initialPositions, onNext, onBack }: Props) {
+  const config = getStateConfig(pathway)
+  const benefitsRate = config.benefits_load
+
+  function getDefaults() {
+    if (config.pathway === 'wa_charter') {
+      return buildDefaultPositions(enrollment, maxClassSize, gradeConfig, pctIep, pctEll, sectionsY1)
+    }
+    return buildDefaultPositionsFromConfig(config.pathway, enrollment, maxClassSize, pctIep)
+  }
+
   const [positions, setPositions] = useState<LocalPosition[]>(
-    initialPositions.length > 0 ? initialPositions : buildDefaultPositions(enrollment, maxClassSize, gradeConfig, pctIep, pctEll, sectionsY1)
+    initialPositions.length > 0 ? initialPositions : getDefaults()
   )
 
-  const rev = calcCommissionRevenue(enrollment, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS)
-  const totalRevenue = rev.total
+  // Revenue calculation — pathway-aware
+  const totalRevenue = useMemo(() => {
+    if (config.revenue_model === 'tuition') {
+      const rate = tuitionRate ?? config.tuition_rate_default ?? 0
+      const aidPct = financialAidPct ?? config.financial_aid_pct_default ?? 0
+      return enrollment * rate * (1 - aidPct)
+    }
+    const rev = calcCommissionRevenue(enrollment, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS)
+    return rev.total
+  }, [enrollment, pctFrl, pctIep, pctEll, pctHicap, config, tuitionRate, financialAidPct])
 
   const totals = useMemo(() => {
     let totalPersonnel = 0
     let totalFte = 0
     for (const p of positions) {
       const salary = p.fte * p.salary
-      totalPersonnel += salary + calcBenefits(salary)
+      totalPersonnel += salary + Math.round(salary * benefitsRate)
       totalFte += p.fte
     }
     const pctOfRevenue = totalRevenue > 0 ? (totalPersonnel / totalRevenue) * 100 : 0
     const studentTeacherRatio = (() => {
       const teacherFte = positions
-        .filter(p => p.positionType === 'teacher_elem' || p.positionType === 'teacher_ms' || p.positionType === 'teacher_hs' || /classroom teacher/i.test(p.title))
+        .filter(p => p.positionType === 'teacher_elem' || p.positionType === 'teacher_ms' || p.positionType === 'teacher_hs' || /classroom teacher/i.test(p.title) || /lead teacher/i.test(p.title))
         .reduce((s, p) => s + p.fte, 0)
       return teacherFte > 0 ? Math.round(enrollment / teacherFte) : 0
     })()
     return { totalPersonnel, totalFte, pctOfRevenue, studentTeacherRatio }
-  }, [positions, totalRevenue, enrollment])
+  }, [positions, totalRevenue, enrollment, benefitsRate])
 
   const healthColor = totals.pctOfRevenue > 85
     ? 'text-red-600'
@@ -173,7 +237,7 @@ export default function StepStaffing({ enrollment, maxClassSize, sectionsY1, gra
   }
 
   function resetDefaults() {
-    setPositions(buildDefaultPositions(enrollment, maxClassSize, gradeConfig, pctIep, pctEll, sectionsY1))
+    setPositions(getDefaults())
   }
 
   // Drag-and-drop reordering
@@ -263,7 +327,7 @@ export default function StepStaffing({ enrollment, maxClassSize, sectionsY1, gra
               <th className="text-left py-2 pr-3 font-medium text-slate-600">Category</th>
               <th className="text-right py-2 pr-3 font-medium text-slate-600">FTE</th>
               <th className="text-right py-2 pr-3 font-medium text-slate-600">Annual Salary</th>
-              <th className="text-right py-2 pr-3 font-medium text-slate-600">Benefits (30%)</th>
+              <th className="text-right py-2 pr-3 font-medium text-slate-600">Benefits ({Math.round(benefitsRate * 100)}%)</th>
               <th className="text-right py-2 pr-3 font-medium text-slate-600">Total Cost</th>
               <th className="py-2 w-10"></th>
             </tr>
@@ -271,7 +335,7 @@ export default function StepStaffing({ enrollment, maxClassSize, sectionsY1, gra
           <tbody>
             {positions.map((p, i) => {
               const effectiveSalary = p.fte * p.salary
-              const benefits = calcBenefits(effectiveSalary)
+              const benefits = Math.round(effectiveSalary * benefitsRate)
               const total = effectiveSalary + benefits
               return (
                 <tr
