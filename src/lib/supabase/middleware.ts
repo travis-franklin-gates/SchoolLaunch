@@ -22,7 +22,7 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
@@ -41,6 +41,49 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
+  }
+
+  // --- Onboarding enforcement ---
+  // Only check for routes that need it (dashboard and onboarding)
+  const isOnboardingRoute = pathname === '/onboarding' || pathname.startsWith('/onboarding/')
+  const isDashboardRoute = pathname === '/dashboard' || pathname.startsWith('/dashboard/')
+
+  if (isOnboardingRoute || isDashboardRoute) {
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role, school_id')
+      .eq('user_id', user.id)
+
+    // Admins are exempt from onboarding enforcement
+    const hasAdminRole = roles?.some(r => r.role === 'org_admin' || r.role === 'super_admin')
+
+    if (!hasAdminRole && roles?.length) {
+      const ceoRole = roles.find(r => r.role === 'school_ceo' && r.school_id)
+
+      if (ceoRole?.school_id) {
+        const { data: profile } = await supabase
+          .from('school_profiles')
+          .select('onboarding_complete')
+          .eq('school_id', ceoRole.school_id)
+          .single()
+
+        const onboardingComplete = profile?.onboarding_complete === true
+
+        if (!onboardingComplete && !isOnboardingRoute) {
+          // Not complete → lock into onboarding
+          const url = request.nextUrl.clone()
+          url.pathname = '/onboarding'
+          return NextResponse.redirect(url)
+        }
+
+        if (onboardingComplete && isOnboardingRoute) {
+          // Already complete → onboarding is a one-time flow
+          const url = request.nextUrl.clone()
+          url.pathname = '/dashboard'
+          return NextResponse.redirect(url)
+        }
+      }
+    }
   }
 
   return supabaseResponse
