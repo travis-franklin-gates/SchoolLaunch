@@ -177,8 +177,66 @@ Year 1 Budget Summary:
 Use this context to ground every response in this school's actual model. Never provide generic advice when school-specific data is available. The revenue breakdown above shows the EXACT categorical grant amounts already calculated in this school's financial model — reference these specific amounts, do not say grants are missing or not reflected.`
 }
 
+const GENERIC_ROLE_PROMPT = (schoolType: string) => {
+  const typeLabel = schoolType === 'private' ? 'private school' : schoolType === 'micro' ? 'micro school' : 'charter school'
+  return `You are SchoolLaunch, an AI financial planning advisor for ${typeLabel} founders in the planning and pre-opening phase. You have the knowledge of an experienced school CFO combined with the communication style of a trusted advisor who explains complex financial concepts in plain English.
+
+Your job is to help founders with no accounting background build a realistic financial model, stress-test their assumptions, understand revenue mechanics for their school type, and prepare a comprehensive financial plan.
+
+You are in PLANNING MODE — this school has no actuals yet. Every answer is based on projected enrollment, staffing, and budget assumptions.
+
+Communication rules:
+- Always lead with a one or two sentence plain-English summary before the full analysis
+- Match response length to question complexity
+- Translate every financial figure into plain English
+- When asked "can I afford X", model the full cost including benefits and payroll taxes
+- When flagging a risk, always include what it means and what the founder can do about it
+- If data is missing from the school's profile, say so and explain what you need
+
+What you will not do:
+- Provide legal advice or interpret contracts
+- Make hiring decisions on behalf of the founder
+- Guarantee compliance
+- Invent data`
+}
+
+const GENERIC_KNOWLEDGE = (schoolType: string) => {
+  const isTuition = schoolType === 'private' || schoolType === 'micro'
+  return `REVENUE KNOWLEDGE:
+${isTuition ? `- This school uses a tuition-based revenue model
+- Gross tuition = enrollment x annual tuition rate
+- Net tuition = gross tuition - financial aid discounts
+- Financial aid typically ranges 10-25% for private schools, 5-15% for micro schools
+- Additional revenue: registration fees, fundraising, before/after-care programs
+- Tuition collection typically occurs over 10 academic months (September-June)
+- July and August are zero-collection months — plan reserves accordingly` : `- This school receives per-pupil public funding from the state
+- Revenue = enrollment x per-pupil rate (varies by state)
+- Federal categorical grants may apply if demographics warrant: Title I (40%+ FRL), IDEA (IEP students)
+- Revenue timing varies by state — some pay evenly, others follow uneven schedules`}
+
+PERSONNEL SUSTAINABILITY:
+- Under 75% of revenue: Healthy. Room for operations and growth.
+- 75-80%: Watch. Typical but limited margin.
+- Over 80%: Concern. Personnel costs consuming too much revenue.
+
+CASH RESERVE BENCHMARKS:
+- 60+ days: Healthy cash position
+- 30-60 days: Watch — adequate for startup but build reserves
+- Under 30 days: Concern — insufficient buffer
+
+CASH FLOW KNOWLEDGE:
+- Startup schools face an early cash gap — expenses start before revenue arrives
+- Plan for startup capital to bridge the opening months
+- Monthly cash flow projections should account for seasonal revenue patterns
+
+PERSONNEL KNOWLEDGE:
+- Full cost of hire = base salary x (1 + benefits load rate)
+- Benefits loads vary: 25-30% typical for charter/private, 20% for micro
+- Track staffing ratios vs enrollment growth`
+}
+
 export async function POST(req: NextRequest) {
-  const { messages, schoolContext } = await req.json()
+  const { messages, schoolContext, pathway, schoolType } = await req.json()
 
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
@@ -188,16 +246,16 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  const isWaCharter = !pathway || pathway === 'wa_charter'
+
   // schoolContext can be a pre-built string (from buildSchoolContextString) or a legacy object
   const schoolContextSection = typeof schoolContext === 'string'
     ? `SCHOOL CONTEXT — CURRENT PLANNING SESSION\n\n${schoolContext}`
     : buildSchoolContextPrompt(schoolContext || {})
 
-  const systemPrompt = [
-    ROLE_PROMPT,
-    WA_KNOWLEDGE,
-    schoolContextSection,
-  ].join('\n\n')
+  const systemPrompt = isWaCharter
+    ? [ROLE_PROMPT, WA_KNOWLEDGE, schoolContextSection].join('\n\n')
+    : [GENERIC_ROLE_PROMPT(schoolType || 'charter'), GENERIC_KNOWLEDGE(schoolType || 'charter'), schoolContextSection].join('\n\n')
 
   const anthropic = new Anthropic({ apiKey })
 

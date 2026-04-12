@@ -99,6 +99,7 @@ export async function POST(request: Request) {
     multiYear,
     scorecard,
     startingCash,
+    pathway,
   } = body as {
     schoolName: string
     profile: { pct_frl: number; pct_iep: number; pct_ell: number; grade_config: string }
@@ -108,7 +109,9 @@ export async function POST(request: Request) {
     scorecard: { measures: FPFMeasure[] }
     startingCash: number
     scenarios?: { name: string; assumptions: Record<string, number>; results: { years: Record<string, Record<string, number | string>> } | null }[]
+    pathway?: string
   }
+  const isWaCharter = !pathway || pathway === 'wa_charter'
 
   const wb = XLSX.utils.book_new()
   const yearHeaders = ['Year 0', ...multiYear.map((r) => `Year ${r.year}`)]
@@ -144,7 +147,9 @@ export async function POST(request: Request) {
   enrollRows.push(['Total Enrollment', 0, ...multiYear.map((r) => r.enrollment)])
   enrollRows.push(['AAFTE', 0, ...multiYear.map((r) => r.aafte)])
   enrollRows.push([])
-  enrollRows.push([`Note: AAFTE = ${assumptions.aafte_pct}% of headcount enrollment (adjustable in Settings). State apportionment revenue is calculated on AAFTE, not headcount.`])
+  if (isWaCharter) {
+    enrollRows.push([`Note: AAFTE = ${assumptions.aafte_pct}% of headcount enrollment (adjustable in Settings). State apportionment revenue is calculated on AAFTE, not headcount.`])
+  }
   enrollRows.push([])
   enrollRows.push(['Student Needs Populations'])
   enrollRows.push(['SPED Enrollment', 0, ...multiYear.map((r) => Math.round(r.enrollment * profile.pct_iep / 100))])
@@ -263,23 +268,30 @@ export async function POST(request: Request) {
   const plSheet = XLSX.utils.aoa_to_sheet(plRows)
   XLSX.utils.book_append_sheet(wb, plSheet, 'P&L')
 
-  // --- Tab 5: CASH FLOW (Monthly Year 1 + Annual Summary) ---
-  const ospiSchedule = [
-    { month: 'Sep', pct: 9 }, { month: 'Oct', pct: 8 }, { month: 'Nov', pct: 5 },
-    { month: 'Dec', pct: 9 }, { month: 'Jan', pct: 8.5 }, { month: 'Feb', pct: 9 },
-    { month: 'Mar', pct: 9 }, { month: 'Apr', pct: 9 }, { month: 'May', pct: 5 },
-    { month: 'Jun', pct: 6 }, { month: 'Jul', pct: 12.5 }, { month: 'Aug', pct: 10 },
-  ]
+  // --- Tab 5: CASH FLOW (Monthly Year 1) ---
+  const ospiSchedule = isWaCharter
+    ? [
+      { month: 'Sep', pct: 9 }, { month: 'Oct', pct: 8 }, { month: 'Nov', pct: 5 },
+      { month: 'Dec', pct: 9 }, { month: 'Jan', pct: 8.5 }, { month: 'Feb', pct: 9 },
+      { month: 'Mar', pct: 9 }, { month: 'Apr', pct: 9 }, { month: 'May', pct: 5 },
+      { month: 'Jun', pct: 6 }, { month: 'Jul', pct: 12.5 }, { month: 'Aug', pct: 10 },
+    ]
+    : ((body.paymentSchedule || [
+      { month: 'Sep', pct: 10 }, { month: 'Oct', pct: 10 }, { month: 'Nov', pct: 10 },
+      { month: 'Dec', pct: 10 }, { month: 'Jan', pct: 10 }, { month: 'Feb', pct: 10 },
+      { month: 'Mar', pct: 10 }, { month: 'Apr', pct: 10 }, { month: 'May', pct: 10 },
+      { month: 'Jun', pct: 10 }, { month: 'Jul', pct: 0 }, { month: 'Aug', pct: 0 },
+    ]) as { month: string; pct: number }[])
   const y1Row = multiYear[0]
   const y1AnnualRev = y1Row?.revenue?.total ?? 0
   const y1AnnualExp = y1Row?.totalExpenses ?? 0
   const monthlyExp = Math.round(y1AnnualExp / 12)
 
   const cfRows: (string | number | null)[][] = [
-    ['Monthly Cash Flow — Year 1 (OSPI Apportionment Schedule)'],
+    [isWaCharter ? 'Monthly Cash Flow — Year 1 (OSPI Apportionment Schedule)' : 'Monthly Cash Flow — Year 1'],
     [],
     ['Month', ...ospiSchedule.map(m => m.month)],
-    ['OSPI %', ...ospiSchedule.map(m => `${m.pct}%`)],
+    [isWaCharter ? 'OSPI %' : 'Revenue %', ...ospiSchedule.map(m => `${m.pct}%`)],
   ]
 
   let monthCash = startingCash
@@ -323,9 +335,9 @@ export async function POST(request: Request) {
 
   // --- Tab 6: DASHBOARD (FPF Scorecard) ---
   const dashRows: (string | number | null)[][] = [
-    ['Commission Financial Performance Framework Scorecard'],
+    [isWaCharter ? 'Commission Financial Performance Framework Scorecard' : 'Financial Health Scorecard'],
     [],
-    ['Measure', 'Formula', ...multiYear.map((r) => `Year ${r.year}`), 'Stage 1 Target', 'Stage 2 Target'],
+    ['Measure', 'Formula', ...multiYear.map((r) => `Year ${r.year}`), isWaCharter ? 'Stage 1 Target' : 'Healthy', isWaCharter ? 'Stage 2 Target' : 'Concern'],
   ]
   if (scorecard?.measures) {
     for (const m of scorecard.measures as FPFMeasure[]) {
@@ -371,7 +383,7 @@ export async function POST(request: Request) {
     }
 
     scenRows.push(['FPF COMPLIANCE (5-Year)', ...scenarios.map(s => s.name)])
-    scenRows.push(['', ...scenarios.map(() => 'Years 1-2: Stage 1 | Years 3-5: Stage 2')])
+    if (isWaCharter) scenRows.push(['', ...scenarios.map(() => 'Years 1-2: Stage 1 | Years 3-5: Stage 2')])
     for (let y = 1; y <= 5; y++) {
       scenRows.push([`Year ${y} (Stage ${y <= 2 ? '1' : '2'})`, ...scenarios.map(s => s.name)])
       for (const fpf of ['fpf_current_ratio', 'fpf_days_cash', 'fpf_total_margin', 'fpf_enrollment_variance']) {
@@ -390,7 +402,7 @@ export async function POST(request: Request) {
   return new NextResponse(buffer, {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': `attachment; filename="${schoolName.replace(/[^a-zA-Z0-9]/g, '_')}_Commission_Template.xlsx"`,
+      'Content-Disposition': `attachment; filename="${schoolName.replace(/[^a-zA-Z0-9]/g, '_')}_${isWaCharter ? 'Commission_Template' : 'Financial_Plan'}.xlsx"`,
     },
   })
 }

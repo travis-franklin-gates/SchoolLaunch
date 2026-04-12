@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { buildSchoolContextString, buildAgentContextString, computeAdvisoryHash } from '@/lib/buildSchoolContext'
-import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward } from '@/lib/budgetEngine'
+import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward, computeGenericProjections, computeGenericHealthScorecard } from '@/lib/budgetEngine'
 import { createClient } from '@/lib/supabase/client'
+import { useStateConfig } from '@/contexts/StateConfigContext'
 import type { AdvisoryCache } from '@/lib/types'
 import Link from 'next/link'
 
@@ -82,6 +83,7 @@ export default function AdvisoryPage() {
     baseSummary,
     conservativeMode,
   } = useScenario()
+  const { config: pathwayConfig } = useStateConfig()
   const supabase = createClient()
 
   // Carry-forward from Year 0 — same computation as Overview page
@@ -166,7 +168,7 @@ ${criticalFindings ? `Key misalignments:\n${criticalFindings}` : 'No critical mi
       const res = await fetch('/api/advisory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schoolContext, agentContext }),
+        body: JSON.stringify({ schoolContext, agentContext, pathway: pathwayConfig.pathway, schoolType: pathwayConfig.pathway === 'generic_private' ? 'private' : pathwayConfig.pathway === 'generic_micro' ? 'micro' : 'charter' }),
       })
       if (!res.ok) throw new Error(`API returned ${res.status}`)
       const result = await res.json() as AdvisoryData

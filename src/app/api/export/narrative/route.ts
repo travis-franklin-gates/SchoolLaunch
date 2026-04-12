@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { getStateConfig } from '@/lib/stateConfig'
+import type { Pathway } from '@/lib/stateConfig'
 
 // --- Types matching the POST body ---
 interface Position {
@@ -70,6 +72,7 @@ interface MultiYearRow {
 
 interface NarrativePayload {
   schoolName: string
+  pathway?: string
   profile: {
     grade_config: string
     target_enrollment_y1: number
@@ -180,7 +183,7 @@ function pct(n: number, total: number): string {
 }
 
 // Color helpers
-// Stage 1 (Years 1-2) thresholds per WA Commission Financial Performance Framework
+// Stage 1 (Years 1-2) thresholds per WA Commission Financial Performance Framework (also used as generic benchmarks)
 function reserveColor(days: number): string {
   if (days >= 30) return '#0F6E56'
   if (days >= 21) return '#B45309'
@@ -221,7 +224,13 @@ export async function POST(request: NextRequest) {
   const {
     schoolName, profile, assumptions, positions, projections,
     baseSummary, conservativeSummary, cashFlow, multiYear, scorecard, advisory, scenarios,
+    pathway: rawPathway,
   } = data
+
+  // Pathway detection for generic vs WA-specific content
+  const pathway = (rawPathway || 'wa_charter') as Pathway
+  const _stateConfig = getStateConfig(pathway) // available for future use
+  const isWaCharter = pathway === 'wa_charter'
 
   const enrollment = profile.target_enrollment_y1
   const conservativeEnrollment = Math.floor(enrollment * 0.9)
@@ -288,11 +297,15 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
   // Generate AI content in parallel
   const [executiveSummary, riskAnalysis] = await Promise.all([
     generateAIContent(
-      `Write a 2-3 paragraph executive summary for a charter school financial plan being submitted to the Washington State Charter School Commission. Be specific with numbers. Be direct about risks. Write in third person (e.g., "The school projects..." not "You project..."). This should read like a professional financial document, not a conversation. Do not use markdown formatting — output plain text with paragraph breaks only.`,
+      isWaCharter
+        ? `Write a 2-3 paragraph executive summary for a charter school financial plan being submitted to the Washington State Charter School Commission. Be specific with numbers. Be direct about risks. Write in third person (e.g., "The school projects..." not "You project..."). This should read like a professional financial document, not a conversation. Do not use markdown formatting — output plain text with paragraph breaks only.`
+        : `Write a 2-3 paragraph executive summary for a school financial plan. Be specific with numbers. Be direct about risks. Write in third person (e.g., "The school projects..." not "You project..."). This should read like a professional financial document, not a conversation. Do not use markdown formatting — output plain text with paragraph breaks only.`,
       schoolContext,
     ),
     generateAIContent(
-      `Based on this school's financial model, identify the top 5 financial risks and provide a specific mitigation strategy for each. Format as numbered items. Each risk should have a bold title (use <strong> tags), followed by the risk description and mitigation in 2-3 sentences. Write for a Charter School Commission reviewer — be specific and reference the school's actual numbers. Do not use markdown — use plain HTML inline formatting only (<strong> tags).`,
+      isWaCharter
+        ? `Based on this school's financial model, identify the top 5 financial risks and provide a specific mitigation strategy for each. Format as numbered items. Each risk should have a bold title (use <strong> tags), followed by the risk description and mitigation in 2-3 sentences. Write for a Charter School Commission reviewer — be specific and reference the school's actual numbers. Do not use markdown — use plain HTML inline formatting only (<strong> tags).`
+        : `Based on this school's financial model, identify the top 5 financial risks and provide a specific mitigation strategy for each. Format as numbered items. Each risk should have a bold title (use <strong> tags), followed by the risk description and mitigation in 2-3 sentences. Write for a school board or financial reviewer — be specific and reference the school's actual numbers. Do not use markdown — use plain HTML inline formatting only (<strong> tags).`,
       schoolContext,
     ),
   ])
@@ -414,7 +427,7 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
   function personnelAssessment(): string {
     const p = baseSummary.personnelPctRevenue
     if (p < 72) return `<span style="color:#D85A30;font-weight:600;">Below recommended range</span> — may indicate understaffing or under-enrollment for the staffing plan.`
-    if (p <= 78) return `<span style="color:#0F6E56;font-weight:600;">Healthy range</span> — aligns with WA charter school best practices (72-78%).`
+    if (p <= 78) return `<span style="color:#0F6E56;font-weight:600;">Healthy range</span> — aligns with ${isWaCharter ? 'WA charter school' : 'school financial'} best practices (72-78%).`
     if (p <= 80) return `<span style="color:#B45309;font-weight:600;">Caution</span> — approaching the upper limit. Monitor closely as enrollment fluctuates.`
     return `<span style="color:#D85A30;font-weight:600;">Exceeds 80%</span> — leaves insufficient margin for operations and reserves. Consider staffing adjustments.`
   }
@@ -432,7 +445,7 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
     const p = baseSummary.facilityPct
     if (p <= 12) return `<div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:8px;padding:14px 18px;margin-top:16px;font-size:12px;color:#065F46;"><strong>Facility costs represent ${p.toFixed(1)}% of projected revenue.</strong> This is within the healthy range. Industry standard: &le;15% of revenue.</div>`
     if (p <= 15) return `<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:14px 18px;margin-top:16px;font-size:12px;color:#92400E;"><strong>Facility costs represent ${p.toFixed(1)}% of projected revenue.</strong> Approaching the 15% threshold that lenders and authorizers monitor. Industry standard: &le;15%.</div>`
-    return `<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:14px 18px;margin-top:16px;font-size:12px;color:#991B1B;"><strong>Warning: Facility costs represent ${p.toFixed(1)}% of projected revenue.</strong> This exceeds the 15% threshold. Most lenders require facility costs below 15% for financing. The Charter Commission may flag this.</div>`
+    return `<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:14px 18px;margin-top:16px;font-size:12px;color:#991B1B;"><strong>Warning: Facility costs represent ${p.toFixed(1)}% of projected revenue.</strong> This exceeds the 15% threshold. Most lenders require facility costs below 15% for financing.${isWaCharter ? ' The Charter Commission may flag this.' : ''}</div>`
   }
 
   const html = `<!DOCTYPE html>
@@ -553,10 +566,9 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
 <div class="cover">
   <h1>${schoolName}</h1>
   <div class="subtitle">Financial Plan &mdash; Year 1 through Year 5</div>
-  <div class="subtitle" style="font-size:16px;color:#64748B;">${profile.grade_config} &bull; ${profile.region || 'Washington State'}</div>
+  <div class="subtitle" style="font-size:16px;color:#64748B;">${profile.grade_config} &bull; ${profile.region || (isWaCharter ? 'Washington State' : '')}</div>
   <div class="prepared">
-    Prepared for the<br/>
-    <strong>Washington State Charter School Commission</strong><br/><br/>
+    ${isWaCharter ? 'Prepared for the<br/><strong>Washington State Charter School Commission</strong>' : `<strong>${schoolName} Financial Plan</strong>`}<br/><br/>
     ${dateStr}
   </div>
   <div class="logo">SchoolLaunch</div>
@@ -575,7 +587,7 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
   <div class="metric-card" style="background:${metricCardBg(y1ReserveDays)};">
     <div class="label">Reserve Days</div>
     <div class="value" style="color:${reserveColor(y1ReserveDays)};">${y1ReserveDays}</div>
-    <div class="sub">${y1ReserveDays >= 30 ? 'Meets Stage 1' : y1ReserveDays >= 21 ? 'Approaches Stage 1' : 'Below Stage 1'} &bull; Stage 2: 60 days</div>
+    <div class="sub">${y1ReserveDays >= 30 ? (isWaCharter ? 'Meets Stage 1' : 'Meets Benchmark') : y1ReserveDays >= 21 ? (isWaCharter ? 'Approaches Stage 1' : 'Approaches Benchmark') : (isWaCharter ? 'Below Stage 1' : 'Below Benchmark')} &bull; ${isWaCharter ? 'Stage 2' : 'Target'}: 60 days</div>
   </div>
   <div class="metric-card" style="background:${baseSummary.personnelPctRevenue >= 72 && baseSummary.personnelPctRevenue <= 78 ? '#ECFDF5' : baseSummary.personnelPctRevenue <= 80 ? '#FFFBEB' : '#FEF2F2'};">
     <div class="label">Personnel % of Revenue</div>
@@ -693,7 +705,7 @@ ${facilityCallout()}
 <!-- PAGE 6: Cash Flow -->
 <div class="page-break"></div>
 <h2>Month-by-Month Cash Flow Projection</h2>
-<p style="font-size:12px;color:#64748B;margin-bottom:16px;">Year 1 (September through August) using the OSPI apportionment payment schedule. Starting balance from pre-opening funding.</p>
+<p style="font-size:12px;color:#64748B;margin-bottom:16px;">Year 1 (September through August) using the ${isWaCharter ? 'OSPI apportionment payment schedule' : 'projected payment schedule'}. Starting balance from pre-opening funding.</p>
 
 <table>
   <thead>
@@ -757,10 +769,10 @@ ${cashFlow.some((m) => m.cumulativeBalance < 0)
     <!-- Zero line -->
     <line x1="50" y1="${yScale(0)}" x2="${chartW - 20}" y2="${yScale(0)}" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4,4" />
     <text x="45" y="${yScale(0) + 4}" text-anchor="end" font-size="10" fill="#94A3B8">0</text>
-    <!-- 30 day line (Stage 1) -->
+    <!-- 30 day line (${isWaCharter ? 'Stage 1' : 'Benchmark'}) -->
     <line x1="50" y1="${yScale(30)}" x2="${chartW - 20}" y2="${yScale(30)}" stroke="#FDE68A" stroke-width="1" stroke-dasharray="4,4" />
     <text x="45" y="${yScale(30) + 4}" text-anchor="end" font-size="9" fill="#D97706">30d</text>
-    <!-- 60 day line (Stage 2) -->
+    <!-- 60 day line (${isWaCharter ? 'Stage 2' : 'Target'}) -->
     <line x1="50" y1="${yScale(60)}" x2="${chartW - 20}" y2="${yScale(60)}" stroke="#A7F3D0" stroke-width="1" stroke-dasharray="4,4" />
     <text x="45" y="${yScale(60) + 4}" text-anchor="end" font-size="9" fill="#6EE7B7">60d</text>
     <!-- X axis labels -->
@@ -775,10 +787,10 @@ ${cashFlow.some((m) => m.cumulativeBalance < 0)
 <div class="page-footer">SchoolLaunch Financial Plan &bull; ${schoolName} &bull; Generated ${dateStr}</div>
 
 ${scorecard?.measures ? `
-<!-- PAGE: Commission FPF Scorecard -->
+<!-- PAGE: ${isWaCharter ? 'Commission FPF Scorecard' : 'Financial Health Scorecard'} -->
 <div class="page-break"></div>
-<h2>Commission Financial Performance Framework</h2>
-<p style="font-size:12px;color:#64748B;margin-bottom:16px;">Years 1-2 evaluated against Stage 1 thresholds (lenient). Years 3-5 evaluated against Stage 2 thresholds (strict).</p>
+<h2>${isWaCharter ? 'Commission Financial Performance Framework' : 'Financial Health Scorecard'}</h2>
+<p style="font-size:12px;color:#64748B;margin-bottom:16px;">${isWaCharter ? 'Years 1-2 evaluated against Stage 1 thresholds (lenient). Years 3-5 evaluated against Stage 2 thresholds (strict).' : 'Years 1-2 evaluated against initial benchmarks. Years 3-5 evaluated against mature benchmarks.'}</p>
 
 <table style="width:100%;border-collapse:collapse;font-size:11px;">
   <thead>
@@ -786,10 +798,10 @@ ${scorecard?.measures ? `
       <th style="text-align:left;padding:6px 8px;color:#64748B;">Measure</th>
       ${multiYear.map((r, i) => {
         const isStage2 = r.year >= 3
-        return `<th style="text-align:center;padding:6px 4px;color:#64748B;${isStage2 ? 'background:#F1F5F9;' : ''}${r.year === 3 ? 'border-left:2px solid #94A3B8;' : ''}">Y${r.year}<br><span style="font-size:9px;font-weight:normal;">Stage ${isStage2 ? '2' : '1'}</span></th>`
+        return `<th style="text-align:center;padding:6px 4px;color:#64748B;${isStage2 ? 'background:#F1F5F9;' : ''}${r.year === 3 ? 'border-left:2px solid #94A3B8;' : ''}">Y${r.year}<br><span style="font-size:9px;font-weight:normal;">${isWaCharter ? `Stage ${isStage2 ? '2' : '1'}` : (isStage2 ? 'Mature' : 'Initial')}</span></th>`
       }).join('')}
-      <th style="text-align:center;padding:6px 4px;color:#64748B;font-size:10px;">S1 Target</th>
-      <th style="text-align:center;padding:6px 4px;color:#64748B;font-size:10px;">S2 Target</th>
+      <th style="text-align:center;padding:6px 4px;color:#64748B;font-size:10px;">${isWaCharter ? 'S1 Target' : 'Initial'}</th>
+      <th style="text-align:center;padding:6px 4px;color:#64748B;font-size:10px;">${isWaCharter ? 'S2 Target' : 'Mature'}</th>
     </tr>
   </thead>
   <tbody>
@@ -849,7 +861,7 @@ ${fundingSources.length > 0 ? `
   </div>
 </div>
 
-${securedFunding < totalFunding * 0.5 ? `<div class="callout warning"><strong>Funding Risk:</strong> Less than 50% of startup funding is secured. The Charter Commission typically expects committed funding sources before approving a charter application.</div>` : ''}
+${securedFunding < totalFunding * 0.5 ? `<div class="callout warning"><strong>Funding Risk:</strong> Less than 50% of startup funding is secured. ${isWaCharter ? 'The Charter Commission typically expects committed funding sources before approving a charter application.' : 'Committed funding sources are typically expected before launch.'}</div>` : ''}
 ` : '<p style="color:#64748B;font-size:13px;">No startup funding sources have been configured. Add funding sources on the Multi-Year tab.</p>'}
 
 <div class="page-footer">SchoolLaunch Financial Plan &bull; ${schoolName} &bull; Generated ${dateStr}</div>
@@ -857,7 +869,7 @@ ${securedFunding < totalFunding * 0.5 ? `<div class="callout warning"><strong>Fu
 <!-- PAGE 9: Sensitivity -->
 <div class="page-break"></div>
 <h2>Sensitivity Analysis &mdash; Conservative Enrollment</h2>
-<p style="font-size:12px;color:#64748B;margin-bottom:16px;">Industry best practice: budget for revenue at 90% of projected enrollment while maintaining 100% of planned expenses. The WA Charter Commission uses Stage 1 thresholds (30+ days cash) for Years 1-2 and Stage 2 thresholds (60+ days) for Year 3+.</p>
+<p style="font-size:12px;color:#64748B;margin-bottom:16px;">Industry best practice: budget for revenue at 90% of projected enrollment while maintaining 100% of planned expenses. ${isWaCharter ? 'The WA Charter Commission uses Stage 1 thresholds (30+ days cash) for Years 1-2 and Stage 2 thresholds (60+ days) for Year 3+.' : 'Financial health benchmarks recommend 30+ days cash on hand for early years and 60+ days for Year 3+.'}</p>
 
 <table>
   <thead>
@@ -891,7 +903,7 @@ ${securedFunding < totalFunding * 0.5 ? `<div class="callout warning"><strong>Fu
   ${riskAnalysis
     ? riskAnalysis.split('\n').filter((l: string) => l.trim()).map((l: string) => `<p>${l}</p>`).join('')
     : `<p><strong>1. Enrollment Risk:</strong> The school's financial model is based on ${enrollment} enrolled students. Each student below target reduces revenue by approximately ${fmtDollars(assumptions.per_pupil_rate + assumptions.levy_equity_per_student)} in base funding. The break-even enrollment is ${baseSummary.breakEvenEnrollment} students — a buffer of only ${enrollment - baseSummary.breakEvenEnrollment} students. Mitigation: Invest in pre-opening student recruitment and maintain a waiting list.</p>
-       <p><strong>2. Cash Flow Timing:</strong> OSPI apportionment follows an uneven monthly schedule, with November and May at just 5%. Schools with thin reserves risk cash shortfalls during these months. Mitigation: Maintain at minimum 30 days of operating reserves and consider establishing a line of credit.</p>
+       <p><strong>2. Cash Flow Timing:</strong> ${isWaCharter ? 'OSPI apportionment follows an uneven monthly schedule, with November and May at just 5%.' : 'Revenue payments may follow an uneven monthly schedule.'} Schools with thin reserves risk cash shortfalls during low-revenue months. Mitigation: Maintain at minimum 30 days of operating reserves and consider establishing a line of credit.</p>
        <p><strong>3. Facility Cost Escalation:</strong> Facility costs at ${baseSummary.facilityPct.toFixed(1)}% of revenue ${baseSummary.facilityPct > 12 ? 'are already elevated' : 'are within healthy range but could increase'}. Lease renegotiations or unexpected maintenance could push this ratio higher. Mitigation: Negotiate multi-year lease terms with fixed escalation clauses.</p>
        <p><strong>4. Personnel Cost Growth:</strong> Personnel comprises ${baseSummary.personnelPctRevenue.toFixed(1)}% of revenue. As staff receive annual raises, this ratio increases unless offset by enrollment growth. Mitigation: Tie salary increases to enrollment milestones.</p>
        <p><strong>5. Categorical Grant Uncertainty:</strong> Federal categorical grants (Title I, IDEA, etc.) are subject to annual appropriations and may fluctuate. These represent ${fmtDollars(baseSummary.totalRevenue - (effectiveRegularEd + spedApport + facilitiesRev + levyEquity))} or ${pct(baseSummary.totalRevenue - effectiveRegularEd - spedApport - facilitiesRev - levyEquity, baseSummary.totalRevenue)} of total revenue. Mitigation: Do not rely on categorical grants for core staffing costs.</p>`
@@ -904,7 +916,7 @@ ${scenarios && scenarios.length > 0 ? `
 <!-- PAGE: Scenario Analysis -->
 <div class="page-break"></div>
 <h2>Scenario Analysis</h2>
-<p style="font-size:12px;color:#64748B;margin-bottom:16px;">Three scenarios modeled to stress-test financial assumptions against the Commission's Financial Performance Framework.</p>
+<p style="font-size:12px;color:#64748B;margin-bottom:16px;">Three scenarios modeled to stress-test financial assumptions against ${isWaCharter ? "the Commission's Financial Performance Framework" : 'financial health benchmarks'}.</p>
 
 <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px;">
   <thead>
@@ -927,7 +939,7 @@ ${scenarios && scenarios.length > 0 ? `
       </tr>`
     }).join('')}
     <tr style="border-top:2px solid #E2E8F0;font-weight:700;">
-      <td style="padding:8px 12px;color:#1E293B;">FPF Compliance (Y1)</td>
+      <td style="padding:8px 12px;color:#1E293B;">${isWaCharter ? 'FPF Compliance' : 'Health Score'} (Y1)</td>
       ${scenarios.map(s => {
         const y1 = s.results?.years?.['1']
         const passing = [y1?.fpf_current_ratio, y1?.fpf_days_cash, y1?.fpf_total_margin, y1?.fpf_enrollment_variance].filter(v => v === 'meets' || v === 'approaches').length
@@ -951,7 +963,7 @@ ${advisory ? `
 <!-- PAGE 11: Advisory Panel -->
 <div class="page-break"></div>
 <h2>Multi-Expert Financial Review</h2>
-<p style="font-size:12px;color:#64748B;margin-bottom:20px;">SchoolLaunch's advisory system evaluates your financial plan from seven expert perspectives critical to charter school success in Washington State.</p>
+<p style="font-size:12px;color:#64748B;margin-bottom:20px;">SchoolLaunch's advisory system evaluates your financial plan from seven expert perspectives critical to ${isWaCharter ? 'charter school success in Washington State' : 'school financial health'}.</p>
 
 ${advisory.agents.map((agent) => {
   const statusColors: Record<string, { bg: string; text: string; border: string }> = {

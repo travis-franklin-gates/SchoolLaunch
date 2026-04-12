@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { getGenericAgents, getGenericBriefingPrompt } from '@/lib/genericAgents'
+import type { GenericAgentConfig } from '@/lib/genericAgents'
 
 const client = new Anthropic()
 
@@ -238,16 +240,13 @@ async function runAgent(agent: AgentConfig, schoolContext: string): Promise<Agen
   }
 }
 
-async function generateBriefing(agents: AgentResult[], schoolContext: string): Promise<string> {
+async function generateBriefing(agents: AgentResult[], schoolContext: string, customSystemPrompt?: string): Promise<string> {
   try {
     const agentSummaries = agents.map((a) =>
       `${a.name} (${a.status}): ${a.summary}${a.actions.length > 0 ? ' Actions: ' + a.actions.join('; ') : ''}`
     ).join('\n\n')
 
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1500,
-      system: `You are the lead financial advisor synthesizing assessments from 7 specialist advisors for a WA charter school founder.
+    const defaultWaPrompt = `You are the lead financial advisor synthesizing assessments from 7 specialist advisors for a WA charter school founder.
 
 IMPORTANT CONTEXT: This is a pre-opening charter school plan. The WA Charter School Commission's Financial Performance Framework uses Stage 1 thresholds for Years 1-2, which are more lenient than the Stage 2 thresholds for Year 3+.
 
@@ -257,10 +256,15 @@ When synthesizing agent assessments, calibrate your tone for a startup:
 - Reserve urgent/alarming language for metrics that genuinely don't meet Stage 1 standards (below 21 days cash, negative current ratio, enrollment projections below 85% of target with no contingency plan)
 - The Commission expects startup schools to be BUILDING toward financial sustainability, not already there.
 
-Your tone should be: constructive advisor helping a founder strengthen their plan, not alarmist critic predicting failure.`,
+Your tone should be: constructive advisor helping a founder strengthen their plan, not alarmist critic predicting failure.`
+
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1500,
+      system: customSystemPrompt || defaultWaPrompt,
       messages: [{
         role: 'user',
-        content: `School context:\n${schoolContext}\n\nAdvisor assessments:\n${agentSummaries}\n\nWrite a 3-4 paragraph briefing for the school founder. Lead with the most important finding. Be direct about risks. End with the single most important thing the founder should do next. Write in second person ("Your model shows..."). Do not use bullet points or headers — write in flowing paragraphs like a trusted advisor speaking directly to the founder. Do not use markdown formatting.`,
+        content: `School context:\n${schoolContext}\n\nAdvisor assessments:\n${agentSummaries}\n\nWrite a 3-4 paragraph briefing for the school founder. Lead with the most important finding. Be direct about risks. End with the single most important thing the founder should do next. Write in second person ("Your model shows..."). Do not use bullet points or headers — write in flowing paragraphs like a trusted advisor speaking directly to the founder. Do not use markdown formatting. Do not reference "Commission" or "Stage 1/Stage 2" unless the school context explicitly mentions the WA Charter School Commission.`,
       }],
     })
 
@@ -273,29 +277,30 @@ Your tone should be: constructive advisor helping a founder strengthen their pla
 }
 
 export async function POST(request: NextRequest) {
-  const { schoolContext, agentContext } = await request.json()
+  const { schoolContext, agentContext, pathway, schoolType } = await request.json()
 
   if (!schoolContext || typeof schoolContext !== 'string') {
     return NextResponse.json({ error: 'Missing schoolContext' }, { status: 400 })
   }
 
-  // Agents receive the summarized context (pre-computed metrics only, no raw data for recomputation)
-  // Briefing synthesis receives the full context for reference
   const contextForAgents = agentContext || schoolContext
+  const isWaCharter = !pathway || pathway === 'wa_charter'
 
-  // Log the days of cash value being sent to agents for verification
-  const daysMatch = contextForAgents.match(/(\d+) days of cash at the end of Year 1/)
-  console.log('[advisory] Days of Cash in agent context:', daysMatch?.[1] || 'NOT FOUND (checking alt)')
-  const altMatch = contextForAgents.match(/Days of Cash.*?:\s*(\d+)/)
-  if (!daysMatch) console.log('[advisory] Alt match:', altMatch?.[1] || 'NOT FOUND')
+  // Select agents based on pathway
+  const agentsToRun: (AgentConfig | GenericAgentConfig)[] = isWaCharter
+    ? AGENTS
+    : getGenericAgents(schoolType || 'charter')
 
-  // Run all 7 agents in parallel with summarized context
+  // Run agents in parallel
   const agentResults = await Promise.all(
-    AGENTS.map((agent) => runAgent(agent, contextForAgents))
+    agentsToRun.map((agent) => runAgent(agent as AgentConfig, contextForAgents))
   )
 
-  // Generate synthesized briefing with FULL context (includes scorecard) + agent results
-  const briefing = await generateBriefing(agentResults, schoolContext)
+  // Generate synthesized briefing
+  const briefingSystemPrompt = isWaCharter
+    ? undefined // uses default WA briefing prompt
+    : getGenericBriefingPrompt(schoolType || 'charter')
+  const briefing = await generateBriefing(agentResults, schoolContext, briefingSystemPrompt)
 
   return NextResponse.json({
     briefing,

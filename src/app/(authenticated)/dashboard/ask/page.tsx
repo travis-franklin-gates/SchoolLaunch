@@ -3,14 +3,15 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { buildSchoolContextString } from '@/lib/buildSchoolContext'
-import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward } from '@/lib/budgetEngine'
+import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward, computeGenericProjections } from '@/lib/budgetEngine'
+import { useStateConfig } from '@/contexts/StateConfigContext'
 
 interface Message {
   role: 'user' | 'assistant' | 'system'
   content: string
 }
 
-const SUGGESTED_QUESTIONS = [
+const WA_SUGGESTED_QUESTIONS = [
   'What enrollment do I need to break even in Year 1?',
   'Can I afford a full-time principal at this enrollment level?',
   'How does our personnel ratio compare to healthy WA charters?',
@@ -19,14 +20,27 @@ const SUGGESTED_QUESTIONS = [
   'What are the biggest risks in our financial model?',
 ]
 
+const GENERIC_SUGGESTED_QUESTIONS = [
+  'What enrollment do I need to break even in Year 1?',
+  'Can I afford a full-time principal at this enrollment level?',
+  'How does our personnel ratio compare to healthy schools?',
+  'What happens if enrollment is 20% below target?',
+  'What are the biggest risks in our financial model?',
+  'How should I set tuition to be competitive?',
+]
+
 export default function AskPage() {
   const { schoolData, assumptions } = useScenario()
+  const { config: pathwayConfig } = useStateConfig()
+  const isWaCharter = pathwayConfig.pathway === 'wa_charter'
   const { schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, loading } = schoolData
 
   const preOpenCash = useMemo(() => computeCarryForward(profile), [profile])
   const multiYear = useMemo(
-    () => computeMultiYearDetailed(profile, positions, projections, assumptions, preOpenCash, gradeExpansionPlan, allPositions, profile.startup_funding),
-    [profile, positions, allPositions, projections, assumptions, gradeExpansionPlan, preOpenCash]
+    () => isWaCharter
+      ? computeMultiYearDetailed(profile, positions, projections, assumptions, preOpenCash, gradeExpansionPlan, allPositions, profile.startup_funding)
+      : computeGenericProjections(profile, positions, projections, pathwayConfig, preOpenCash, gradeExpansionPlan, allPositions, profile.startup_funding),
+    [profile, positions, allPositions, projections, assumptions, gradeExpansionPlan, preOpenCash, isWaCharter, pathwayConfig]
   )
   const scorecard = useMemo(
     () => computeFPFScorecard(multiYear, preOpenCash, false),
@@ -67,6 +81,8 @@ export default function AskPage() {
               .slice(-20)
               .map((m) => ({ role: m.role, content: m.content })),
             schoolContext,
+            pathway: pathwayConfig.pathway,
+            schoolType: pathwayConfig.pathway === 'generic_private' ? 'private' : pathwayConfig.pathway === 'generic_micro' ? 'micro' : 'charter',
           }),
         })
 
@@ -157,7 +173,7 @@ export default function AskPage() {
               Ask questions about your financial model in plain English
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl w-full px-4">
-              {SUGGESTED_QUESTIONS.map((q) => (
+              {(isWaCharter ? WA_SUGGESTED_QUESTIONS : GENERIC_SUGGESTED_QUESTIONS).map((q) => (
                 <button
                   key={q}
                   onClick={() => sendMessage(q)}

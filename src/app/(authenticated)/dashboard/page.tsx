@@ -288,6 +288,7 @@ export default function DashboardPage() {
 
       const payload = {
         schoolName,
+        pathway: pathwayConfig.pathway,
         profile,
         assumptions,
         positions,
@@ -296,7 +297,7 @@ export default function DashboardPage() {
         conservativeSummary,
         cashFlow: cashFlowData,
         multiYear,
-        scorecard,
+        scorecard: isWaCharter ? scorecard : genericScorecard,
         advisory: advisoryForPdf || undefined,
         scenarios: scenarioData && scenarioData.length > 0 ? scenarioData : undefined,
       }
@@ -347,6 +348,7 @@ export default function DashboardPage() {
         scorecard,
         startingCash: preOpenCash,
         scenarios: commScenarios && commScenarios.length > 0 ? commScenarios : undefined,
+        pathway: pathwayConfig.pathway,
       }
       const res = await fetch('/api/export/commission', {
         method: 'POST',
@@ -358,7 +360,7 @@ export default function DashboardPage() {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `${schoolName.replace(/\s+/g, '_')}_Commission_Template.xlsx`
+        a.download = `${schoolName.replace(/\s+/g, '_')}_${isWaCharter ? 'Commission_Template' : 'Financial_Plan'}.xlsx`
         a.click()
         URL.revokeObjectURL(url)
       }
