@@ -137,10 +137,11 @@ export default function DashboardPage() {
     try {
       const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
       const agentContext = buildAgentContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
+      const schoolTypeLabel = pathwayConfig.pathway === 'generic_private' ? 'private' : pathwayConfig.pathway === 'generic_micro' ? 'micro' : 'charter'
       const res = await fetch('/api/advisory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schoolContext, agentContext }),
+        body: JSON.stringify({ schoolContext, agentContext, pathway: pathwayConfig.pathway, schoolType: schoolTypeLabel }),
       })
       if (res.ok) {
         const data = await res.json() as AdvisoryData
@@ -266,10 +267,11 @@ export default function DashboardPage() {
         // Try generating a fresh one for the export
         const schoolContext = buildSchoolContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
         const agentContext = buildAgentContextString(schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard)
+        const stLabel = pathwayConfig.pathway === 'generic_private' ? 'private' : pathwayConfig.pathway === 'generic_micro' ? 'micro' : 'charter'
         const advRes = await fetch('/api/advisory', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ schoolContext, agentContext }),
+          body: JSON.stringify({ schoolContext, agentContext, pathway: pathwayConfig.pathway, schoolType: stLabel }),
         })
         if (advRes.ok) {
           advisoryForPdf = await advRes.json()

@@ -508,15 +508,15 @@ export default function OnboardingPage() {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-teal-500 mt-0.5">2.</span>
-              <span>Run the <strong>Advisory Panel</strong> for expert analysis from 7 specialized financial agents</span>
+              <span>Run the <strong>Advisory Panel</strong> for expert analysis from {data.pathway === 'wa_charter' ? '7' : '5'} specialized financial agents</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-teal-500 mt-0.5">3.</span>
-              <span>Export a professional <strong>Budget Narrative PDF</strong> for your authorizer application</span>
+              <span>Export a professional <strong>{data.pathway === 'wa_charter' ? 'Budget Narrative PDF' : 'Financial Plan PDF'}</strong> for your {data.pathway === 'wa_charter' ? 'authorizer application' : 'planning and presentations'}</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-teal-500 mt-0.5">4.</span>
-              <span>Use <strong>Ask SchoolLaunch</strong> to get instant answers about WA charter finances</span>
+              <span>Use <strong>Ask SchoolLaunch</strong> to get instant answers about {data.pathway === 'wa_charter' ? 'WA charter finances' : 'your school finances'}</span>
             </li>
           </ul>
         </div>
