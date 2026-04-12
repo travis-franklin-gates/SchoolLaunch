@@ -5,6 +5,7 @@ import { useScenario } from '@/lib/ScenarioContext'
 import { computeCashFlow } from '@/lib/budgetEngine'
 import { createClient } from '@/lib/supabase/client'
 import type { StartupFundingSource, PreOpeningExpense, PreOpeningTransaction } from '@/lib/types'
+import { useStateConfig } from '@/contexts/StateConfigContext'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -40,6 +41,7 @@ export default function CashFlowPage() {
     scenarioApportionment,
     isModified,
   } = useScenario()
+  const { config: pathwayConfig } = useStateConfig()
 
   const supabase = createClient()
   const [view, setView] = useState<'year0' | 'year1'>('year0')
@@ -274,7 +276,7 @@ export default function CashFlowPage() {
 
       <h1 className="text-[28px] font-semibold text-slate-900 mb-2">Cash Flow</h1>
       <p className="text-sm text-slate-500 mb-4">
-        Month-by-month projections using the OSPI apportionment payment schedule.
+        {pathwayConfig.pathway === 'wa_charter' ? 'Month-by-month projections using the OSPI apportionment payment schedule.' : 'Month-by-month projections using your payment schedule.'}
       </p>
 
       {/* View toggle */}
@@ -685,7 +687,7 @@ export default function CashFlowPage() {
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
                   <th className="text-left px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Month</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Apport. %</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">{pathwayConfig.pathway === 'wa_charter' ? 'Apport. %' : 'Revenue %'}</th>
                   <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Apport. $</th>
                   <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Other Revenue</th>
                   <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Total Inflow</th>

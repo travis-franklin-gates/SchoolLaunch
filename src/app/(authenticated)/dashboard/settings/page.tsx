@@ -12,6 +12,7 @@ import GradeExpansionEditor from '@/components/GradeExpansionEditor'
 import TeamSection from '@/components/settings/TeamSection'
 import LogoUpload from '@/components/settings/LogoUpload'
 import { usePermissions } from '@/hooks/usePermissions'
+import { useStateConfig } from '@/contexts/StateConfigContext'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -27,6 +28,8 @@ export default function SettingsPage() {
   } = useScenario()
   const supabase = createClient()
   const { canEdit, canManageTeam, canResetSchool, canEditIdentity } = usePermissions()
+  const { config: pathwayConfig } = useStateConfig()
+  const isWaCharter = pathwayConfig.pathway === 'wa_charter'
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   const [name, setName] = useState(schoolName)
@@ -215,22 +218,24 @@ export default function SettingsPage() {
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
             />
           </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">WA County / Region</label>
-            <select
-              value={region}
-              onChange={(e) => {
-                setRegion(e.target.value)
-                const factor = REGIONALIZATION_FACTORS[e.target.value]?.factor ?? 1.0
-                updateFa('regionalization_factor', factor)
-              }}
-              disabled={!canEditIdentity}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
-            >
-              <option value="">Select county...</option>
-              {COUNTY_KEYS.map((key) => <option key={key} value={key}>{REGIONALIZATION_FACTORS[key].label}</option>)}
-            </select>
-          </div>
+          {isWaCharter && (
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">WA County / Region</label>
+              <select
+                value={region}
+                onChange={(e) => {
+                  setRegion(e.target.value)
+                  const factor = REGIONALIZATION_FACTORS[e.target.value]?.factor ?? 1.0
+                  updateFa('regionalization_factor', factor)
+                }}
+                disabled={!canEditIdentity}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
+              >
+                <option value="">Select county...</option>
+                {COUNTY_KEYS.map((key) => <option key={key} value={key}>{REGIONALIZATION_FACTORS[key].label}</option>)}
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Planned Opening Year</label>
             <input
@@ -369,7 +374,7 @@ export default function SettingsPage() {
               <div className="text-sm font-medium text-slate-800">Transportation</div>
               <div className="text-xs text-slate-500">
                 Adds {fmt(fa.transportation_per_student)}/student to operations.
-                Required under RCW 28A.710.040 for WA charter schools.
+                {isWaCharter && 'Required under RCW 28A.710.040 for WA charter schools.'}
               </div>
             </div>
             <button
@@ -389,7 +394,23 @@ export default function SettingsPage() {
       {/* Section 4: Revenue Assumptions */}
       <div data-tour="revenue-assumptions" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Revenue Assumptions</h2>
-        <p className="text-xs text-slate-500 mb-4">Commission-aligned per-pupil rates. State apportionment uses AAFTE (Annual Average FTE).</p>
+        <p className="text-xs text-slate-500 mb-4">{isWaCharter ? 'Commission-aligned per-pupil rates. State apportionment uses AAFTE (Annual Average FTE).' : 'Revenue rates and escalation settings for your financial projections.'}</p>
+
+        {/* Tuition settings for private/micro pathways */}
+        {!isWaCharter && pathwayConfig.revenue_model === 'tuition' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 pb-4 border-b border-slate-100">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Annual Tuition Per Student ($)</label>
+              <input type="number" step={500} defaultValue={(profile as unknown as Record<string, unknown>).tuition_rate as number || pathwayConfig.tuition_rate_default || 0}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Financial Aid Discount (%)</label>
+              <input type="number" step={1} min={0} max={100} defaultValue={((profile as unknown as Record<string, unknown>).financial_aid_pct as number || pathwayConfig.financial_aid_pct_default || 0) * 100}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Regular Ed per Pupil ($)</label>

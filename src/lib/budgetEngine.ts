@@ -998,3 +998,380 @@ export function computeFPFScorecard(
 
   return { measures, overallStatus, overallMessage }
 }
+
+// --- Generic Pathway Projections ---
+
+import { getStateConfig } from './stateConfig'
+import type { Pathway, StateConfig } from './stateConfig'
+
+/**
+ * Compute multi-year projections for generic (non-WA) pathways.
+ * Returns the same MultiYearDetailedRow[] shape so all downstream consumers work.
+ */
+export function computeGenericProjections(
+  profile: SchoolProfile,
+  positions: StaffingPosition[],
+  projections: BudgetProjection[],
+  config: StateConfig,
+  preOpeningNet: number,
+  gradeExpansionPlan?: GradeExpansionEntry[],
+  allPositions?: StaffingPosition[],
+  startupFunding?: StartupFundingSource[] | null,
+): MultiYearDetailedRow[] {
+  const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
+  const retentionRate = profile.retention_rate ?? 90
+  const expansionEnrollments = hasExpansion
+    ? expansionToEnrollmentArray(gradeExpansionPlan!, retentionRate)
+    : null
+  const expansionDetails = hasExpansion
+    ? computeExpansionEnrollments(gradeExpansionPlan!, retentionRate)
+    : null
+
+  const enrollments = expansionEnrollments || [
+    profile.target_enrollment_y1,
+    profile.target_enrollment_y2,
+    profile.target_enrollment_y3,
+    profile.target_enrollment_y4,
+    profile.target_enrollment_y5 || profile.target_enrollment_y4,
+  ]
+
+  const salaryEscalator = 1 + config.salary_escalator
+  const revEscalator = 1 + config.revenue_escalator
+  const opsEscalator = 1 + config.operations_escalator
+  const benefitsRate = config.benefits_load
+  const authorizerFeeRate = config.authorizer_fee
+  const isTuition = config.revenue_model === 'tuition'
+
+  // Read tuition/aid from profile (saved during onboarding Step 2)
+  const tuitionRate = (profile as unknown as Record<string, unknown>).tuition_rate as number || config.tuition_rate_default || 0
+  const financialAidPct = (profile as unknown as Record<string, unknown>).financial_aid_pct as number || config.financial_aid_pct_default || 0
+
+  // Read per-pupil rate from custom revenue lines or assumptions
+  const customLines = ((profile as unknown as Record<string, unknown>).custom_revenue_lines as { key: string; amount: number }[]) || []
+  const perPupilLine = customLines.find(l => l.key === 'per_pupil_funding')
+  const perPupilRate = perPupilLine ? perPupilLine.amount / (enrollments[0] || 1) : 10000
+  const registrationFeeLine = customLines.find(l => l.key === 'registration_fees')
+  const registrationFeePerStudent = registrationFeeLine ? registrationFeeLine.amount / (enrollments[0] || 1) : 0
+  const fundraisingLine = customLines.find(l => l.key === 'fundraising')
+  const baseFundraising = fundraisingLine?.amount || 0
+
+  // Year 1 base operations from projections
+  const y1Facilities = projections.find((p) => !p.is_revenue && p.subcategory === 'Facilities')?.amount || 0
+  const y1Supplies = projections.find((p) => !p.is_revenue && p.subcategory === 'Supplies & Materials')?.amount || 0
+  const y1Contracted = projections.find((p) => !p.is_revenue && p.subcategory === 'Contracted Services')?.amount || 0
+  const y1Technology = projections.find((p) => !p.is_revenue && p.subcategory === 'Technology')?.amount || 0
+  const y1Insurance = projections.find((p) => !p.is_revenue && p.subcategory === 'Insurance')?.amount || 0
+  const y1FoodService = projections.find((p) => !p.is_revenue && p.subcategory === 'Food Service')?.amount || 0
+  const y1Transportation = projections.find((p) => !p.is_revenue && p.subcategory === 'Transportation')?.amount || 0
+  const y1Curriculum = projections.find((p) => !p.is_revenue && p.subcategory === 'Curriculum & Materials')?.amount || 0
+  const y1ProfDev = projections.find((p) => !p.is_revenue && p.subcategory === 'Professional Development')?.amount || 0
+  const y1Marketing = projections.find((p) => !p.is_revenue && p.subcategory === 'Marketing & Outreach')?.amount || 0
+  const y1Fundraising = projections.find((p) => !p.is_revenue && p.subcategory === 'Fundraising')?.amount || 0
+  const contingencyPct = (projections.find((p) => !p.is_revenue && p.subcategory === 'Contingency')?.amount || 0) > 0
+    ? 0.02
+    : (config.operations_defaults.contingency_pct ?? 2) / 100
+
+  const interestRate = 0.03 // default for generic
+  let cumulativeNet = preOpeningNet
+  const rows: MultiYearDetailedRow[] = []
+
+  for (let y = 1; y <= 5; y++) {
+    const enr = enrollments[y - 1] || enrollments[enrollments.length - 1] || enrollments[0]
+    const colaMult = Math.pow(revEscalator, y - 1)
+
+    // --- Revenue ---
+    let operatingRevenue: number
+    let tuitionRevenue = 0
+    let feeRevenue = 0
+    let fundRevenue = 0
+
+    if (isTuition) {
+      // Tuition-based: enrollment × tuition × COLA × (1 - aid)
+      tuitionRevenue = Math.round(enr * tuitionRate * colaMult * (1 - financialAidPct))
+      feeRevenue = Math.round(enr * registrationFeePerStudent * colaMult)
+      fundRevenue = Math.round(baseFundraising * colaMult)
+      operatingRevenue = tuitionRevenue + feeRevenue + fundRevenue
+    } else {
+      // Per-pupil: enrollment × rate × COLA
+      const ppRevenue = Math.round(enr * perPupilRate * colaMult)
+      fundRevenue = Math.round(baseFundraising * colaMult)
+      operatingRevenue = ppRevenue + fundRevenue
+    }
+
+    // Interest income
+    const priorCash = cumulativeNet
+    const interestIncome = y === 1
+      ? Math.round(Math.max(0, priorCash) * interestRate / 2)
+      : Math.round(Math.max(0, priorCash) * interestRate)
+    operatingRevenue += interestIncome
+
+    const yearGrantRevenue = getGrantRevenueForYear(startupFunding, y)
+    const totalRevenue = operatingRevenue + yearGrantRevenue
+
+    // --- Personnel ---
+    const yearPositions = allPositions?.filter((p) => p.year === y)
+    const hasYearPositions = yearPositions && yearPositions.length > 0
+    const positionsForYear = hasYearPositions ? yearPositions : positions
+    const escalator = y === 1 ? 1 : Math.pow(salaryEscalator, y - 1)
+
+    let certCost = 0, classCost = 0, adminCost = 0, benefitsCost = 0, totalSalaries = 0
+    for (const pos of positionsForYear) {
+      const salary = Math.round(pos.annual_salary * escalator)
+      const cost = pos.fte * salary
+      const ben = Math.round(cost * benefitsRate)
+      if (pos.category === 'certificated') certCost += cost
+      else if (pos.category === 'classified') classCost += cost
+      else if (pos.category === 'admin') adminCost += cost
+      benefitsCost += ben
+    }
+    totalSalaries = certCost + classCost + adminCost
+    const totalPersonnel = totalSalaries + benefitsCost
+
+    const staffing = computeYear1Staffing(positionsForYear, benefitsRate)
+
+    // --- Operations ---
+    const opsScale = Math.pow(opsEscalator, y - 1)
+    const enrRatio = enrollments[0] > 0 ? enr / enrollments[0] : 1
+    const facilities = Math.round(y1Facilities * opsScale)
+    const supplies = Math.round(y1Supplies * enrRatio * opsScale)
+    const contracted = Math.round(y1Contracted * enrRatio * opsScale)
+    const technology = Math.round(y1Technology * enrRatio * opsScale)
+    const authorizerFee = Math.round(operatingRevenue * authorizerFeeRate)
+    const insurance = Math.round(y1Insurance * opsScale)
+    const foodService = Math.round(y1FoodService * enrRatio * opsScale)
+    const transportation = Math.round(y1Transportation * enrRatio * opsScale)
+    const curriculum = Math.round(y1Curriculum * enrRatio * opsScale)
+    const profDev = Math.round(y1ProfDev * opsScale)
+    const marketing = Math.round(y1Marketing * opsScale)
+    const fundraisingExpense = Math.round(y1Fundraising * opsScale)
+    const contingencyBase = totalPersonnel + facilities + supplies + contracted + technology + authorizerFee + insurance + foodService + transportation + curriculum + profDev + marketing + fundraisingExpense
+    const contingency = Math.round(contingencyBase * contingencyPct)
+    const totalOperations = facilities + supplies + contracted + technology + authorizerFee + insurance + foodService + transportation + curriculum + profDev + marketing + fundraisingExpense + contingency
+
+    const totalExpenses = totalPersonnel + totalOperations
+    const net = totalRevenue - totalExpenses
+    cumulativeNet += net
+    const dailyExpense = totalExpenses / 365
+    const reserveDays = dailyExpense > 0 ? Math.round(cumulativeNet / dailyExpense) : 0
+
+    const expansionDetail = expansionDetails?.find((d) => d.year === y)
+
+    // Map revenue into the same shape — use regularEd for the primary revenue line, zeros for WA-specific
+    rows.push({
+      year: y,
+      enrollment: enr,
+      aafte: enr, // no AAFTE concept for generic
+      revenue: {
+        regularEd: isTuition ? tuitionRevenue : Math.round(enr * perPupilRate * colaMult),
+        sped: 0,
+        stateSped: 0,
+        facilitiesRev: 0,
+        levyEquity: 0,
+        titleI: 0,
+        idea: 0,
+        lap: 0,
+        lapHighPoverty: 0,
+        tbip: 0,
+        hicap: 0,
+        foodServiceRev: 0,
+        transportationRev: 0,
+        smallSchoolEnhancement: 0,
+        interestIncome,
+        grantRevenue: yearGrantRevenue,
+        operatingRevenue,
+        total: totalRevenue,
+        apportionment: isTuition ? tuitionRevenue : Math.round(enr * perPupilRate * colaMult),
+      },
+      personnel: {
+        certificated: certCost,
+        classified: classCost,
+        admin: adminCost,
+        benefits: benefitsCost,
+        total: totalPersonnel,
+        totalSalaries,
+      },
+      operations: { facilities, supplies, contracted, technology, authorizerFee, insurance, foodService, transportation, curriculum, profDev, marketing, fundraising: fundraisingExpense, contingency, total: totalOperations },
+      totalExpenses,
+      net,
+      cumulativeNet,
+      reserveDays,
+      staffing,
+      expansionDetail: expansionDetail ? {
+        returning: expansionDetail.returning,
+        newGrade: expansionDetail.newGrade,
+        grades: expansionDetail.grades,
+        newGrades: expansionDetail.newGrades,
+      } : undefined,
+    })
+  }
+
+  return rows
+}
+
+/**
+ * Compute cash flow using a custom payment schedule instead of OSPI.
+ * schedule is an array of 12 percentages (should sum to ~100).
+ */
+export function computeGenericCashFlow(
+  summary: BudgetSummary,
+  revenueTotal: number,
+  schedule: number[],
+  monthLabels: string[],
+  startingBalance: number = 0,
+): CashFlowMonth[] {
+  const monthlyPayroll = Math.round(summary.totalPersonnel / 12)
+  const monthlyOtherExpenses = Math.round(summary.totalOperations / 12)
+
+  let cumulative = startingBalance
+  return monthLabels.map((month, i) => {
+    const pct = (schedule[i] || 0) / 100
+    const revenueAmt = Math.round(revenueTotal * pct)
+    const totalInflow = revenueAmt
+    const netCashFlow = totalInflow - monthlyPayroll - monthlyOtherExpenses
+    cumulative += netCashFlow
+    return {
+      month,
+      apportionmentPct: pct,
+      apportionmentAmt: revenueAmt,
+      otherRevenue: 0,
+      totalInflow,
+      payroll: monthlyPayroll,
+      otherExpenses: monthlyOtherExpenses,
+      netCashFlow,
+      cumulativeBalance: cumulative,
+    }
+  })
+}
+
+/**
+ * Generic Financial Health Scorecard — replaces FPF for non-WA pathways.
+ */
+export interface GenericHealthMeasure {
+  name: string
+  values: { year: number; value: number; formatted: string; status: 'green' | 'yellow' | 'red' }[]
+  healthy: string
+  watch: string
+  concern: string
+  applicable: boolean
+}
+
+export interface GenericHealthScorecard {
+  measures: GenericHealthMeasure[]
+  overallStatus: 'green' | 'yellow' | 'red'
+  overallMessage: string
+}
+
+export function computeGenericHealthScorecard(
+  multiYear: MultiYearDetailedRow[],
+  startingCash: number,
+  config: StateConfig,
+  tuitionRate?: number,
+  financialAidPct?: number,
+): GenericHealthScorecard {
+  const isTuition = config.revenue_model === 'tuition'
+  const measures: GenericHealthMeasure[] = []
+
+  // 1. Reserve Days
+  measures.push({
+    name: 'Reserve Days (Cash on Hand)',
+    healthy: '60+ days', watch: '30-60 days', concern: 'Under 30 days',
+    applicable: true,
+    values: multiYear.map(r => ({
+      year: r.year,
+      value: r.reserveDays,
+      formatted: `${r.reserveDays} days`,
+      status: r.reserveDays >= 60 ? 'green' : r.reserveDays >= 30 ? 'yellow' : 'red',
+    })),
+  })
+
+  // 2. Personnel % of Revenue
+  measures.push({
+    name: 'Personnel % of Revenue',
+    healthy: 'Under 75%', watch: '75-80%', concern: 'Over 80%',
+    applicable: true,
+    values: multiYear.map(r => {
+      const pct = r.revenue.operatingRevenue > 0 ? (r.personnel.total / r.revenue.operatingRevenue) * 100 : 0
+      return {
+        year: r.year, value: pct, formatted: `${pct.toFixed(1)}%`,
+        status: pct < 75 ? 'green' : pct <= 80 ? 'yellow' : 'red',
+      }
+    }),
+  })
+
+  // 3. Total Margin
+  measures.push({
+    name: 'Total Margin (Net / Revenue)',
+    healthy: 'Above 5%', watch: '0-5%', concern: 'Negative',
+    applicable: true,
+    values: multiYear.map(r => {
+      const margin = r.revenue.total > 0 ? (r.net / r.revenue.total) * 100 : 0
+      return {
+        year: r.year, value: margin, formatted: `${margin.toFixed(1)}%`,
+        status: margin > 5 ? 'green' : margin >= 0 ? 'yellow' : 'red',
+      }
+    }),
+  })
+
+  // 4. Break-Even Enrollment (as % of projected)
+  measures.push({
+    name: 'Break-Even Enrollment',
+    healthy: 'Below 85%', watch: '85-95%', concern: 'Above 95%',
+    applicable: true,
+    values: multiYear.map(r => {
+      const perPupilRev = r.enrollment > 0 ? r.revenue.operatingRevenue / r.enrollment : 0
+      const breakEven = perPupilRev > 0 ? r.totalExpenses / perPupilRev : 0
+      const pct = r.enrollment > 0 ? (breakEven / r.enrollment) * 100 : 0
+      return {
+        year: r.year, value: pct, formatted: `${pct.toFixed(0)}%`,
+        status: pct < 85 ? 'green' : pct <= 95 ? 'yellow' : 'red',
+      }
+    }),
+  })
+
+  // 5. Current Ratio (simplified: cumulative cash / annual expenses * rough current liabilities)
+  measures.push({
+    name: 'Current Ratio',
+    healthy: 'Above 1.5', watch: '1.0-1.5', concern: 'Below 1.0',
+    applicable: true,
+    values: multiYear.map(r => {
+      // Approximate: current assets ≈ cumulative cash; current liabilities ≈ 2 months of expenses
+      const currentLiabilities = r.totalExpenses / 6
+      const ratio = currentLiabilities > 0 ? r.cumulativeNet / currentLiabilities : 0
+      return {
+        year: r.year, value: ratio, formatted: ratio.toFixed(2),
+        status: ratio >= 1.5 ? 'green' : ratio >= 1.0 ? 'yellow' : 'red',
+      }
+    }),
+  })
+
+  // 6. Financial Aid as % of Tuition (private/micro only)
+  if (isTuition && tuitionRate && tuitionRate > 0) {
+    const aidPct = (financialAidPct || 0) * 100
+    measures.push({
+      name: 'Financial Aid % of Tuition',
+      healthy: 'Under 15%', watch: '15-25%', concern: 'Over 25%',
+      applicable: true,
+      values: multiYear.map(r => ({
+        year: r.year, value: aidPct, formatted: `${aidPct.toFixed(0)}%`,
+        status: aidPct < 15 ? 'green' : aidPct <= 25 ? 'yellow' : 'red',
+      })),
+    })
+  }
+
+  // Overall status
+  const yearStatuses = multiYear.map((_, i) => {
+    const worst = measures
+      .filter(m => m.applicable)
+      .map(m => m.values[i]?.status || 'green')
+      .reduce((w, s) => s === 'red' ? 'red' : s === 'yellow' && w !== 'red' ? 'yellow' : w, 'green' as 'green' | 'yellow' | 'red')
+    return worst
+  })
+  const overallStatus = yearStatuses.includes('red') ? 'red' : yearStatuses.includes('yellow') ? 'yellow' : 'green'
+  const overallMessage = overallStatus === 'green'
+    ? 'Your financial model meets all health benchmarks across 5 years.'
+    : overallStatus === 'yellow'
+    ? 'Some metrics are in the watch range — review before finalizing your plan.'
+    : 'Critical metrics need attention — address before proceeding.'
+
+  return { measures, overallStatus, overallMessage }
+}

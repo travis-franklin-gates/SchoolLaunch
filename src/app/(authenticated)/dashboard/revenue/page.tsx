@@ -7,6 +7,8 @@ import { calcCommissionRevenue, calcAAFTE, calcSmallSchoolEnhancement, calcSmall
 import { getGrantAllocationsForYear } from '@/lib/budgetEngine'
 import { createClient } from '@/lib/supabase/client'
 import type { StartupFundingSource } from '@/lib/types'
+import { useStateConfig } from '@/contexts/StateConfigContext'
+import GenericRevenueView from '@/components/dashboard/GenericRevenueView'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -32,6 +34,7 @@ interface RevenueRow {
 
 export default function RevenuePage() {
   const { canEdit } = usePermissions()
+  const { config: pathwayConfig } = useStateConfig()
   const {
     schoolData: { schoolId, profile, loading, reload, gradeExpansionPlan },
     assumptions,
@@ -310,6 +313,26 @@ export default function RevenuePage() {
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
+  }
+
+  // Generic pathway: use GenericRevenueView component
+  if (pathwayConfig.pathway !== 'wa_charter') {
+    return (
+      <div className="animate-fade-in">
+        {!canEdit && (
+          <div className="mb-4 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-600">
+            You have view-only access. Contact the school owner to request edit permissions.
+          </div>
+        )}
+        <GenericRevenueView
+          config={pathwayConfig}
+          profile={profile as Parameters<typeof GenericRevenueView>[0]['profile']}
+          enrollment={profile.target_enrollment_y1}
+          startupFunding={profile.startup_funding}
+          canEdit={canEdit}
+        />
+      </div>
+    )
   }
 
   return (

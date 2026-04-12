@@ -2,9 +2,10 @@
 
 import { useMemo } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
-import { computeMultiYearDetailed, getGrantRevenueForYear, computeCarryForward } from '@/lib/budgetEngine'
+import { computeMultiYearDetailed, getGrantRevenueForYear, computeCarryForward, computeGenericProjections } from '@/lib/budgetEngine'
 import type { StartupFundingSource, PreOpeningTransaction } from '@/lib/types'
 import Link from 'next/link'
+import { useStateConfig } from '@/contexts/StateConfigContext'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -15,6 +16,7 @@ export default function MultiYearPage() {
     schoolData: { profile, positions, allPositions, projections, gradeExpansionPlan, loading },
     assumptions,
   } = useScenario()
+  const { config: pathwayConfig } = useStateConfig()
 
   const fundingSources: StartupFundingSource[] = profile.startup_funding && profile.startup_funding.length > 0
     ? profile.startup_funding
@@ -46,8 +48,10 @@ export default function MultiYearPage() {
   const preOpenExpenses = preOpenActualSpend > 0 ? preOpenActualSpend : preOpenBudget
 
   const yearsWithStartup = useMemo(
-    () => computeMultiYearDetailed(profile, positions, projections, assumptions, carryForward, gradeExpansionPlan, allPositions, fundingSources),
-    [profile, positions, allPositions, projections, assumptions, carryForward, gradeExpansionPlan, fundingSources]
+    () => pathwayConfig.pathway !== 'wa_charter'
+      ? computeGenericProjections(profile, positions, projections, pathwayConfig, carryForward, gradeExpansionPlan, allPositions, fundingSources)
+      : computeMultiYearDetailed(profile, positions, projections, assumptions, carryForward, gradeExpansionPlan, allPositions, fundingSources),
+    [profile, positions, allPositions, projections, assumptions, carryForward, gradeExpansionPlan, fundingSources, pathwayConfig]
   )
 
   const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0

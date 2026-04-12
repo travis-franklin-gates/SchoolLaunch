@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { usePermissions } from '@/hooks/usePermissions'
 import { SELECTED_SCHOOL_KEY } from '@/lib/useSchoolData'
 import SchoolLogo from '@/components/SchoolLogo'
+import { useStateConfig } from '@/contexts/StateConfigContext'
 
 interface SidebarSchool {
   school_id: string
@@ -72,6 +73,7 @@ export default function Sidebar() {
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [schools, setSchools] = useState<SidebarSchool[]>([])
   const { role } = usePermissions()
+  const { config: pathwayConfig } = useStateConfig()
   const roleBadge = role && role !== 'org_admin' && role !== 'super_admin' ? ROLE_BADGE[role] : null
 
   useEffect(() => {
@@ -179,7 +181,10 @@ export default function Sidebar() {
           <div key={gi}>
             {gi > 0 && <div className="mx-3 my-2 border-t border-white/[0.06]" />}
             <div className="space-y-0.5">
-              {group.items.map(({ href, label, icon }) => {
+              {group.items.map(({ href, label: rawLabel, icon }) => {
+                const label = (href === '/dashboard/scorecard' && pathwayConfig.pathway !== 'wa_charter')
+                  ? 'Financial Health'
+                  : rawLabel
                 const active = pathname === href
                 return (
                   <Link

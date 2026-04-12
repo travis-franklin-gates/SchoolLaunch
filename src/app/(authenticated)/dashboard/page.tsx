@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
-import { computeMultiYearDetailed, computeCashFlow, computeFPFScorecard, computeCarryForward, type FPFScorecard } from '@/lib/budgetEngine'
+import { computeMultiYearDetailed, computeCashFlow, computeFPFScorecard, computeCarryForward, computeGenericProjections, computeGenericHealthScorecard, type FPFScorecard } from '@/lib/budgetEngine'
+import { useStateConfig } from '@/contexts/StateConfigContext'
 import { buildSchoolContextString, buildAgentContextString, computeAdvisoryHash } from '@/lib/buildSchoolContext'
 import { createClient } from '@/lib/supabase/client'
 import type { AdvisoryCache } from '@/lib/types'
@@ -71,6 +72,8 @@ export default function DashboardPage() {
     conservativeSummary,
   } = useScenario()
   const { role } = usePermissions()
+  const { config: pathwayConfig } = useStateConfig()
+  const isWaCharter = pathwayConfig.pathway === 'wa_charter'
 
   const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
 
@@ -87,8 +90,10 @@ export default function DashboardPage() {
   const preOpenCash = useMemo(() => computeCarryForward(profile), [profile])
 
   const multiYear = useMemo(
-    () => computeMultiYearDetailed(profile, positions, projections, assumptions, preOpenCash, gradeExpansionPlan, allPositions, profile.startup_funding),
-    [profile, positions, allPositions, projections, assumptions, gradeExpansionPlan, preOpenCash]
+    () => isWaCharter
+      ? computeMultiYearDetailed(profile, positions, projections, assumptions, preOpenCash, gradeExpansionPlan, allPositions, profile.startup_funding)
+      : computeGenericProjections(profile, positions, projections, pathwayConfig, preOpenCash, gradeExpansionPlan, allPositions, profile.startup_funding),
+    [profile, positions, allPositions, projections, assumptions, gradeExpansionPlan, preOpenCash, isWaCharter, pathwayConfig]
   )
   const cashFlowData = useMemo(
     () => computeCashFlow(baseSummary, baseApportionment, preOpenCash),
@@ -99,6 +104,12 @@ export default function DashboardPage() {
     () => computeFPFScorecard(multiYear, preOpenCash, false),
     [multiYear, preOpenCash]
   )
+
+  const genericScorecard = useMemo(() => {
+    if (isWaCharter) return null
+    const profileExt = profile as unknown as Record<string, unknown>
+    return computeGenericHealthScorecard(multiYear, preOpenCash, pathwayConfig, profileExt.tuition_rate as number | undefined, profileExt.financial_aid_pct as number | undefined)
+  }, [multiYear, preOpenCash, isWaCharter, pathwayConfig, profile])
 
   // Compute current data hash for change detection
   const totalFte = positions.reduce((s, p) => s + p.fte, 0)
@@ -412,17 +423,23 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* 3. Commission Scorecard summary banner */}
-      <div className={`mb-4 px-5 py-3 rounded-xl text-sm font-medium flex items-center justify-between ${
-        scorecard.overallStatus === 'green' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-          : scorecard.overallStatus === 'yellow' ? 'bg-amber-50 text-amber-700 border border-amber-200'
-          : 'bg-red-50 text-red-700 border border-red-200'
-      }`}>
-        <span>{scorecard.overallMessage}</span>
-        <Link href="/dashboard/scorecard" className="text-xs font-medium opacity-75 hover:opacity-100 transition-opacity whitespace-nowrap ml-4">
-          View Full Scorecard &rarr;
-        </Link>
-      </div>
+      {/* 3. Scorecard summary banner — WA FPF or Generic Health */}
+      {(() => {
+        const sc = isWaCharter ? scorecard : genericScorecard
+        if (!sc) return null
+        return (
+          <div className={`mb-4 px-5 py-3 rounded-xl text-sm font-medium flex items-center justify-between ${
+            sc.overallStatus === 'green' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+              : sc.overallStatus === 'yellow' ? 'bg-amber-50 text-amber-700 border border-amber-200'
+              : 'bg-red-50 text-red-700 border border-red-200'
+          }`}>
+            <span>{sc.overallMessage}</span>
+            <Link href="/dashboard/scorecard" className="text-xs font-medium opacity-75 hover:opacity-100 transition-opacity whitespace-nowrap ml-4">
+              View Full {isWaCharter ? 'Scorecard' : 'Health Report'} &rarr;
+            </Link>
+          </div>
+        )
+      })()}
 
       {/* 4. 90% enrollment sensitivity */}
       {(() => {
@@ -444,7 +461,7 @@ export default function DashboardPage() {
       {baseSummary.facilityPct > 15 && (
         <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-5 py-3 text-sm text-red-700">
           <strong>Warning:</strong> Facility costs exceed 15% of projected revenue. Most lenders require
-          facility costs below 15% for financing. The Charter School Commission may flag this during application review.
+          facility costs below 15% for financing.{isWaCharter ? ' The Charter School Commission may flag this during application review.' : ''}
         </div>
       )}
       {baseSummary.facilityPct > 12 && baseSummary.facilityPct <= 15 && (
@@ -677,7 +694,7 @@ export default function DashboardPage() {
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
           </svg>
-          {commissionExporting ? 'Generating...' : 'Export for Commission'}
+          {commissionExporting ? 'Generating...' : isWaCharter ? 'Export for Commission' : 'Export Financial Plan'}
         </button>
       </div>
     </div>

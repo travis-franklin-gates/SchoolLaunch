@@ -8,6 +8,8 @@ import {
   calcSmallSchoolEnhancementFromGrades,
 } from '@/lib/calculations'
 import { getAssumptions } from '@/lib/types'
+import { getStateConfig } from '@/lib/stateConfig'
+import type { Pathway } from '@/lib/stateConfig'
 
 export async function POST(request: Request) {
   // Authenticate the user via their session cookie
@@ -58,42 +60,105 @@ export async function POST(request: Request) {
   const enrollment = profile.target_enrollment_y1
   const assumptions = getAssumptions(profile.financial_assumptions)
 
-  // --- Calculate revenue (Commission-aligned) ---
-  const rev = calcCommissionRevenue(enrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
-  const smallSchoolEnhancement = calcSmallSchoolEnhancementFromGrades(
-    enrollment, profile.opening_grades || [], assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0
-  )
-  const stateApport = rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev + smallSchoolEnhancement
+  // --- Read school pathway ---
+  const { data: school } = await admin.from('schools').select('pathway').eq('id', schoolId).single()
+  const pathway = (school?.pathway || 'wa_charter') as Pathway
+  const config = getStateConfig(pathway)
+  const isWaCharter = pathway === 'wa_charter'
+  const benefitsRate = config.benefits_load
+
+  // --- Calculate revenue ---
+  let revenueProjections: { school_id: string; year: number; category: string; subcategory: string; amount: number; is_revenue: boolean }[]
+
+  if (isWaCharter) {
+    // WA Charter: Commission-aligned (unchanged)
+    const rev = calcCommissionRevenue(enrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
+    const smallSchoolEnhancement = calcSmallSchoolEnhancementFromGrades(
+      enrollment, profile.opening_grades || [], assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0
+    )
+
+    revenueProjections = [
+      { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Regular Ed Apportionment', amount: rev.regularEd, is_revenue: true },
+      { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'SPED Apportionment', amount: rev.sped, is_revenue: true },
+      { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'State Special Education', amount: rev.stateSped, is_revenue: true },
+      { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Facilities Revenue', amount: rev.facilitiesRev, is_revenue: true },
+      { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Levy Equity', amount: rev.levyEquity, is_revenue: true },
+      { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Small School Enhancement', amount: smallSchoolEnhancement, is_revenue: true },
+      { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Title I', amount: rev.titleI, is_revenue: true },
+      { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'IDEA', amount: rev.idea, is_revenue: true },
+      { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'LAP', amount: rev.lap, is_revenue: true },
+      { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'LAP High Poverty', amount: rev.lapHighPoverty, is_revenue: true },
+      { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'TBIP', amount: rev.tbip, is_revenue: true },
+      { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'HiCap', amount: rev.hicap, is_revenue: true },
+    ]
+  } else {
+    // Generic pathways
+    const customLines = profile.custom_revenue_lines || []
+    if (config.revenue_model === 'tuition') {
+      const tuitionRate = profile.tuition_rate || config.tuition_rate_default || 0
+      const aidPct = profile.financial_aid_pct || config.financial_aid_pct_default || 0
+      const grossTuition = enrollment * tuitionRate
+      const netTuition = Math.round(grossTuition * (1 - aidPct))
+      const regFees = customLines.find((l: { key: string }) => l.key === 'registration_fees')?.amount || 0
+      const fundraisingRev = customLines.find((l: { key: string }) => l.key === 'fundraising')?.amount || 0
+      revenueProjections = [
+        { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Tuition Revenue', amount: netTuition, is_revenue: true },
+        { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Registration Fees', amount: regFees, is_revenue: true },
+        { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Fundraising', amount: fundraisingRev, is_revenue: true },
+      ]
+    } else {
+      // Per-pupil (generic charter)
+      const ppLine = customLines.find((l: { key: string }) => l.key === 'per_pupil_funding')
+      const ppRevenue = ppLine?.amount || (enrollment * 10000)
+      const fundraisingRev = customLines.find((l: { key: string }) => l.key === 'fundraising')?.amount || 0
+      revenueProjections = [
+        { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Per-Pupil Funding', amount: ppRevenue, is_revenue: true },
+        { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Fundraising', amount: fundraisingRev, is_revenue: true },
+      ]
+    }
+  }
 
   // --- Calculate operations costs ---
-  console.log('[onboarding/complete] facility mode:', operations.facilityMode, 'facilityMonthly:', operations.facilityMonthly)
   const facilityCost = operations.facilityMode === 'sqft'
     ? operations.facilitySqft * operations.facilityCostPerSqft
     : operations.facilityMonthly * 12
-  console.log('[onboarding/complete] facilityCost:', facilityCost)
   const supplies = operations.suppliesPerPupil * enrollment
   const contracted = operations.contractedPerPupil * enrollment
   const technology = operations.technologyPerPupil * enrollment
-  const authorizerFee = calcAuthorizerFeeCommission(stateApport, assumptions.authorizer_fee_pct / 100)
   const insurance = operations.insurance
+
+  // Authorizer fee: WA uses Commission calculation, generic uses config rate
+  let authorizerFee: number
+  if (isWaCharter) {
+    const rev = calcCommissionRevenue(enrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
+    const smallSchoolEnhancement = calcSmallSchoolEnhancementFromGrades(
+      enrollment, profile.opening_grades || [], assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0
+    )
+    const stateApport = rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev + smallSchoolEnhancement
+    authorizerFee = calcAuthorizerFeeCommission(stateApport, assumptions.authorizer_fee_pct / 100)
+  } else {
+    const totalRev = revenueProjections.reduce((s, p) => s + p.amount, 0)
+    authorizerFee = Math.round(totalRev * config.authorizer_fee)
+  }
 
   // --- Calculate personnel total from positions ---
   let totalPersonnel = 0
   for (const p of positions) {
     const sal = p.fte * p.salary
-    totalPersonnel += sal + calcBenefits(sal)
+    totalPersonnel += sal + Math.round(sal * benefitsRate)
   }
 
-  // Expanded operations categories
-  const curriculum = assumptions.curriculum_per_student * enrollment
-  const profDev = assumptions.professional_development_per_fte * (positions?.length > 0
-    ? positions.reduce((s: number, p: { fte: number }) => s + p.fte, 0) : 0)
-  const foodService = assumptions.food_service_offered ? assumptions.food_service_per_student * enrollment : 0
-  const transportation = assumptions.transportation_offered ? assumptions.transportation_per_student * enrollment : 0
-  const marketing = assumptions.marketing_per_student * enrollment
-  const fundraising = assumptions.fundraising_annual
+  // Expanded operations categories — use config defaults for generic, assumptions for WA
+  const opsDefaults = config.operations_defaults
+  const curriculum = (isWaCharter ? assumptions.curriculum_per_student : (opsDefaults.curriculum_per_student || 0)) * enrollment
+  const totalFte = positions?.length > 0 ? positions.reduce((s: number, p: { fte: number }) => s + p.fte, 0) : 0
+  const profDev = (isWaCharter ? assumptions.professional_development_per_fte : (opsDefaults.professional_development_per_fte || 0)) * totalFte
+  const foodService = (isWaCharter && assumptions.food_service_offered) ? assumptions.food_service_per_student * enrollment : 0
+  const transportation = (isWaCharter && assumptions.transportation_offered) ? assumptions.transportation_per_student * enrollment : 0
+  const marketing = (isWaCharter ? assumptions.marketing_per_student : (opsDefaults.marketing_per_student || 0)) * enrollment
+  const fundraisingExp = isWaCharter ? assumptions.fundraising_annual : (opsDefaults.fundraising_annual || 0)
 
-  const subtotalExpenses = totalPersonnel + facilityCost + supplies + contracted + technology + authorizerFee + insurance + curriculum + profDev + foodService + transportation + marketing + fundraising
+  const subtotalExpenses = totalPersonnel + facilityCost + supplies + contracted + technology + authorizerFee + insurance + curriculum + profDev + foodService + transportation + marketing + fundraisingExp
   const misc = Math.round(subtotalExpenses * (operations.miscPct / 100))
 
   // --- Save staffing positions (fixes G4: uses service role) ---
@@ -184,20 +249,8 @@ export async function POST(request: Request) {
   }
   console.log('[onboarding/complete] insert scenario succeeded')
 
-  // --- Insert budget projections (fixes G1: uses service role) ---
-  const projections = [
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Regular Ed Apportionment', amount: rev.regularEd, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'SPED Apportionment', amount: rev.sped, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'State Special Education', amount: rev.stateSped, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Facilities Revenue', amount: rev.facilitiesRev, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Levy Equity', amount: rev.levyEquity, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Small School Enhancement', amount: smallSchoolEnhancement, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'Title I', amount: rev.titleI, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'IDEA', amount: rev.idea, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'LAP', amount: rev.lap, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'LAP High Poverty', amount: rev.lapHighPoverty, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'TBIP', amount: rev.tbip, is_revenue: true },
-    { school_id: schoolId, year: 1, category: 'Revenue', subcategory: 'HiCap', amount: rev.hicap, is_revenue: true },
+  // --- Insert budget projections ---
+  const expenseProjections = [
     { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Facilities', amount: facilityCost, is_revenue: false },
     { school_id: schoolId, year: 1, category: 'Personnel', subcategory: 'Total Personnel', amount: totalPersonnel, is_revenue: false },
     { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Supplies & Materials', amount: supplies, is_revenue: false },
@@ -210,9 +263,10 @@ export async function POST(request: Request) {
     { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Food Service', amount: foodService, is_revenue: false },
     { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Transportation', amount: transportation, is_revenue: false },
     { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Marketing & Outreach', amount: marketing, is_revenue: false },
-    { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Fundraising', amount: fundraising, is_revenue: false },
+    { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Fundraising', amount: fundraisingExp, is_revenue: false },
     { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Misc/Contingency', amount: misc, is_revenue: false },
   ]
+  const projections = [...revenueProjections, ...expenseProjections]
 
   console.log('[onboarding/complete] inserting budget_projections, count:', projections.length)
   console.log('[onboarding/complete] projections payload:', JSON.stringify(projections))

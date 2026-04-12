@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
-import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward } from '@/lib/budgetEngine'
+import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward, computeGenericProjections, computeGenericHealthScorecard } from '@/lib/budgetEngine'
+import { useStateConfig } from '@/contexts/StateConfigContext'
+import GenericScorecard from '@/components/dashboard/GenericScorecard'
 
 const STATUS_LABELS: Record<string, string> = {
   meets: 'Meets',
@@ -16,23 +18,45 @@ export default function ScorecardPage() {
     schoolData: { profile, positions, allPositions, projections, gradeExpansionPlan, loading },
     assumptions,
   } = useScenario()
+  const { config: pathwayConfig } = useStateConfig()
 
   const [notesOpen, setNotesOpen] = useState(false)
 
   const preOpenCash = useMemo(() => computeCarryForward(profile), [profile])
 
-  const multiYear = useMemo(
-    () => computeMultiYearDetailed(profile, positions, projections, assumptions, preOpenCash, gradeExpansionPlan, allPositions, profile.startup_funding),
-    [profile, positions, allPositions, projections, assumptions, gradeExpansionPlan, preOpenCash]
-  )
+  const multiYear = useMemo(() => {
+    if (pathwayConfig.pathway !== 'wa_charter') {
+      return computeGenericProjections(profile, positions, projections, pathwayConfig, preOpenCash, gradeExpansionPlan, allPositions, profile.startup_funding)
+    }
+    return computeMultiYearDetailed(profile, positions, projections, assumptions, preOpenCash, gradeExpansionPlan, allPositions, profile.startup_funding)
+  }, [profile, positions, allPositions, projections, assumptions, gradeExpansionPlan, preOpenCash, pathwayConfig])
 
   const scorecard = useMemo(
     () => computeFPFScorecard(multiYear, preOpenCash, false),
     [multiYear, preOpenCash]
   )
 
+  const genericScorecard = useMemo(() => {
+    if (pathwayConfig.pathway === 'wa_charter') return null
+    const profileExt = profile as unknown as Record<string, unknown>
+    return computeGenericHealthScorecard(
+      multiYear, preOpenCash, pathwayConfig,
+      profileExt.tuition_rate as number | undefined,
+      profileExt.financial_aid_pct as number | undefined,
+    )
+  }, [multiYear, preOpenCash, pathwayConfig, profile])
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
+  }
+
+  // Generic pathway: use GenericScorecard component
+  if (pathwayConfig.pathway !== 'wa_charter' && genericScorecard) {
+    return (
+      <div className="animate-fade-in">
+        <GenericScorecard scorecard={genericScorecard} />
+      </div>
+    )
   }
 
   return (
