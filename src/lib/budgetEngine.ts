@@ -839,13 +839,13 @@ export function computeFPFScorecard(
     ),
   })
 
-  // 3. Total Margin — FPF: Net Income / Total Revenue
+  // 3. Total Margin — FPF: Net Income / Operating Revenue (excludes one-time startup grants)
   const totalMargin = multiYear.map(row =>
-    row.revenue.total > 0 ? Math.round((row.net / row.revenue.total) * 1000) / 10 : 0
+    row.revenue.operatingRevenue > 0 ? Math.round((row.net / row.revenue.operatingRevenue) * 1000) / 10 : 0
   )
   measures.push({
     name: 'Total Margin',
-    formula: 'Net Income ÷ Total Revenue',
+    formula: 'Net Income ÷ Operating Revenue',
     values: totalMargin,
     stage1Target: '≥ 0%',
     stage2Target: '≥ 0%',
@@ -858,11 +858,11 @@ export function computeFPFScorecard(
     ),
   })
 
-  // 4. Aggregated 3-Year Total Margin — FPF: Total 3-Year Net Income / Total 3-Year Revenue
+  // 4. Aggregated 3-Year Total Margin — FPF: Total 3-Year Net Income / Total 3-Year Operating Revenue
   const threeYearMargin: (number | null)[] = multiYear.map((_, i) => {
     if (i < 2) return null // N/A for Years 1-2 (need 3 years of data)
     const netSum = multiYear.slice(i - 2, i + 1).reduce((s, r) => s + r.net, 0)
-    const revSum = multiYear.slice(i - 2, i + 1).reduce((s, r) => s + r.revenue.total, 0)
+    const revSum = multiYear.slice(i - 2, i + 1).reduce((s, r) => s + r.revenue.operatingRevenue, 0)
     return revSum > 0 ? Math.round((netSum / revSum) * 1000) / 10 : 0
   })
   measures.push({

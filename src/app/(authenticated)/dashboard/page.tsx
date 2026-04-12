@@ -224,8 +224,9 @@ export default function DashboardPage() {
     ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
     : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
 
-  // Total Margin % = Net Income / Total Revenue (Commission FPF definition, includes grants)
-  const totalMarginPct = y1Revenue > 0 ? (y1Net / y1Revenue) * 100 : 0
+  // Total Margin % = Net Income / Operating Revenue (excludes one-time startup grants)
+  const y1OperatingRevenue = multiYear.length > 0 ? multiYear[0].revenue.operatingRevenue : baseSummary.operatingRevenue
+  const totalMarginPct = y1OperatingRevenue > 0 ? (y1Net / y1OperatingRevenue) * 100 : 0
   const totalMarginColor = totalMarginPct >= 0
     ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
     : totalMarginPct >= -5

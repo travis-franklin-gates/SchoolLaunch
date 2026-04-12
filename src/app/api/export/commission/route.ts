@@ -144,6 +144,8 @@ export async function POST(request: Request) {
   enrollRows.push(['Total Enrollment', 0, ...multiYear.map((r) => r.enrollment)])
   enrollRows.push(['AAFTE', 0, ...multiYear.map((r) => r.aafte)])
   enrollRows.push([])
+  enrollRows.push([`Note: AAFTE = ${assumptions.aafte_pct}% of headcount enrollment (adjustable in Settings). State apportionment revenue is calculated on AAFTE, not headcount.`])
+  enrollRows.push([])
   enrollRows.push(['Student Needs Populations'])
   enrollRows.push(['SPED Enrollment', 0, ...multiYear.map((r) => Math.round(r.enrollment * profile.pct_iep / 100))])
   enrollRows.push(['FRPL Enrollment', 0, ...multiYear.map((r) => Math.round(r.enrollment * profile.pct_frl / 100))])
@@ -254,7 +256,7 @@ export async function POST(request: Request) {
     [],
     ['KEY METRICS'],
     ['Personnel % of Revenue', '', ...multiYear.map((r) => r.revenue.operatingRevenue > 0 ? `${(r.personnel.total / r.revenue.operatingRevenue * 100).toFixed(1)}%` : '0%')],
-    ['Total Margin', '', ...multiYear.map((r) => r.revenue.operatingRevenue > 0 ? `${(r.net / r.revenue.operatingRevenue * 100).toFixed(1)}%` : '0%')],
+    ['Total Margin (Operating)', '', ...multiYear.map((r) => r.revenue.operatingRevenue > 0 ? `${(r.net / r.revenue.operatingRevenue * 100).toFixed(1)}%` : '0%')],
     ['Days of Cash on Hand', '', ...multiYear.map((r) => r.reserveDays)],
   ]
 
