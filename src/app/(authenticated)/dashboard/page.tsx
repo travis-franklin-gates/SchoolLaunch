@@ -141,7 +141,7 @@ export default function DashboardPage() {
       const res = await fetch('/api/advisory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schoolContext, agentContext, pathway: pathwayConfig.pathway, schoolType: schoolTypeLabel }),
+        body: JSON.stringify({ schoolId, schoolContext, agentContext, pathway: pathwayConfig.pathway, schoolType: schoolTypeLabel }),
       })
       if (res.ok) {
         const data = await res.json() as AdvisoryData
@@ -271,7 +271,7 @@ export default function DashboardPage() {
         const advRes = await fetch('/api/advisory', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ schoolContext, agentContext, pathway: pathwayConfig.pathway, schoolType: stLabel }),
+          body: JSON.stringify({ schoolId, schoolContext, agentContext, pathway: pathwayConfig.pathway, schoolType: stLabel }),
         })
         if (advRes.ok) {
           advisoryForPdf = await advRes.json()
@@ -289,6 +289,7 @@ export default function DashboardPage() {
         .order('name')
 
       const payload = {
+        schoolId,
         schoolName,
         pathway: pathwayConfig.pathway,
         profile,
@@ -340,6 +341,7 @@ export default function DashboardPage() {
         .order('name')
 
       const payload = {
+        schoolId,
         schoolName,
         profile,
         assumptions,

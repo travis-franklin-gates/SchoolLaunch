@@ -33,7 +33,7 @@ export default function AskPage() {
   const { schoolData, assumptions } = useScenario()
   const { config: pathwayConfig } = useStateConfig()
   const isWaCharter = pathwayConfig.pathway === 'wa_charter'
-  const { schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, loading } = schoolData
+  const { schoolId, schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, loading } = schoolData
 
   const preOpenCash = useMemo(() => computeCarryForward(profile), [profile])
   const multiYear = useMemo(
@@ -76,6 +76,7 @@ export default function AskPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            schoolId,
             messages: updatedMessages
               .filter((m) => m.role !== 'system')
               .slice(-20)
@@ -128,7 +129,7 @@ export default function AskPage() {
 
       setStreaming(false)
     },
-    [messages, streaming, cooldown, schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard]
+    [messages, streaming, cooldown, schoolId, schoolName, profile, positions, projections, gradeExpansionPlan, multiYear, scorecard]
   )
 
   function handleSubmit(e: React.FormEvent) {

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { calcCommissionRevenue, calcAuthorizerFeeCommission } from '@/lib/calculations'
+import { calcCommissionRevenue, calcAuthorizerFeeCommission, calcSmallSchoolEnhancementFromGrades } from '@/lib/calculations'
+import { stateApportionmentBase } from '@/lib/budgetEngine'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import type { StartupFundingSource } from '@/lib/types'
 import type { Pathway } from '@/lib/stateConfig'
@@ -28,6 +29,7 @@ interface Props {
   pctEll: number
   pctHicap: number
   pathway?: Pathway
+  openingGrades?: string[]
   tuitionRate?: number
   financialAidPct?: number
   initialData: OperationsData
@@ -144,6 +146,7 @@ export default function StepOperations({
   pctEll,
   pctHicap,
   pathway,
+  openingGrades,
   tuitionRate,
   financialAidPct,
   initialData,
@@ -200,11 +203,18 @@ export default function StepOperations({
     if (!showAuthorizerFee) return 0
     if (isWaCharter) {
       const rev = calcCommissionRevenue(enrollment, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS)
-      return calcAuthorizerFeeCommission(rev.regularEd + rev.sped + rev.facilitiesRev)
+      const sse = calcSmallSchoolEnhancementFromGrades(
+        enrollment,
+        openingGrades || [],
+        DEFAULT_ASSUMPTIONS.aafte_pct,
+        DEFAULT_ASSUMPTIONS.regular_ed_per_pupil,
+        DEFAULT_ASSUMPTIONS.regionalization_factor || 1.0,
+      )
+      return calcAuthorizerFeeCommission(stateApportionmentBase(rev, sse))
     }
     // Generic charter: default 0% authorizer fee (editable in dashboard later)
     return Math.round(totalRevenue * config.authorizer_fee)
-  }, [enrollment, pctFrl, pctIep, pctEll, pctHicap, showAuthorizerFee, isWaCharter, totalRevenue, config])
+  }, [enrollment, pctFrl, pctIep, pctEll, pctHicap, showAuthorizerFee, isWaCharter, totalRevenue, config, openingGrades])
 
   const estimatedFacilityAnnual = Math.round(totalRevenue * 0.15)
   const estimatedFacilityMonthly = Math.round(estimatedFacilityAnnual / 12)

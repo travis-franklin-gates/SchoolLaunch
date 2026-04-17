@@ -1,5 +1,6 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { authenticateRequest } from '@/lib/apiAuth'
 
 const ROLE_PROMPT = `You are SchoolLaunch, an AI financial planning advisor built specifically for Washington State charter school founders in the application and pre-opening phase. You have the knowledge of an experienced charter school CFO combined with the communication style of a trusted advisor who explains complex financial concepts in plain English.
 
@@ -236,7 +237,11 @@ PERSONNEL KNOWLEDGE:
 }
 
 export async function POST(req: NextRequest) {
-  const { messages, schoolContext, pathway, schoolType } = await req.json()
+  const body = await req.json()
+  const { messages, schoolContext, pathway, schoolType, schoolId } = body
+
+  const auth = await authenticateRequest(req, { schoolId })
+  if (auth instanceof NextResponse) return auth
 
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {

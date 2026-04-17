@@ -121,6 +121,11 @@ export default function SettingsPage() {
     setSaving(true)
     setToast(null)
 
+    // Enforce pathway-level authorizer fee lock (e.g., WA Commission contract = 3%, non-negotiable).
+    const faToSave: FinancialAssumptions = pathwayConfig.authorizer_fee_editable
+      ? fa
+      : { ...fa, authorizer_fee_pct: pathwayConfig.authorizer_fee * 100 }
+
     const profileUpdate: Record<string, unknown> = {
       region,
       planned_open_year: openYear,
@@ -134,7 +139,7 @@ export default function SettingsPage() {
       pct_iep: pctIep,
       pct_ell: pctEll,
       pct_hicap: pctHicap,
-      financial_assumptions: fa,
+      financial_assumptions: faToSave,
     }
 
     if (expansionData) {
@@ -527,10 +532,22 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Authorizer Fee (%)</label>
-            <input type="number" step={0.5} value={fa.authorizer_fee_pct}
-              onChange={(e) => updateFa('authorizer_fee_pct', Number(e.target.value))}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
-            <p className="text-[10px] text-slate-400 mt-0.5">Applied to state apportionment</p>
+            {pathwayConfig.authorizer_fee_editable ? (
+              <>
+                <input type="number" step={0.5} value={fa.authorizer_fee_pct}
+                  onChange={(e) => updateFa('authorizer_fee_pct', Number(e.target.value))}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+                <p className="text-[10px] text-slate-400 mt-0.5">Applied to state apportionment</p>
+              </>
+            ) : (
+              <>
+                <input type="number" value={(pathwayConfig.authorizer_fee * 100).toFixed(1)} disabled
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-500 cursor-not-allowed" />
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  {isWaCharter ? 'Fixed at 3% by WA Charter School Commission contract.' : 'Fixed by authorizer.'} Applied to state apportionment.
+                </p>
+              </>
+            )}
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Annual Salary Escalator (%)</label>

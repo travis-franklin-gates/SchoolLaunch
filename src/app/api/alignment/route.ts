@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { authenticateRequest } from '@/lib/apiAuth'
 
 const client = new Anthropic()
 
@@ -69,7 +70,14 @@ Be specific. Reference actual numbers from the financial model. Quote or closely
 
 export async function POST(request: NextRequest) {
   try {
-    const { narrativeText, schoolContext } = await request.json()
+    const body = await request.json()
+    const { narrativeText, schoolContext, schoolId } = body
+
+    const auth = await authenticateRequest(request, {
+      schoolId,
+      requireRoles: ['school_ceo', 'school_editor', 'org_admin'],
+    })
+    if (auth instanceof NextResponse) return auth
 
     if (!narrativeText || typeof narrativeText !== 'string') {
       return NextResponse.json({ error: 'Missing narrativeText' }, { status: 400 })

@@ -730,6 +730,7 @@ export default function OnboardingPage() {
           pctEll={data.pctEll}
           pctHicap={data.pctHicap}
           pathway={data.pathway}
+          openingGrades={data.openingGrades}
           tuitionRate={data.tuitionRate}
           financialAidPct={data.financialAidPct}
           initialData={data.operations}

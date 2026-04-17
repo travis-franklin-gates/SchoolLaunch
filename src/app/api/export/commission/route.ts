@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
+import { authenticateRequest } from '@/lib/apiAuth'
 
 interface MultiYearRow {
   year: number
@@ -89,7 +90,61 @@ interface FPFMeasure {
   statuses: string[]
 }
 
-export async function POST(request: Request) {
+// Distribute Y1 revenue across fiscal months using per-revenue-type cadence.
+// - State apportionment (regularEd + sped + stateSped + facilitiesRev + SSE + levyEquity): OSPI schedule
+// - Federal (titleI + idea): flat 10-month Oct-Jul (typical reimbursement-driven arrival)
+// - State categoricals (lap, lapHighPoverty, tbip, hicap): flat 12-month
+// - Food service + transportation: 10 school months Sep-Jun
+// - Interest income: flat 12-month
+// - Y1 startup grant revenue: Sep-only (lump sum at fiscal-year start)
+function distributeRevenueToMonths(
+  rev: {
+    regularEd: number; sped: number; stateSped: number; facilitiesRev: number;
+    smallSchoolEnhancement: number; levyEquity: number;
+    titleI: number; idea: number;
+    lap: number; lapHighPoverty: number; tbip: number; hicap: number;
+    foodServiceRev: number; transportationRev: number;
+    interestIncome: number; grantRevenue: number;
+  },
+  isWaCharter: boolean,
+  paymentSchedule?: { month: string; pct: number }[],
+): { month: string; amount: number }[] {
+  const WA_MONTHS = ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug']
+  const OSPI_PCTS = [9, 8, 5, 9, 8.5, 9, 9, 9, 5, 6, 12.5, 10]
+
+  if (!isWaCharter) {
+    const schedule = paymentSchedule || WA_MONTHS.map((m) => ({ month: m, pct: 100 / 12 }))
+    const total = rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev + rev.smallSchoolEnhancement
+      + rev.levyEquity + rev.titleI + rev.idea + rev.lap + rev.lapHighPoverty + rev.tbip + rev.hicap
+      + rev.foodServiceRev + rev.transportationRev + rev.interestIncome + rev.grantRevenue
+    return schedule.map(({ month, pct }) => ({ month, amount: Math.round(total * pct / 100) }))
+  }
+
+  const stateApport = rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev + rev.smallSchoolEnhancement + rev.levyEquity
+  const federal = rev.titleI + rev.idea
+  const stateCategorical = rev.lap + rev.lapHighPoverty + rev.tbip + rev.hicap
+  const foodTransport = rev.foodServiceRev + rev.transportationRev
+  const interest = rev.interestIncome
+  const startupGrants = rev.grantRevenue
+
+  return WA_MONTHS.map((month, idx) => {
+    let amount = 0
+    amount += stateApport * OSPI_PCTS[idx] / 100
+    // Federal: Oct (idx=1) through Jul (idx=10), 10% each
+    if (idx >= 1 && idx <= 10) amount += federal / 10
+    // State categoricals: flat 12-month
+    amount += stateCategorical / 12
+    // Food + Transportation: Sep (0) through Jun (9), 10% each
+    if (idx >= 0 && idx <= 9) amount += foodTransport / 10
+    // Interest: flat 12-month
+    amount += interest / 12
+    // Startup grants: Sep only
+    if (idx === 0) amount += startupGrants
+    return { month, amount: Math.round(amount) }
+  })
+}
+
+export async function POST(request: NextRequest) {
   const body = await request.json()
   const {
     schoolName,
@@ -100,6 +155,7 @@ export async function POST(request: Request) {
     scorecard,
     startingCash,
     pathway,
+    schoolId,
   } = body as {
     schoolName: string
     profile: { pct_frl: number; pct_iep: number; pct_ell: number; grade_config: string }
@@ -110,7 +166,12 @@ export async function POST(request: Request) {
     startingCash: number
     scenarios?: { name: string; assumptions: Record<string, number>; results: { years: Record<string, Record<string, number | string>> } | null }[]
     pathway?: string
+    schoolId?: string
   }
+
+  const auth = await authenticateRequest(request, { schoolId })
+  if (auth instanceof NextResponse) return auth
+
   const isWaCharter = !pathway || pathway === 'wa_charter'
 
   const wb = XLSX.utils.book_new()
@@ -269,29 +330,26 @@ export async function POST(request: Request) {
   XLSX.utils.book_append_sheet(wb, plSheet, 'P&L')
 
   // --- Tab 5: CASH FLOW (Monthly Year 1) ---
-  const ospiSchedule = isWaCharter
-    ? [
-      { month: 'Sep', pct: 9 }, { month: 'Oct', pct: 8 }, { month: 'Nov', pct: 5 },
-      { month: 'Dec', pct: 9 }, { month: 'Jan', pct: 8.5 }, { month: 'Feb', pct: 9 },
-      { month: 'Mar', pct: 9 }, { month: 'Apr', pct: 9 }, { month: 'May', pct: 5 },
-      { month: 'Jun', pct: 6 }, { month: 'Jul', pct: 12.5 }, { month: 'Aug', pct: 10 },
-    ]
-    : ((body.paymentSchedule || [
-      { month: 'Sep', pct: 10 }, { month: 'Oct', pct: 10 }, { month: 'Nov', pct: 10 },
-      { month: 'Dec', pct: 10 }, { month: 'Jan', pct: 10 }, { month: 'Feb', pct: 10 },
-      { month: 'Mar', pct: 10 }, { month: 'Apr', pct: 10 }, { month: 'May', pct: 10 },
-      { month: 'Jun', pct: 10 }, { month: 'Jul', pct: 0 }, { month: 'Aug', pct: 0 },
-    ]) as { month: string; pct: number }[])
   const y1Row = multiYear[0]
-  const y1AnnualRev = y1Row?.revenue?.total ?? 0
   const y1AnnualExp = y1Row?.totalExpenses ?? 0
   const monthlyExp = Math.round(y1AnnualExp / 12)
 
+  // Per-revenue-type monthly distribution (OSPI for apportionment, 10-mo federal, flat categoricals,
+  // 10-school-month food/transport, flat interest, Sep-only startup grants).
+  const monthlyRev = distributeRevenueToMonths(
+    y1Row?.revenue ?? {
+      regularEd: 0, sped: 0, stateSped: 0, facilitiesRev: 0, smallSchoolEnhancement: 0, levyEquity: 0,
+      titleI: 0, idea: 0, lap: 0, lapHighPoverty: 0, tbip: 0, hicap: 0,
+      foodServiceRev: 0, transportationRev: 0, interestIncome: 0, grantRevenue: 0,
+    },
+    isWaCharter,
+    body.paymentSchedule as { month: string; pct: number }[] | undefined,
+  )
+
   const cfRows: (string | number | null)[][] = [
-    [isWaCharter ? 'Monthly Cash Flow — Year 1 (OSPI Apportionment Schedule)' : 'Monthly Cash Flow — Year 1'],
+    [isWaCharter ? 'Monthly Cash Flow — Year 1 (per-revenue-type distribution)' : 'Monthly Cash Flow — Year 1'],
     [],
-    ['Month', ...ospiSchedule.map(m => m.month)],
-    [isWaCharter ? 'OSPI %' : 'Revenue %', ...ospiSchedule.map(m => `${m.pct}%`)],
+    ['Month', ...monthlyRev.map((m) => m.month)],
   ]
 
   let monthCash = startingCash
@@ -301,13 +359,12 @@ export async function POST(request: Request) {
   const netRow: (string | number)[] = ['Net Monthly']
   const endRow: (string | number)[] = ['Ending Cash']
 
-  for (const m of ospiSchedule) {
+  for (const m of monthlyRev) {
     beginRow.push(Math.round(monthCash))
-    const monthRev = Math.round(y1AnnualRev * m.pct / 100)
-    revRow.push(monthRev)
+    revRow.push(m.amount)
     expRow.push(monthlyExp)
-    netRow.push(monthRev - monthlyExp)
-    monthCash += monthRev - monthlyExp
+    netRow.push(m.amount - monthlyExp)
+    monthCash += m.amount - monthlyExp
     endRow.push(Math.round(monthCash))
   }
   cfRows.push(beginRow, revRow, expRow, netRow, endRow)

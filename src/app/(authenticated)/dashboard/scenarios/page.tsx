@@ -189,6 +189,7 @@ export default function ScenariosPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          schoolId,
           messages: [{ role: 'user', content: `Analyze these three financial scenarios for my charter school and provide a 3-4 paragraph assessment. Which scenario should I present as primary to the Commission? What are the key risks?\n\n${scenarioSummary}` }],
           schoolContext: scenarioSummary,
         }),

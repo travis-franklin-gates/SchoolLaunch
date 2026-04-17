@@ -175,7 +175,7 @@ export default function AlignmentPage() {
       const res = await fetch('/api/alignment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ narrativeText, schoolContext }),
+        body: JSON.stringify({ schoolId, narrativeText, schoolContext }),
       })
 
       if (!res.ok) {

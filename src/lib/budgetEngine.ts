@@ -7,11 +7,34 @@ import {
   calcCommissionRevenue,
   calcAuthorizerFeeCommission,
   calcSmallSchoolEnhancement,
+  calcSmallSchoolEnhancementFromGrades,
   PER_PUPIL_RATE,
   LEVY_EQUITY_RATE,
+  type CommissionRevenue,
 } from './calculations'
 import type { SchoolProfile, StaffingPosition, BudgetProjection, FinancialAssumptions, GradeExpansionEntry, StartupFundingSource } from './types'
 import { DEFAULT_ASSUMPTIONS } from './types'
+
+/**
+ * Canonical state apportionment base for WA charter schools.
+ *
+ * Used for: (1) authorizer fee calculation (3% of this value), (2) OSPI
+ * monthly payment distribution, (3) dashboard state apportionment totals.
+ *
+ * VERIFICATION FLAG (2026-04-17): SSE inclusion is a working assumption
+ * pending confirmation against the Portfolio Schools LLC charter contract.
+ * If the contract defines the fee base without SSE, change this helper
+ * (removing `smallSchoolEnhancement`) and all downstream uses update.
+ *
+ * Excludes: levy equity, federal funds, categoricals, food service,
+ * transportation, interest income, startup grants.
+ */
+export function stateApportionmentBase(
+  rev: CommissionRevenue,
+  smallSchoolEnhancement: number = 0,
+): number {
+  return rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev + smallSchoolEnhancement
+}
 
 /** Minimal profile fields needed for live revenue calculation */
 export interface RevenueProfile {
@@ -242,8 +265,15 @@ export function computeScenario(
       const perPupilRate = baseEnrollment > 0 ? op.amount / baseEnrollment : 0
       totalOperations += Math.round(perPupilRate * enrollment)
     } else if (op.subcategory === 'Authorizer Fee') {
-      // Fee on state apportionment (regularEd + sped + facilities)
-      const stateApport = rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev
+      // Fee on canonical state apportionment (includes SSE — see stateApportionmentBase).
+      const sse = calcSmallSchoolEnhancementFromGrades(
+        enrollment,
+        profile.opening_grades || [],
+        a.aafte_pct,
+        a.regular_ed_per_pupil,
+        a.regionalization_factor || 1.0,
+      )
+      const stateApport = stateApportionmentBase(rev, sse)
       totalOperations += calcAuthorizerFeeCommission(stateApport, feeRate)
     } else {
       totalOperations += op.amount
@@ -498,8 +528,8 @@ export function computeMultiYearDetailed(
     const yearGrantRevenue = getGrantRevenueForYear(startupFunding, y)
     const operatingRevenue = rev.total + smallSchoolEnhancement + interestIncome // rev.total already includes foodServiceRev + transportationRev
     const totalRevenue = operatingRevenue + yearGrantRevenue
-    // State apportionment = regularEd + sped + stateSped + facilitiesRev + smallSchoolEnhancement (for authorizer fee + OSPI cash flow)
-    const stateApport = rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev + smallSchoolEnhancement
+    // State apportionment (canonical — see stateApportionmentBase). Used for authorizer fee + OSPI cash flow.
+    const stateApport = stateApportionmentBase(rev, smallSchoolEnhancement)
 
     // Personnel — use year-specific positions if available, else auto-scale
     const yearPositions = allPositions?.filter((p) => p.year === y)
@@ -633,7 +663,7 @@ export function computeMultiYearDetailed(
         grantRevenue: yearGrantRevenue,
         operatingRevenue,
         total: totalRevenue,
-        apportionment: rev.regularEd + rev.sped + rev.stateSped + rev.facilitiesRev + smallSchoolEnhancement,
+        apportionment: stateApportionmentBase(rev, smallSchoolEnhancement),
       },
       personnel: {
         certificated: certCost,

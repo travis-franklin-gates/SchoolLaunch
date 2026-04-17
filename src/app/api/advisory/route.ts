@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getGenericAgents, getGenericBriefingPrompt } from '@/lib/genericAgents'
 import type { GenericAgentConfig } from '@/lib/genericAgents'
+import { authenticateRequest } from '@/lib/apiAuth'
 
 const client = new Anthropic()
 
@@ -277,7 +278,11 @@ Your tone should be: constructive advisor helping a founder strengthen their pla
 }
 
 export async function POST(request: NextRequest) {
-  const { schoolContext, agentContext, pathway, schoolType } = await request.json()
+  const body = await request.json()
+  const { schoolContext, agentContext, pathway, schoolType, schoolId } = body
+
+  const auth = await authenticateRequest(request, { schoolId })
+  if (auth instanceof NextResponse) return auth
 
   if (!schoolContext || typeof schoolContext !== 'string') {
     return NextResponse.json({ error: 'Missing schoolContext' }, { status: 400 })

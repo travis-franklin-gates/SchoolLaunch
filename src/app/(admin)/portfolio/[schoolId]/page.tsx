@@ -11,12 +11,13 @@ import {
   computeCashFlow,
   computeCarryForward,
   getGrantRevenueForYear,
+  stateApportionmentBase,
   MONTHS,
   type BudgetSummary,
   type MultiYearDetailedRow,
   type CashFlowMonth,
 } from '@/lib/budgetEngine'
-import { calcCommissionRevenue } from '@/lib/calculations'
+import { calcCommissionRevenue, calcSmallSchoolEnhancement, calcSmallSchoolEnhancementFromGrades } from '@/lib/calculations'
 import type { SchoolProfile, StaffingPosition, BudgetProjection, GradeExpansionEntry, FinancialAssumptions, StartupFundingSource } from '@/lib/types'
 import { getAssumptions } from '@/lib/types'
 
@@ -126,7 +127,10 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
   // Use computeCarryForward for beginning cash — same as school_ceo dashboard
   const preOpenCash = computeCarryForward(profile)
   const rev = calcCommissionRevenue(profile.target_enrollment_y1, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
-  const apportionment = rev.regularEd + rev.sped + rev.facilitiesRev
+  const sse = gradeExpansionPlan.length > 0
+    ? calcSmallSchoolEnhancement(gradeExpansionPlan, 1, assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0, 1, assumptions.revenue_cola_pct)
+    : calcSmallSchoolEnhancementFromGrades(profile.target_enrollment_y1, profile.opening_grades || [], assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0)
+  const apportionment = stateApportionmentBase(rev, sse)
   const cashFlow = computeCashFlow(summary, apportionment, preOpenCash)
 
   // Use same multi-year calculation as school_ceo dashboard with carry-forward and all positions

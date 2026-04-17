@@ -6,6 +6,7 @@ import {
   computeSummaryFromProjections,
   computeScenario,
   getGrantRevenueForYear,
+  stateApportionmentBase,
   type ScenarioInputs,
   type BudgetSummary,
 } from '@/lib/budgetEngine'
@@ -112,7 +113,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
   const baseSSE = gradeExpansionPlan && gradeExpansionPlan.length > 0
     ? calcSmallSchoolEnhancement(gradeExpansionPlan, 1, assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0, 1, assumptions.revenue_cola_pct)
     : calcSmallSchoolEnhancementFromGrades(profile.target_enrollment_y1, profile.opening_grades || [], assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0)
-  const baseApportionment = baseRev.regularEd + baseRev.sped + baseRev.facilitiesRev + baseSSE
+  const baseApportionment = stateApportionmentBase(baseRev, baseSSE)
   const scenarioRev = calcCommissionRevenue(scenarioInputs.enrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
   const scenarioSSE = (() => {
     if (gradeExpansionPlan && gradeExpansionPlan.length > 0) {
@@ -122,7 +123,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
     }
     return calcSmallSchoolEnhancementFromGrades(scenarioInputs.enrollment, profile.opening_grades || [], assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0)
   })()
-  const scenarioApportionment = scenarioRev.regularEd + scenarioRev.sped + scenarioRev.facilitiesRev + scenarioSSE
+  const scenarioApportionment = stateApportionmentBase(scenarioRev, scenarioSSE)
 
   function updateScenario(partial: Partial<ScenarioInputs>) {
     setScenario((prev) => ({

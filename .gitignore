@@ -44,3 +44,6 @@ next-env.d.ts
 # playwright / test artifacts
 test-screenshots/
 .playwright-mcp/
+/test-results/
+/playwright-report/
+tests/session1/artifacts/

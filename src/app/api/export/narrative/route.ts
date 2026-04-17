@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getStateConfig } from '@/lib/stateConfig'
 import type { Pathway } from '@/lib/stateConfig'
+import { authenticateRequest } from '@/lib/apiAuth'
 
 // --- Types matching the POST body ---
 interface Position {
@@ -220,12 +221,16 @@ async function generateAIContent(prompt: string, context: string): Promise<strin
 }
 
 export async function POST(request: NextRequest) {
-  const data: NarrativePayload = await request.json()
+  const data: NarrativePayload & { schoolId?: string } = await request.json()
   const {
     schoolName, profile, assumptions, positions, projections,
     baseSummary, conservativeSummary, cashFlow, multiYear, scorecard, advisory, scenarios,
     pathway: rawPathway,
+    schoolId,
   } = data
+
+  const auth = await authenticateRequest(request, { schoolId })
+  if (auth instanceof NextResponse) return auth
 
   // Pathway detection for generic vs WA-specific content
   const pathway = (rawPathway || 'wa_charter') as Pathway

@@ -168,7 +168,7 @@ ${criticalFindings ? `Key misalignments:\n${criticalFindings}` : 'No critical mi
       const res = await fetch('/api/advisory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schoolContext, agentContext, pathway: pathwayConfig.pathway, schoolType: pathwayConfig.pathway === 'generic_private' ? 'private' : pathwayConfig.pathway === 'generic_micro' ? 'micro' : 'charter' }),
+        body: JSON.stringify({ schoolId, schoolContext, agentContext, pathway: pathwayConfig.pathway, schoolType: pathwayConfig.pathway === 'generic_private' ? 'private' : pathwayConfig.pathway === 'generic_micro' ? 'micro' : 'charter' }),
       })
       if (!res.ok) throw new Error(`API returned ${res.status}`)
       const result = await res.json() as AdvisoryData

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import { calcCommissionRevenue } from '@/lib/calculations'
+import { calcCommissionRevenue, calcSmallSchoolEnhancementFromGrades } from '@/lib/calculations'
+import { stateApportionmentBase } from '@/lib/budgetEngine'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import type { GrowthPreset, GradeExpansionEntry, EnrollmentMode } from '@/lib/types'
 import { expansionToEnrollmentArray } from '@/lib/gradeExpansion'
@@ -128,10 +129,18 @@ export default function StepEnrollment({
     }
     // Charter pathways: use Commission revenue calculation
     const rev = calcCommissionRevenue(effectiveY1, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS)
-    const baseRevenue = rev.regularEd + rev.sped + rev.facilitiesRev + rev.levyEquity
-    const totalGrants = rev.titleI + rev.idea + rev.lap + rev.tbip + rev.hicap
+    const openingGrades = expansionResult?.openingGrades || initialOpeningGrades || []
+    const sse = calcSmallSchoolEnhancementFromGrades(
+      effectiveY1,
+      openingGrades,
+      DEFAULT_ASSUMPTIONS.aafte_pct,
+      DEFAULT_ASSUMPTIONS.regular_ed_per_pupil,
+      DEFAULT_ASSUMPTIONS.regionalization_factor || 1.0,
+    )
+    const baseRevenue = stateApportionmentBase(rev, sse)
+    const totalGrants = rev.total - baseRevenue
     return { baseRevenue, totalGrants, total: rev.total }
-  }, [effectiveY1, pctFrl, pctIep, pctEll, pctHicap, isTuitionBased, tuitionRate, financialAidPct])
+  }, [effectiveY1, pctFrl, pctIep, pctEll, pctHicap, isTuitionBased, tuitionRate, financialAidPct, expansionResult, initialOpeningGrades])
 
   function handleNext(e: React.FormEvent) {
     e.preventDefault()
