@@ -77,7 +77,7 @@ function Delta({ value, base, suffix = '', invert = false }: { value: number; ba
 }
 
 export default function ScenariosPage() {
-  const { schoolData: { schoolId, profile, positions, projections, loading } } = useScenario()
+  const { schoolData: { schoolId, profile, positions, allPositions, projections, gradeExpansionPlan, loading } } = useScenario()
   const supabase = createClient()
   const [scenarios, setScenarios] = useState<ScenarioRecord[]>([])
   const [activeTab, setActiveTab] = useState('Base Case')
@@ -107,20 +107,17 @@ export default function ScenariosPage() {
       if (data[0]?.ai_analysis && !aiAssumptionsHash) {
         setAiAssumptionsHash(assumptionsHash(data as ScenarioRecord[]))
       }
-      // Check staleness
-      const totalFte = positions.reduce((s, p) => s + p.fte, 0)
-      const totalPersonnel = positions.reduce((s, p) => s + p.fte * p.annual_salary, 0)
-      const totalOps = projections.filter(p => !p.is_revenue).reduce((s, p) => s + p.amount, 0)
-      const currentHash = computeAdvisoryHash(
-        profile.target_enrollment_y1 * 12000,
-        totalPersonnel, totalOps,
-        profile.target_enrollment_y1, totalFte
-      )
+      // Check staleness — shares `computeAdvisoryHash` with the advisory cache
+      // so any input that regenerates advisory also re-runs scenarios.
+      // Use allPositions (all years) + Y1-filtered projections to match the
+      // server-side seed in /api/scenarios/calculate.
+      const y1Projections = projections.filter(p => p.year === 1)
+      const currentHash = computeAdvisoryHash({ profile, positions: allPositions, projections: y1Projections, gradeExpansionPlan })
       if (data[0]?.base_data_hash && data[0].base_data_hash !== currentHash) {
         setStale(true)
       }
     }
-  }, [schoolId, supabase, positions, projections, profile])
+  }, [schoolId, supabase, allPositions, projections, profile, gradeExpansionPlan])
 
   useEffect(() => { if (!loading) loadScenarios() }, [loading, loadScenarios])
 

@@ -111,11 +111,11 @@ export default function DashboardPage() {
     return computeGenericHealthScorecard(multiYear, preOpenCash, pathwayConfig, profileExt.tuition_rate as number | undefined, profileExt.financial_aid_pct as number | undefined)
   }, [multiYear, preOpenCash, isWaCharter, pathwayConfig, profile])
 
-  // Compute current data hash for change detection
-  const totalFte = positions.reduce((s, p) => s + p.fte, 0)
+  // Compute current data hash for change detection. Uses allPositions so Y2-Y5
+  // staffing edits invalidate the advisory cache (matches scenarios staleness).
   const currentDataHash = useMemo(
-    () => computeAdvisoryHash(baseSummary.operatingRevenue, baseSummary.totalPersonnel, baseSummary.totalOperations, profile.target_enrollment_y1, totalFte),
-    [baseSummary.operatingRevenue, baseSummary.totalPersonnel, baseSummary.totalOperations, profile.target_enrollment_y1, totalFte]
+    () => computeAdvisoryHash({ profile, positions: allPositions, projections, gradeExpansionPlan }),
+    [profile, allPositions, projections, gradeExpansionPlan]
   )
 
   // Save advisory to DB cache

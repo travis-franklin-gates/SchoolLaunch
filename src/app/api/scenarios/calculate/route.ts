@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { authenticateRequest } from '@/lib/apiAuth'
 import { computeScenarioProjections, type ScenarioAssumptions } from '@/lib/scenarioEngine'
-import { computeAdvisoryHash } from '@/lib/buildSchoolContext'
+import { hashProjectionInputs } from '@/lib/buildSchoolContext'
 import type { SchoolProfile, StaffingPosition, BudgetProjection, GradeExpansionEntry } from '@/lib/types'
 
 export async function POST(request: NextRequest) {
@@ -51,17 +51,15 @@ export async function POST(request: NextRequest) {
   const projections = (projRes.data || []) as BudgetProjection[]
   const gradeExpansionPlan = (gepRes.data || []) as GradeExpansionEntry[]
 
-  // Compute base data hash for staleness detection
-  const totalFte = positions.reduce((s, p) => s + p.fte, 0)
-  const totalPersonnel = positions.reduce((s, p) => s + p.fte * p.annual_salary, 0)
-  const totalOps = projections.filter(p => !p.is_revenue && p.year === 1).reduce((s, p) => s + p.amount, 0)
-  const baseHash = computeAdvisoryHash(
-    profile.target_enrollment_y1 * 12000, // approximate revenue for hash
-    totalPersonnel,
-    totalOps,
-    profile.target_enrollment_y1,
-    totalFte
-  )
+  // Staleness hash must match what the scenarios page computes client-side
+  // (same `hashProjectionInputs` shared with the advisory cache). Client
+  // loads all staffing rows but only Y1 projections — filter to match.
+  const baseHash = hashProjectionInputs({
+    profile,
+    positions: allPositions,
+    projections: projections.filter(p => p.year === 1),
+    gradeExpansionPlan,
+  })
 
   // Calculate each scenario
   const results: Array<{ id: string; name: string; results: unknown }> = []

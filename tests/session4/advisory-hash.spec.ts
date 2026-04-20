@@ -1,0 +1,202 @@
+import { test, expect } from '@playwright/test'
+import { computeAdvisoryHash, hashProjectionInputs, PROMPT_VERSION } from '../../src/lib/buildSchoolContext'
+import type { SchoolProfile, StaffingPosition, BudgetProjection, GradeExpansionEntry } from '../../src/lib/types'
+
+/**
+ * Suite 6 — Advisory / scenario-staleness hash (Session 4, Track A1 / A2, AUDIT 5.2 & 6.2).
+ *
+ * Pure-function contract tests. These do not require a running dev server or
+ * Supabase — they exercise `computeAdvisoryHash` directly and assert that every
+ * input that feeds `computeMultiYearDetailed` changes the hash.
+ */
+
+function baseProfile(): SchoolProfile {
+  return {
+    school_id: '00000000-0000-0000-0000-000000000001',
+    region: 'Seattle',
+    planned_open_year: 2027,
+    grade_config: 'K-5',
+    target_enrollment_y1: 150,
+    target_enrollment_y2: 200,
+    target_enrollment_y3: 250,
+    target_enrollment_y4: 300,
+    target_enrollment_y5: 350,
+    max_class_size: 24,
+    pct_frl: 40,
+    pct_iep: 12,
+    pct_ell: 10,
+    pct_hicap: 5,
+    onboarding_complete: true,
+    financial_assumptions: {
+      regular_ed_per_pupil: 11812,
+      sped_per_pupil: 2548,
+      regionalization_factor: 1.0,
+      salary_escalator_pct: 2.5,
+    },
+    startup_funding: [
+      { source: 'CSP Grant', amount: 250000, type: 'grant', status: 'pledged' },
+    ],
+    retention_rate: 0.9,
+    opening_grades: ['K', '1', '2'],
+    buildout_grades: ['3', '4', '5'],
+  }
+}
+
+function basePositions(): StaffingPosition[] {
+  return [
+    { school_id: '00000000-0000-0000-0000-000000000001', year: 1, title: 'Principal', category: 'admin', fte: 1, annual_salary: 120000, position_type: 'principal', classification: 'Administrative', driver: 'fixed', students_per_position: 0 },
+    { school_id: '00000000-0000-0000-0000-000000000001', year: 1, title: 'Teacher K', category: 'certificated', fte: 6, annual_salary: 80000, position_type: 'teacher_elem', classification: 'Instructional', driver: 'per_pupil_elem', students_per_position: 24 },
+    { school_id: '00000000-0000-0000-0000-000000000001', year: 2, title: 'Teacher K', category: 'certificated', fte: 8, annual_salary: 82000, position_type: 'teacher_elem', classification: 'Instructional', driver: 'per_pupil_elem', students_per_position: 24 },
+  ]
+}
+
+function baseProjections(): BudgetProjection[] {
+  return [
+    { school_id: '00000000-0000-0000-0000-000000000001', year: 1, category: 'Operations', subcategory: 'Facilities', amount: 180000, is_revenue: false },
+    { school_id: '00000000-0000-0000-0000-000000000001', year: 1, category: 'Operations', subcategory: 'Supplies', amount: 30000, is_revenue: false },
+  ]
+}
+
+function baseGep(): GradeExpansionEntry[] {
+  return [
+    { year: 1, grade_level: 'K', sections: 2, students_per_section: 25, is_new_grade: true },
+    { year: 1, grade_level: '1', sections: 2, students_per_section: 25, is_new_grade: true },
+  ]
+}
+
+function baseInput() {
+  return { profile: baseProfile(), positions: basePositions(), projections: baseProjections(), gradeExpansionPlan: baseGep() }
+}
+
+test.describe('Suite 6 — Advisory/scenario hash (A1 + A2)', () => {
+  test('baseline is deterministic and includes PROMPT_VERSION', () => {
+    const h1 = computeAdvisoryHash(baseInput())
+    const h2 = computeAdvisoryHash(baseInput())
+    expect(h1).toBe(h2)
+    expect(h1.startsWith(`${PROMPT_VERSION}|`)).toBe(true)
+  })
+
+  test('hashProjectionInputs is an alias of computeAdvisoryHash', () => {
+    expect(hashProjectionInputs(baseInput())).toBe(computeAdvisoryHash(baseInput()))
+  })
+
+  test('driver change invalidates hash (AUDIT 5.2 core regression)', () => {
+    const base = baseInput()
+    const modified = baseInput()
+    modified.positions[1].driver = 'fixed' // was 'per_pupil_elem'
+    expect(computeAdvisoryHash(modified)).not.toBe(computeAdvisoryHash(base))
+  })
+
+  test('classification change invalidates hash', () => {
+    const base = baseInput()
+    const modified = baseInput()
+    modified.positions[0].classification = 'Instructional'
+    expect(computeAdvisoryHash(modified)).not.toBe(computeAdvisoryHash(base))
+  })
+
+  test('position_type change invalidates hash', () => {
+    const base = baseInput()
+    const modified = baseInput()
+    modified.positions[0].position_type = 'asst_principal'
+    expect(computeAdvisoryHash(modified)).not.toBe(computeAdvisoryHash(base))
+  })
+
+  test('students_per_position change invalidates hash', () => {
+    const base = baseInput()
+    const modified = baseInput()
+    modified.positions[1].students_per_position = 20
+    expect(computeAdvisoryHash(modified)).not.toBe(computeAdvisoryHash(base))
+  })
+
+  test('Y2 staffing change invalidates hash', () => {
+    const base = baseInput()
+    const modified = baseInput()
+    modified.positions[2].fte = 10 // was 8, Y2 teacher
+    expect(computeAdvisoryHash(modified)).not.toBe(computeAdvisoryHash(base))
+  })
+
+  test('staffing salary edit invalidates hash (AUDIT 6.2 core regression)', () => {
+    const base = baseInput()
+    const modified = baseInput()
+    modified.positions[1].annual_salary = 85000 // was 80000
+    expect(computeAdvisoryHash(modified)).not.toBe(computeAdvisoryHash(base))
+  })
+
+  test('nested financial_assumptions change invalidates hash', () => {
+    const base = baseInput()
+    const modified = baseInput()
+    modified.profile.financial_assumptions = {
+      ...modified.profile.financial_assumptions,
+      salary_escalator_pct: 3.5, // nested key, not caught by old hash
+    }
+    expect(computeAdvisoryHash(modified)).not.toBe(computeAdvisoryHash(base))
+  })
+
+  test('regionalization_factor change invalidates hash', () => {
+    const base = baseInput()
+    const modified = baseInput()
+    modified.profile.financial_assumptions = {
+      ...modified.profile.financial_assumptions,
+      regionalization_factor: 1.15,
+    }
+    expect(computeAdvisoryHash(modified)).not.toBe(computeAdvisoryHash(base))
+  })
+
+  test('demographics (pct_frl) change invalidates hash', () => {
+    const base = baseInput()
+    const modified = baseInput()
+    modified.profile.pct_frl = 55
+    expect(computeAdvisoryHash(modified)).not.toBe(computeAdvisoryHash(base))
+  })
+
+  test('Y2-Y5 enrollment change invalidates hash', () => {
+    const base = baseInput()
+    const modified = baseInput()
+    modified.profile.target_enrollment_y4 = 325
+    expect(computeAdvisoryHash(modified)).not.toBe(computeAdvisoryHash(base))
+  })
+
+  test('retention_rate change invalidates hash', () => {
+    const base = baseInput()
+    const modified = baseInput()
+    modified.profile.retention_rate = 0.85
+    expect(computeAdvisoryHash(modified)).not.toBe(computeAdvisoryHash(base))
+  })
+
+  test('grade expansion change invalidates hash', () => {
+    const base = baseInput()
+    const modified = baseInput()
+    modified.gradeExpansionPlan[0].students_per_section = 30
+    expect(computeAdvisoryHash(modified)).not.toBe(computeAdvisoryHash(base))
+  })
+
+  test('startup_funding change invalidates hash', () => {
+    const base = baseInput()
+    const modified = baseInput()
+    modified.profile.startup_funding = [
+      { source: 'CSP Grant', amount: 300000, type: 'grant', status: 'pledged' },
+    ]
+    expect(computeAdvisoryHash(modified)).not.toBe(computeAdvisoryHash(base))
+  })
+
+  test('position reordering does NOT change hash (canonicalization)', () => {
+    const base = baseInput()
+    const reordered = baseInput()
+    reordered.positions = [reordered.positions[2], reordered.positions[0], reordered.positions[1]]
+    expect(computeAdvisoryHash(reordered)).toBe(computeAdvisoryHash(base))
+  })
+
+  test('projection reordering does NOT change hash (canonicalization)', () => {
+    const base = baseInput()
+    const reordered = baseInput()
+    reordered.projections = [reordered.projections[1], reordered.projections[0]]
+    expect(computeAdvisoryHash(reordered)).toBe(computeAdvisoryHash(base))
+  })
+
+  test('old-format hash (r:…|p:…|…) cleanly mismatches new hash', () => {
+    const newHash = computeAdvisoryHash(baseInput())
+    const oldFormat = 'r:1770000|p:640000|o:210000|e:150|s:15'
+    expect(newHash).not.toBe(oldFormat)
+    expect(newHash.startsWith('r:')).toBe(false)
+  })
+})

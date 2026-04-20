@@ -1,13 +1,150 @@
 import type { FinancialAssumptions, SchoolProfile, StaffingPosition, BudgetProjection, GradeExpansionEntry } from './types'
-import { getAssumptions } from './types'
+import { getAssumptions, DEFAULT_ASSUMPTIONS } from './types'
 import { calcCommissionRevenue, calcAAFTE, calcBenefits } from './calculations'
 import { computeExpansionEnrollments, expansionToEnrollmentArray } from './gradeExpansion'
 import type { MultiYearDetailedRow, FPFScorecard } from './budgetEngine'
 
-/** Stable hash of key financial metrics for advisory cache invalidation */
-export function computeAdvisoryHash(revenue: number, personnel: number, operations: number, enrollment: number, staffCount: number): string {
-  return `r:${Math.round(revenue)}|p:${Math.round(personnel)}|o:${Math.round(operations)}|e:${enrollment}|s:${Math.round(staffCount * 10) / 10}`
+/**
+ * Bumped whenever the advisory/briefing/agent prompt contracts change in a way
+ * that should invalidate previously-cached outputs even if inputs are identical.
+ */
+export const PROMPT_VERSION = 'v2-2026-04'
+
+export interface ProjectionHashInputs {
+  profile: SchoolProfile
+  positions: StaffingPosition[]
+  projections: BudgetProjection[]
+  gradeExpansionPlan?: GradeExpansionEntry[] | null
 }
+
+/**
+ * Canonical, stable serialization of every input that affects
+ * `computeMultiYearDetailed` / `computeFPFScorecard`. Nested objects are
+ * serialized with sorted keys so logically-identical input always yields an
+ * identical string. Extending this function is how you tell the advisory and
+ * scenario-staleness caches "this changed — invalidate."
+ */
+function canonicalizeProjectionInputs(input: ProjectionHashInputs): string {
+  const { profile, positions, projections, gradeExpansionPlan } = input
+  const fa = getAssumptions(profile.financial_assumptions)
+  const faKeys = Object.keys(DEFAULT_ASSUMPTIONS).sort() as (keyof FinancialAssumptions)[]
+  const faSlice: Record<string, unknown> = {}
+  for (const k of faKeys) {
+    const v = fa[k]
+    faSlice[k] = typeof v === 'number' ? Math.round(v * 10000) / 10000 : v
+  }
+
+  const posSlice = positions
+    .map(p => ({
+      y: p.year,
+      t: p.title ?? '',
+      pt: p.position_type ?? '',
+      c: p.category,
+      cls: p.classification ?? '',
+      d: p.driver ?? '',
+      spp: p.students_per_position ?? 0,
+      fte: Math.round((p.fte ?? 0) * 1000) / 1000,
+      sal: Math.round(p.annual_salary ?? 0),
+    }))
+    .sort((a, b) =>
+      a.y - b.y
+      || a.pt.localeCompare(b.pt)
+      || a.t.localeCompare(b.t)
+      || a.cls.localeCompare(b.cls)
+    )
+
+  const projSlice = projections
+    .map(r => ({
+      y: r.year,
+      cat: r.category,
+      sub: r.subcategory,
+      rev: r.is_revenue ? 1 : 0,
+      amt: Math.round(r.amount ?? 0),
+    }))
+    .sort((a, b) =>
+      a.y - b.y
+      || (a.rev - b.rev)
+      || a.cat.localeCompare(b.cat)
+      || a.sub.localeCompare(b.sub)
+    )
+
+  const gepSlice = (gradeExpansionPlan ?? [])
+    .map(g => ({
+      y: g.year,
+      gl: g.grade_level,
+      sec: g.sections,
+      sps: g.students_per_section,
+      n: g.is_new_grade ? 1 : 0,
+    }))
+    .sort((a, b) => a.y - b.y || a.gl.localeCompare(b.gl))
+
+  const fundingSlice = (profile.startup_funding ?? [])
+    .map(f => ({
+      src: f.source,
+      amt: Math.round(f.amount ?? 0),
+      t: f.type,
+      s: f.status,
+      yrs: Array.isArray(f.selectedYears) ? [...f.selectedYears].sort() : null,
+      alloc: f.yearAllocations
+        ? Object.keys(f.yearAllocations).sort().map(k => [Number(k), Math.round((f.yearAllocations as Record<number, number>)[Number(k)] ?? 0)])
+        : null,
+    }))
+    .sort((a, b) => a.src.localeCompare(b.src))
+
+  const profileSlice = {
+    region: profile.region ?? '',
+    open_year: profile.planned_open_year,
+    grade_config: profile.grade_config ?? '',
+    opening_grades: profile.opening_grades ? [...profile.opening_grades].sort() : null,
+    buildout_grades: profile.buildout_grades ? [...profile.buildout_grades].sort() : null,
+    e1: profile.target_enrollment_y1,
+    e2: profile.target_enrollment_y2,
+    e3: profile.target_enrollment_y3,
+    e4: profile.target_enrollment_y4,
+    e5: profile.target_enrollment_y5,
+    max_class: profile.max_class_size,
+    frl: profile.pct_frl,
+    iep: profile.pct_iep,
+    ell: profile.pct_ell,
+    hicap: profile.pct_hicap,
+    retention: profile.retention_rate ?? null,
+  }
+
+  return JSON.stringify({
+    v: PROMPT_VERSION,
+    profile: profileSlice,
+    fa: faSlice,
+    positions: posSlice,
+    projections: projSlice,
+    gep: gepSlice,
+    funding: fundingSlice,
+  })
+}
+
+/** djb2 — synchronous, works in Node and the browser, no deps. */
+function djb2(str: string): string {
+  let h = 5381
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) + h + str.charCodeAt(i)) | 0
+  }
+  return (h >>> 0).toString(16).padStart(8, '0')
+}
+
+/**
+ * Stable hash of every input that drives multi-year projections and advisory
+ * output. Used by the advisory cache (`school_profiles.advisory_cache.dataHash`)
+ * and by the scenario staleness check (`scenarios.base_data_hash`).
+ *
+ * Hash shape includes PROMPT_VERSION and a length discriminator so pre-v2
+ * caches cleanly miss and old collisions are unreachable.
+ */
+export function computeAdvisoryHash(input: ProjectionHashInputs): string {
+  const canonical = canonicalizeProjectionInputs(input)
+  return `${PROMPT_VERSION}|${djb2(canonical)}|${canonical.length}`
+}
+
+/** Alias — same function, different name used by scenario staleness. */
+export const hashProjectionInputs = computeAdvisoryHash
 
 /**
  * Summarized context for advisory agents. Contains pre-computed metrics as settled facts

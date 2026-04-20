@@ -57,7 +57,19 @@
       "Bash(wc:*)",
       "Bash(npx playwright:*)",
       "Bash(curl:*)",
-      "mcp__plugin_playwright_playwright__browser_tabs"
+      "mcp__plugin_playwright_playwright__browser_tabs",
+      "mcp__plugin_supabase_supabase__execute_sql",
+      "mcp__plugin_playwright_playwright__browser_evaluate",
+      "Bash(awk '/^## 6\\\\./,/^## 7\\\\./' AUDIT_REPORT.md)",
+      "Bash(awk '/6\\\\.3|6\\\\.4|6\\\\.5/{flag=1; print NR\": \"$0} flag && /^---$/{flag=0}' AUDIT_REPORT.md)",
+      "Bash(awk '/^## 6\\\\.5|^### 6\\\\.5/,/^##[^#]|^### 6\\\\.[6-9]/' AUDIT_REPORT.md)",
+      "mcp__supabase__list_migrations",
+      "Bash(npx supabase *)",
+      "Bash(tasklist //FI \"IMAGENAME eq chrome.exe\")",
+      "Bash(wmic process *)",
+      "Bash(xargs -I{} taskkill //PID {} //F)",
+      "mcp__plugin_playwright_playwright__browser_network_requests",
+      "mcp__plugin_playwright_playwright__browser_console_messages"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -104,11 +104,11 @@ export default function AdvisoryPage() {
   const [alignmentReview, setAlignmentReview] = useState<AlignmentReview | null>(null)
   const initRef = useRef(false)
 
-  // Compute current data hash — same inputs as Overview page
-  const totalFte = positions.reduce((s, p) => s + p.fte, 0)
+  // Compute current data hash — same inputs as Overview page and scenarios
+  // staleness. Uses allPositions so Y2-Y5 staffing edits invalidate the cache.
   const currentDataHash = useMemo(
-    () => computeAdvisoryHash(baseSummary.operatingRevenue, baseSummary.totalPersonnel, baseSummary.totalOperations, profile.target_enrollment_y1, totalFte),
-    [baseSummary.operatingRevenue, baseSummary.totalPersonnel, baseSummary.totalOperations, profile.target_enrollment_y1, totalFte]
+    () => computeAdvisoryHash({ profile, positions: allPositions, projections, gradeExpansionPlan }),
+    [profile, allPositions, projections, gradeExpansionPlan]
   )
 
   // Fetch alignment review from Supabase
