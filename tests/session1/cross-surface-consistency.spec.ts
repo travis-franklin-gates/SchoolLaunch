@@ -3,20 +3,17 @@ import * as path from 'path'
 import * as fs from 'fs'
 
 /**
- * Suite 1 — Cross-surface state apportionment consistency (Fix 1).
+ * Suite 1 — Cross-surface state apportionment consistency (Fix 1 + Session 2 Fix 4).
  *
- * Verifies that the Y1 Authorizer Fee shown on Multi-Year and the Commission Excel P&L
- * tab agree within $1 — which is only true if both surfaces are using the canonical
- * `stateApportionmentBase(rev, sse)` helper added in Fix 1.
+ * Verifies that the Y1 Authorizer Fee shown on Multi-Year, Operations, and the Commission
+ * Excel P&L tab all agree within $1 — only true if all three surfaces use the canonical
+ * `stateApportionmentBase(rev, sse)` helper.
  *
  * Surfaces handled:
  *  - Multi-Year:    canonical live compute (computeMultiYearDetailed).
+ *  - Operations:    live compute via useScenario().baseApportionment × authorizer_fee_pct.
+ *                   (Session 2 Fix 4 — previously read persisted `budget_projections`.)
  *  - Excel P&L:     canonical live compute (same engine, serialized to XLSX).
- *  - Operations:    NOT asserted. This surface reads persisted `budget_projections` amounts
- *                   rather than live-computing, so it naturally drifts whenever enrollment /
- *                   revenue mix changes after the last save. We still capture its value for
- *                   reporting purposes (helpful to detect when the persisted value has
- *                   drifted and should be resaved).
  *  - Dashboard Overview, Scenarios, Settings, Excel CASH FLOW: no per-line authorizer fee
  *                   exposed, so excluded by design.
  */
@@ -71,10 +68,13 @@ test.describe('Suite 1 — Cross-surface Y1 authorizer fee consistency', () => {
       const op = operationsFee as number
       const xl = excelY1 as number
       // eslint-disable-next-line no-console
-      console.log(`[suite1:${accountKey}] MultiYear=$${my}  Operations=$${op}(persisted)  Excel=$${xl}`)
+      console.log(`[suite1:${accountKey}] MultiYear=$${my}  Operations=$${op}(live)  Excel=$${xl}`)
 
-      // Core canonical assertion: Multi-Year and Excel P&L must agree (both live-compute).
+      // All three surfaces live-compute from state apportionment × authorizer_fee_pct and
+      // must agree within $1 (rounding slack).
       expect(Math.abs(my - xl), `Multi-Year vs Excel P&L: $${my} vs $${xl}`).toBeLessThanOrEqual(1)
+      expect(Math.abs(my - op), `Multi-Year vs Operations: $${my} vs $${op}`).toBeLessThanOrEqual(1)
+      expect(Math.abs(op - xl), `Operations vs Excel P&L: $${op} vs $${xl}`).toBeLessThanOrEqual(1)
     })
   }
 })

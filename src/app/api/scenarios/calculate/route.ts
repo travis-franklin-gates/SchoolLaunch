@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   const [profileRes, posRes, projRes, gepRes] = await Promise.all([
     admin.from('school_profiles').select('*').eq('school_id', schoolId).single(),
     admin.from('staffing_positions').select('*').eq('school_id', schoolId).order('year'),
-    admin.from('budget_projections').select('*').eq('school_id', schoolId).eq('year', 1),
+    admin.from('budget_projections').select('*').eq('school_id', schoolId),
     admin.from('grade_expansion_plan').select('*').eq('school_id', schoolId).order('year').order('grade_level'),
   ])
 
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   // Compute base data hash for staleness detection
   const totalFte = positions.reduce((s, p) => s + p.fte, 0)
   const totalPersonnel = positions.reduce((s, p) => s + p.fte * p.annual_salary, 0)
-  const totalOps = projections.filter(p => !p.is_revenue).reduce((s, p) => s + p.amount, 0)
+  const totalOps = projections.filter(p => !p.is_revenue && p.year === 1).reduce((s, p) => s + p.amount, 0)
   const baseHash = computeAdvisoryHash(
     profile.target_enrollment_y1 * 12000, // approximate revenue for hash
     totalPersonnel,

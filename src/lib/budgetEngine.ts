@@ -492,18 +492,22 @@ export function computeMultiYearDetailed(
   const benefitsRate = assumptions.benefits_load_pct / 100
   const feeRate = assumptions.authorizer_fee_pct / 100
 
-  // Year 1 base data from projections — ALL operational categories
-  const y1Facilities = projections.find((p) => !p.is_revenue && p.subcategory === 'Facilities')?.amount || 0
-  const y1Supplies = projections.find((p) => !p.is_revenue && p.subcategory === 'Supplies & Materials')?.amount || 0
-  const y1Contracted = projections.find((p) => !p.is_revenue && p.subcategory === 'Contracted Services')?.amount || 0
-  const y1Technology = projections.find((p) => !p.is_revenue && p.subcategory === 'Technology')?.amount || 0
-  const y1Insurance = projections.find((p) => !p.is_revenue && p.subcategory === 'Insurance')?.amount || 0
-  const y1FoodService = projections.find((p) => !p.is_revenue && p.subcategory === 'Food Service')?.amount || 0
-  const y1Transportation = projections.find((p) => !p.is_revenue && p.subcategory === 'Transportation')?.amount || 0
-  const y1Curriculum = projections.find((p) => !p.is_revenue && p.subcategory === 'Curriculum & Materials')?.amount || 0
-  const y1ProfDev = projections.find((p) => !p.is_revenue && p.subcategory === 'Professional Development')?.amount || 0
-  const y1Marketing = projections.find((p) => !p.is_revenue && p.subcategory === 'Marketing & Outreach')?.amount || 0
-  const y1Fundraising = projections.find((p) => !p.is_revenue && p.subcategory === 'Fundraising')?.amount || 0
+  // Year 1 base data from projections — ALL operational categories.
+  // Explicitly filter `p.year === 1`: callers may pass a multi-year list, but this engine
+  // currently scales Y1 forward with the ops escalator rather than consuming per-year opex rows.
+  const y1Ops = (sub: string) =>
+    projections.find((p) => !p.is_revenue && p.year === 1 && p.subcategory === sub)?.amount || 0
+  const y1Facilities = y1Ops('Facilities')
+  const y1Supplies = y1Ops('Supplies & Materials')
+  const y1Contracted = y1Ops('Contracted Services')
+  const y1Technology = y1Ops('Technology')
+  const y1Insurance = y1Ops('Insurance')
+  const y1FoodService = y1Ops('Food Service')
+  const y1Transportation = y1Ops('Transportation')
+  const y1Curriculum = y1Ops('Curriculum & Materials')
+  const y1ProfDev = y1Ops('Professional Development')
+  const y1Marketing = y1Ops('Marketing & Outreach')
+  const y1Fundraising = y1Ops('Fundraising')
 
   let cumulativeNet = preOpeningNet
   const rows: MultiYearDetailedRow[] = []

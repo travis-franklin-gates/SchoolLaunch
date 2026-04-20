@@ -28,6 +28,9 @@ export interface ScenarioYearResult {
   fpf_days_cash: string
   fpf_enrollment_variance: string
   fpf_total_margin: string
+  // Variance vs. charter-contract enrollment: enrollment_fill_rate − 1. Used by the UI to
+  // render the FPF Enrollment Variance cell (e.g. -20% for 80% fill, 0% for 100%, +5% for 105%).
+  enrollment_variance_pct: number
   // Expense breakdown
   facility_cost: number
   // Revenue breakdown
@@ -38,6 +41,18 @@ export interface ScenarioYearResult {
   federal_categorical: number
   startup_grants: number
   other_revenue: number
+}
+
+/**
+ * Derive an FPF Enrollment Variance status from the scenario's fill rate.
+ * The Commission compares actual enrollment to charter-contract enrollment; the scenario
+ * models a fractional fill rate vs that target. FPF Stage 1 and Stage 2 both set the
+ * meets threshold at 95%.
+ */
+export function enrollmentVarianceStatus(fillRate: number): 'meets' | 'approaches' | 'does_not_meet' {
+  if (fillRate >= 0.95) return 'meets'
+  if (fillRate >= 0.90) return 'approaches'
+  return 'does_not_meet'
 }
 
 export interface ScenarioResults {
@@ -78,9 +93,10 @@ export function computeScenarioProjections(
     facilities_per_pupil: Math.round(assumptions.facilities_per_pupil * (1 + levers.per_pupil_funding_adjustment)),
   }
 
-  // Apply lever 4: Facility Cost — override the facility projection
+  // Apply lever 4: Facility Cost — override the Y1 facility projection (engine consumes Y1
+  // and scales forward via the ops escalator; Y2+ rows are currently unused but kept intact).
   const adjustedProjections: BudgetProjection[] = projections.map(p => {
-    if (p.subcategory === 'Facilities' && !p.is_revenue) {
+    if (p.subcategory === 'Facilities' && !p.is_revenue && p.year === 1) {
       return { ...p, amount: levers.facility_cost_monthly * 12 }
     }
     return p
@@ -160,8 +176,9 @@ export function computeScenarioProjections(
       break_even_enrollment: breakEven,
       fpf_current_ratio: fpfCurrentRatio,
       fpf_days_cash: fpfDaysCash,
-      fpf_enrollment_variance: 'meets', // scenario enrollment = budget
+      fpf_enrollment_variance: enrollmentVarianceStatus(levers.enrollment_fill_rate),
       fpf_total_margin: fpfTotalMargin,
+      enrollment_variance_pct: levers.enrollment_fill_rate - 1,
       facility_cost: r.operations.facilities,
       regular_ed_revenue: r.revenue.regularEd,
       sped_revenue: r.revenue.sped + r.revenue.stateSped,

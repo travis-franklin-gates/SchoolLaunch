@@ -71,6 +71,7 @@ export default function OperationsPage() {
     assumptions,
     currentSummary,
     isModified,
+    baseApportionment,
   } = useScenario()
   const { canEdit } = usePermissions()
   const [rows, setRows] = useState<OpsRow[]>([])
@@ -133,6 +134,21 @@ export default function OperationsPage() {
       const effectiveRate = mapping ? (assumptions[mapping.key] as number) : null
       const base = mapping?.perFte ? totalFte : enrollment
 
+      // Authorizer Fee is live-computed from state apportionment × fee rate — the persisted
+      // budget_projections value would drift whenever revenue mix or enrollment changes,
+      // and the row is read-only in the UI, so no one can correct it manually.
+      if (lineItem === 'Authorizer Fee') {
+        const authorizerFee = Math.round(baseApportionment * (assumptions.authorizer_fee_pct / 100))
+        return {
+          lineItem,
+          amount: authorizerFee,
+          group: getGroup(lineItem),
+          rate: null,
+          perFte: false,
+          rateKey: null,
+        }
+      }
+
       // Use DB amount if present; if $0 and a per-pupil rate exists, compute default
       let amount = existingByName.get(lineItem) ?? 0
       if (amount === 0 && effectiveRate && effectiveRate > 0) {
@@ -157,7 +173,7 @@ export default function OperationsPage() {
 
     baseRows.sort((a, b) => GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group))
     setRows(baseRows)
-  }, [projections, enrollment, totalFte, assumptions])
+  }, [projections, enrollment, totalFte, assumptions, baseApportionment])
 
   function updateAmount(idx: number, amount: number) {
     setRows((prev) => prev.map((r, i) => {

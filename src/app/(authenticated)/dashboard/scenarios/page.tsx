@@ -605,7 +605,11 @@ function fpfValueDisplay(yr: ScenarioYearResult | undefined, metricKey: string):
     case 'fpf_current_ratio': return yr.current_ratio?.toFixed(2) ?? '-'
     case 'fpf_days_cash': return `${Math.round(yr.reserve_days)} days`
     case 'fpf_total_margin': return `${yr.total_margin?.toFixed(1)}%`
-    case 'fpf_enrollment_variance': return 'On Target'
+    case 'fpf_enrollment_variance': {
+      const pct = (yr.enrollment_variance_pct ?? 0) * 100
+      if (Math.abs(pct) < 0.5) return 'On Target'
+      return `${pct > 0 ? '+' : ''}${pct.toFixed(0)}%`
+    }
     default: return '-'
   }
 }
