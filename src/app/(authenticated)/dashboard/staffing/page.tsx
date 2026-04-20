@@ -600,15 +600,8 @@ export default function StaffingPage() {
       }
     }
 
-    const { error: projError } = await supabase.from('budget_projections')
-      .update({ amount: y1Totals.totalPersonnel })
-      .eq('school_id', schoolId)
-      .eq('year', 1)
-      .eq('subcategory', 'Total Personnel')
-
-    if (projError) {
-      console.error('Update personnel projection failed:', projError)
-    }
+    // Personnel totals are live-computed from staffing_positions —
+    // no Total Personnel row to maintain in budget_projections.
 
     setSaving(false)
     setToast({ type: 'success', message: 'Staffing changes saved successfully.' })

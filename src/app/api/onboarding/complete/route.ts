@@ -250,9 +250,10 @@ export async function POST(request: Request) {
   console.log('[onboarding/complete] insert scenario succeeded')
 
   // --- Insert budget projections ---
+  // Personnel is live-computed from staffing_positions (see budgetEngine) —
+  // no Total Personnel row is persisted.
   const expenseProjections = [
     { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Facilities', amount: facilityCost, is_revenue: false },
-    { school_id: schoolId, year: 1, category: 'Personnel', subcategory: 'Total Personnel', amount: totalPersonnel, is_revenue: false },
     { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Supplies & Materials', amount: supplies, is_revenue: false },
     { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Contracted Services', amount: contracted, is_revenue: false },
     { school_id: schoolId, year: 1, category: 'Operations', subcategory: 'Technology', amount: technology, is_revenue: false },
