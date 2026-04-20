@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { authenticateRequest } from '@/lib/apiAuth'
+import { streamAnthropic, AIUnavailableError } from '@/lib/anthropic-client'
 
 const ROLE_PROMPT = `You are SchoolLaunch, an AI financial planning advisor built specifically for Washington State charter school founders in the application and pre-opening phase. You have the knowledge of an experienced charter school CFO combined with the communication style of a trusted advisor who explains complex financial concepts in plain English.
 
@@ -262,10 +262,10 @@ export async function POST(req: NextRequest) {
     ? [ROLE_PROMPT, WA_KNOWLEDGE, schoolContextSection].join('\n\n')
     : [GENERIC_ROLE_PROMPT(schoolType || 'charter'), GENERIC_KNOWLEDGE(schoolType || 'charter'), schoolContextSection].join('\n\n')
 
-  const anthropic = new Anthropic({ apiKey })
-
   try {
-    const stream = anthropic.messages.stream({
+    // Retry applies to opening the stream only; mid-stream failures surface
+    // as a partial response so the UI can show a retry button.
+    const stream = await streamAnthropic({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2048,
       system: systemPrompt,
@@ -296,6 +296,12 @@ export async function POST(req: NextRequest) {
       headers: { 'Content-Type': 'text/plain; charset=utf-8' },
     })
   } catch (err) {
+    if (err instanceof AIUnavailableError) {
+      return new Response(
+        JSON.stringify({ error: 'AI temporarily unavailable — try again in a moment.' }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
     const msg = err instanceof Error ? err.message : 'Unknown error'
     return new Response(
       JSON.stringify({ error: msg }),

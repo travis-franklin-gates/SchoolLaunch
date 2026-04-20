@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { getGenericAgents, getGenericBriefingPrompt } from '@/lib/genericAgents'
 import type { GenericAgentConfig } from '@/lib/genericAgents'
 import { authenticateRequest } from '@/lib/apiAuth'
-
-const client = new Anthropic()
+import { callAnthropic } from '@/lib/anthropic-client'
 
 interface AgentConfig {
   id: string
@@ -201,7 +199,7 @@ interface AgentResult {
 
 async function runAgent(agent: AgentConfig, schoolContext: string): Promise<AgentResult> {
   try {
-    const response = await client.messages.create({
+    const response = await callAnthropic({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 500,
       system: `${agent.systemPrompt}\n\nSchool Financial Data:\n${schoolContext}`,
@@ -259,7 +257,7 @@ When synthesizing agent assessments, calibrate your tone for a startup:
 
 Your tone should be: constructive advisor helping a founder strengthen their plan, not alarmist critic predicting failure.`
 
-    const response = await client.messages.create({
+    const response = await callAnthropic({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1500,
       system: customSystemPrompt || defaultWaPrompt,

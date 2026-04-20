@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import { callAnthropic } from '@/lib/anthropic-client'
 import { getStateConfig } from '@/lib/stateConfig'
 import type { Pathway } from '@/lib/stateConfig'
 import { authenticateRequest } from '@/lib/apiAuth'
@@ -206,8 +206,7 @@ function reserveColorStage2(days: number): string {
 
 async function generateAIContent(prompt: string, context: string): Promise<string> {
   try {
-    const client = new Anthropic()
-    const response = await client.messages.create({
+    const response = await callAnthropic({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1500,
       messages: [{ role: 'user', content: `${context}\n\n${prompt}` }],

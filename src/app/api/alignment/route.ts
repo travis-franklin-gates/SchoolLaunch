@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { authenticateRequest } from '@/lib/apiAuth'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { scanForInjection } from '@/lib/promptInjection'
+import { callAnthropic, AIUnavailableError } from '@/lib/anthropic-client'
 import { createHash } from 'crypto'
-
-const client = new Anthropic()
 
 const SYSTEM_PROMPT = `You are an expert charter school application reviewer for the Washington State Charter School Commission. You have been given two things:
 
@@ -121,7 +119,7 @@ export async function POST(request: NextRequest) {
 
     // Layer 2: XML delimiters on the untrusted input. The system prompt above
     // instructs the model to treat anything inside <uploaded_narrative> as data.
-    const response = await client.messages.create({
+    const response = await callAnthropic({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4000,
       system: SYSTEM_PROMPT,
@@ -146,6 +144,12 @@ export async function POST(request: NextRequest) {
     })
   } catch (err) {
     console.error('Alignment analysis failed:', err)
+    if (err instanceof AIUnavailableError) {
+      return NextResponse.json(
+        { error: 'AI temporarily unavailable — try again in a moment.' },
+        { status: 503 },
+      )
+    }
     return NextResponse.json({ error: 'Analysis failed. Please try again.' }, { status: 500 })
   }
 }
