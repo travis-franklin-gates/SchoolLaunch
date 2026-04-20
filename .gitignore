@@ -47,3 +47,20 @@ test-screenshots/
 /test-results/
 /playwright-report/
 tests/session1/artifacts/
+
+# scratch / session notes (root-level)
+final-*.md
+final-*.png
+fix*-*.md
+fix*-*.png
+tx-*.md
+tx-*-*.png
+tx-step*.md
+txv-*.md
+test-*.md
+test-*.png
+test*-*.md
+test*-*.png
+verify-*.md
+verify-*.png
+wa-*.md
