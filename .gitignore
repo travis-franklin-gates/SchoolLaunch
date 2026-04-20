@@ -64,3 +64,4 @@ test*-*.png
 verify-*.md
 verify-*.png
 wa-*.md
+tests/*-smoke-*.png
