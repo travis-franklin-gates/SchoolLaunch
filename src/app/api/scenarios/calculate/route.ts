@@ -1,17 +1,21 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { createClient } from '@/lib/supabase/server'
+import { authenticateRequest } from '@/lib/apiAuth'
 import { computeScenarioProjections, type ScenarioAssumptions } from '@/lib/scenarioEngine'
 import { computeAdvisoryHash } from '@/lib/buildSchoolContext'
 import type { SchoolProfile, StaffingPosition, BudgetProjection, GradeExpansionEntry } from '@/lib/types'
 
-export async function POST(request: Request) {
-  const { schoolId, scenarioId } = await request.json()
+export async function POST(request: NextRequest) {
+  const body = await request.json().catch(() => null) as { schoolId?: string; scenarioId?: string } | null
+  const schoolId = body?.schoolId
+  const scenarioId = body?.scenarioId
   if (!schoolId) return NextResponse.json({ error: 'Missing schoolId' }, { status: 400 })
 
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await authenticateRequest(request, {
+    schoolId,
+    requireRoles: ['school_ceo', 'school_editor', 'org_admin'],
+  })
+  if (auth instanceof NextResponse) return auth
 
   const admin = createServiceRoleClient()
 
