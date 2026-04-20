@@ -86,6 +86,7 @@ export default function AlignmentPage() {
   const [result, setResult] = useState<AlignmentResult | null>(null)
   const [savedReview, setSavedReview] = useState<SavedReview | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [injectionWarning, setInjectionWarning] = useState<{ patterns: string[] } | null>(null)
   const [loadingSaved, setLoadingSaved] = useState(true)
   const [dragging, setDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -150,6 +151,7 @@ export default function AlignmentPage() {
     setAnalyzing(true)
     setError(null)
     setResult(null)
+    setInjectionWarning(null)
 
     try {
       let narrativeText = await extractText(file)
@@ -183,8 +185,11 @@ export default function AlignmentPage() {
         throw new Error(errData.error || `Analysis failed (${res.status})`)
       }
 
-      const analysis: AlignmentResult = await res.json()
+      const analysis: AlignmentResult & { injection_suspected?: boolean; suspected_patterns?: string[] } = await res.json()
       setResult(analysis)
+      if (analysis.injection_suspected) {
+        setInjectionWarning({ patterns: analysis.suspected_patterns ?? [] })
+      }
 
       // Sort misalignments by severity
       const severityOrder = { critical: 0, important: 1, minor: 2 }
@@ -251,6 +256,19 @@ export default function AlignmentPage() {
 
       {error && (
         <div className="mb-6 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+
+      {injectionWarning && (
+        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
+          <div className="font-medium mb-1">Heads up — your narrative contains language that looks like it's trying to redirect the reviewer AI.</div>
+          <div className="text-amber-700">
+            We flagged{' '}
+            {injectionWarning.patterns.length > 0
+              ? injectionWarning.patterns.join(', ').replace(/_/g, ' ')
+              : 'suspicious override patterns'}
+            . The review still ran against your real financial model and you can trust the misalignments below, but if you didn&apos;t mean to include this kind of language, re-upload a cleaner draft before sharing the analysis with your board or the Commission.
+          </div>
+        </div>
       )}
 
       {/* Upload area — editors and owners only */}
