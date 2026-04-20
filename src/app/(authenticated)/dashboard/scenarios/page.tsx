@@ -614,8 +614,24 @@ function fpfValueDisplay(yr: ScenarioYearResult | undefined, metricKey: string):
 function FPFComplianceGrid({ scenarios, activeTab }: { scenarios: ScenarioRecord[]; activeTab: string }) {
   const years = [1, 2, 3, 4, 5]
 
+  const legendTooltip = [
+    'Meets — passes the Commission threshold for the applicable stage.',
+    'Approaching — within 5% of the threshold. Watch and plan to improve.',
+    'Does Not Meet — fails the threshold.',
+    '',
+    'Stage 1 applies to Years 1–2 (startup thresholds, e.g. 30 days cash).',
+    'Stage 2 applies to Years 3+ (mature thresholds, e.g. 60 days cash).',
+  ].join('\n')
+
   return (
     <div className="px-5 py-4 overflow-x-auto">
+      <div className="flex items-center gap-2 text-[10px] text-slate-500 mb-3">
+        <span className="uppercase tracking-wide font-medium">Legend:</span>
+        <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">Meets</span>
+        <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Approaching</span>
+        <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">Does Not Meet</span>
+        <span className="ml-1 text-slate-400 cursor-help" title={legendTooltip} aria-label="FPF legend details">?</span>
+      </div>
       {scenarios.map(s => {
         const colors = SCENARIO_COLORS[s.name] || SCENARIO_COLORS['Base Case']
         return (
