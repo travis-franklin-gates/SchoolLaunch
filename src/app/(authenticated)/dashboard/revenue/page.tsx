@@ -253,11 +253,11 @@ export default function RevenuePage() {
     {
       label: 'LAP High Poverty',
       group: 'State Categorical',
-      formula: `${baseEnrollment} × $${(assumptions.lap_high_poverty_per_pupil || 374).toLocaleString()}`,
+      formula: `${baseEnrollment} × ${profile.pct_frl}% FRL × $${(assumptions.lap_high_poverty_per_pupil || 374).toLocaleString()}`,
       calculated: baseRev.lapHighPoverty,
       scenarioCalc: scenarioRev.lapHighPoverty,
       override: overrides['LAP High Poverty'] ?? null,
-      helperNote: 'Flat per-student allocation, not FRL-dependent.',
+      helperNote: '50% FRL threshold required; allocation scales with FRL percentage.',
     },
     {
       label: 'TBIP (Bilingual)',

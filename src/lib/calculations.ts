@@ -77,7 +77,9 @@ export function calcAllGrants(enrollment: number, pctFrl: number, pctIep: number
     titleI: calcTitleI(enrollment, pctFrl, a.title_i_per_pupil),
     idea: calcIDEA(enrollment, pctIep, a.idea_per_pupil),
     lap: calcLAP(enrollment, pctFrl, a.lap_per_pupil),
-    lapHighPoverty: Math.round(enrollment * (a.lap_high_poverty_per_pupil || 374)),
+    // LAP High Poverty: OSPI gates allocation at 50% FRPL (three-year rolling average);
+    // amount scales with FRPL share of enrollment, not flat per-student.
+    lapHighPoverty: pctFrl >= 50 ? Math.round(enrollment * (pctFrl / 100) * (a.lap_high_poverty_per_pupil || 374)) : 0,
     tbip: calcTBIP(enrollment, pctEll, a.tbip_per_pupil),
     hicap: calcHiCap(enrollment, pctHicap, a.hicap_per_pupil),
   }
@@ -113,6 +115,7 @@ export function calcCommissionRevenue(
   pctHicap: number,
   assumptions: FinancialAssumptions,
   colaYear: number = 1,
+  sse: number = 0,
 ): CommissionRevenue {
   const colaMult = Math.pow(1 + assumptions.revenue_cola_pct / 100, colaYear - 1)
   const regionFactor = assumptions.regionalization_factor || 1.0
@@ -141,7 +144,9 @@ export function calcCommissionRevenue(
   const tbipRate = Math.round((assumptions.tbip_per_pupil || 1600) * colaMult)
   const hicapRate = Math.round((assumptions.hicap_per_pupil || 730) * colaMult)
   const lap = Math.round(headcount * (pctFrl / 100) * lapRate)
-  const lapHighPoverty = Math.round(headcount * lapHighPovertyRate)
+  // LAP High Poverty: OSPI gates allocation at 50% FRPL (three-year rolling average);
+  // amount scales with FRPL share of enrollment, not flat per-student.
+  const lapHighPoverty = pctFrl >= 50 ? Math.round(headcount * (pctFrl / 100) * lapHighPovertyRate) : 0
   const tbip = Math.round(headcount * (pctEll / 100) * tbipRate)
   const hicap = Math.round(headcount * (pctHicap / 100) * hicapRate)
 
@@ -157,8 +162,9 @@ export function calcCommissionRevenue(
   const foodServiceRev = assumptions.food_service_offered ? headcount * foodServiceRevRate : 0
   const transportationRev = assumptions.transportation_offered ? headcount * transportRevRate : 0
 
-  // smallSchoolEnhancement is computed externally via calcSmallSchoolEnhancement() because it needs grade-band enrollment data
-  const smallSchoolEnhancement = 0
+  // smallSchoolEnhancement needs grade-band enrollment data to compute; callers that have it
+  // (budgetEngine, onboarding steps, etc.) pass it in via `sse` so rev.total is a true total.
+  const smallSchoolEnhancement = sse
 
   const total = regularEd + sped + stateSped + facilitiesRev + levyEquity + titleI + idea + lap + lapHighPoverty + tbip + hicap + foodServiceRev + transportationRev + smallSchoolEnhancement
 
@@ -304,9 +310,10 @@ export function calcTotalRevenue(
   pctIep: number,
   pctEll: number,
   pctHicap: number,
-  assumptions: FinancialAssumptions
+  assumptions: FinancialAssumptions,
+  sse: number = 0,
 ) {
-  const rev = calcCommissionRevenue(enrollment, pctFrl, pctIep, pctEll, pctHicap, assumptions)
+  const rev = calcCommissionRevenue(enrollment, pctFrl, pctIep, pctEll, pctHicap, assumptions, 1, sse)
   return rev.total
 }
 

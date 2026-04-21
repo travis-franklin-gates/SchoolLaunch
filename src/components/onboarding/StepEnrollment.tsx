@@ -128,7 +128,6 @@ export default function StepEnrollment({
       return { baseRevenue: netTuition, totalGrants: 0, total: netTuition }
     }
     // Charter pathways: use Commission revenue calculation
-    const rev = calcCommissionRevenue(effectiveY1, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS)
     const openingGrades = expansionResult?.openingGrades || initialOpeningGrades || []
     const sse = calcSmallSchoolEnhancementFromGrades(
       effectiveY1,
@@ -137,6 +136,7 @@ export default function StepEnrollment({
       DEFAULT_ASSUMPTIONS.regular_ed_per_pupil,
       DEFAULT_ASSUMPTIONS.regionalization_factor || 1.0,
     )
+    const rev = calcCommissionRevenue(effectiveY1, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS, 1, sse)
     const baseRevenue = stateApportionmentBase(rev, sse)
     const totalGrants = rev.total - baseRevenue
     return { baseRevenue, totalGrants, total: rev.total }

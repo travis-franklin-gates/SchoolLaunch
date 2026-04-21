@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { calcCommissionRevenue } from '@/lib/calculations'
+import { calcCommissionRevenue, calcSmallSchoolEnhancementFromGrades } from '@/lib/calculations'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
 import type { Pathway } from '@/lib/stateConfig'
@@ -25,6 +25,7 @@ function formatRegionName(key: string): string {
 interface Props {
   enrollment: number
   region: string
+  openingGrades?: string[]
   initialData: {
     pctFrl: number
     pctIep: number
@@ -41,7 +42,7 @@ function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 }
 
-export default function StepDemographics({ enrollment, region, initialData, pathway, onNext, onSkip, onBack }: Props) {
+export default function StepDemographics({ enrollment, region, openingGrades, initialData, pathway, onNext, onSkip, onBack }: Props) {
   const config = getStateConfig(pathway)
   const isWaCharter = config.pathway === 'wa_charter'
   const isOptional = config.pathway === 'generic_private' || config.pathway === 'generic_micro'
@@ -55,10 +56,16 @@ export default function StepDemographics({ enrollment, region, initialData, path
 
   const regionDefaults = REGIONAL_DEFAULTS[region] || REGIONAL_DEFAULTS['other']
 
-  const rev = useMemo(
-    () => calcCommissionRevenue(enrollment, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS),
-    [enrollment, pctFrl, pctIep, pctEll, pctHicap]
-  )
+  const rev = useMemo(() => {
+    const sse = calcSmallSchoolEnhancementFromGrades(
+      enrollment,
+      openingGrades || [],
+      DEFAULT_ASSUMPTIONS.aafte_pct,
+      DEFAULT_ASSUMPTIONS.regular_ed_per_pupil,
+      DEFAULT_ASSUMPTIONS.regionalization_factor || 1.0,
+    )
+    return calcCommissionRevenue(enrollment, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS, 1, sse)
+  }, [enrollment, pctFrl, pctIep, pctEll, pctHicap, openingGrades])
 
   const demographicRevenue = rev.stateSped + rev.sped + rev.idea + rev.titleI + rev.lap + rev.lapHighPoverty + rev.tbip + rev.hicap
   const totalRevenue = rev.total

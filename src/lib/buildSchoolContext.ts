@@ -1,6 +1,6 @@
 import type { FinancialAssumptions, SchoolProfile, StaffingPosition, BudgetProjection, GradeExpansionEntry } from './types'
 import { getAssumptions, DEFAULT_ASSUMPTIONS } from './types'
-import { calcCommissionRevenue, calcAAFTE, calcBenefits } from './calculations'
+import { calcCommissionRevenue, calcAAFTE, calcBenefits, calcSmallSchoolEnhancement, calcSmallSchoolEnhancementFromGrades } from './calculations'
 import { computeExpansionEnrollments, expansionToEnrollmentArray } from './gradeExpansion'
 import type { MultiYearDetailedRow, FPFScorecard } from './budgetEngine'
 
@@ -162,7 +162,10 @@ export function buildAgentContextString(
 ): string {
   const assumptions = getAssumptions(profile.financial_assumptions)
   const enroll = profile.target_enrollment_y1
-  const rev = calcCommissionRevenue(enroll, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
+  const sse = gradeExpansionPlan && gradeExpansionPlan.length > 0
+    ? calcSmallSchoolEnhancement(gradeExpansionPlan, 1, assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0)
+    : calcSmallSchoolEnhancementFromGrades(enroll, profile.opening_grades || [], assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0)
+  const rev = calcCommissionRevenue(enroll, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions, 1, sse)
   const hasMultiYear = multiYear && multiYear.length > 0
 
   const operatingRevenue = rev.total
@@ -304,7 +307,10 @@ export function buildSchoolContextString(
 ): string {
   const assumptions = getAssumptions(profile.financial_assumptions)
   const enroll = profile.target_enrollment_y1
-  const rev = calcCommissionRevenue(enroll, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions)
+  const sse = gradeExpansionPlan && gradeExpansionPlan.length > 0
+    ? calcSmallSchoolEnhancement(gradeExpansionPlan, 1, assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0)
+    : calcSmallSchoolEnhancementFromGrades(enroll, profile.opening_grades || [], assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0)
+  const rev = calcCommissionRevenue(enroll, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions, 1, sse)
   const aafte = calcAAFTE(enroll, assumptions.aafte_pct)
   const hasMultiYear = multiYear && multiYear.length > 0
 

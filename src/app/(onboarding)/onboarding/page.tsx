@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { calcBenefits, calcCommissionRevenue } from '@/lib/calculations'
+import { calcBenefits, calcCommissionRevenue, calcSmallSchoolEnhancementFromGrades } from '@/lib/calculations'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import StepIdentity from '@/components/onboarding/StepIdentity'
 import StepEnrollment from '@/components/onboarding/StepEnrollment'
@@ -443,7 +443,14 @@ export default function OnboardingPage() {
     if (pathwayConfig.revenue_model === 'tuition') {
       totalRevenue = data.enrollmentY1 * data.tuitionRate * (1 - data.financialAidPct)
     } else {
-      const rev = calcCommissionRevenue(data.enrollmentY1, data.pctFrl, data.pctIep, data.pctEll, data.pctHicap, DEFAULT_ASSUMPTIONS)
+      const sse = calcSmallSchoolEnhancementFromGrades(
+        data.enrollmentY1,
+        data.openingGrades || [],
+        DEFAULT_ASSUMPTIONS.aafte_pct,
+        DEFAULT_ASSUMPTIONS.regular_ed_per_pupil,
+        DEFAULT_ASSUMPTIONS.regionalization_factor || 1.0,
+      )
+      const rev = calcCommissionRevenue(data.enrollmentY1, data.pctFrl, data.pctIep, data.pctEll, data.pctHicap, DEFAULT_ASSUMPTIONS, 1, sse)
       totalRevenue = rev.total
     }
     const totalFte = data.positions.reduce((s, p) => s + p.fte, 0)
@@ -689,6 +696,7 @@ export default function OnboardingPage() {
         <StepDemographics
           enrollment={data.enrollmentY1}
           region={data.region}
+          openingGrades={data.openingGrades}
           initialData={{
             pctFrl: data.pctFrl,
             pctIep: data.pctIep,
@@ -715,6 +723,7 @@ export default function OnboardingPage() {
           pathway={data.pathway}
           tuitionRate={data.tuitionRate}
           financialAidPct={data.financialAidPct}
+          openingGrades={data.openingGrades}
           initialPositions={data.positions}
           onNext={saveStep4}
           onBack={() => setStep(2)}

@@ -195,9 +195,16 @@ export default function StepOperations({
     if (config.pathway === 'generic_charter') {
       return enrollment * perPupilRate + fundraisingAmount
     }
-    const rev = calcCommissionRevenue(enrollment, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS)
+    const sse = calcSmallSchoolEnhancementFromGrades(
+      enrollment,
+      openingGrades || [],
+      DEFAULT_ASSUMPTIONS.aafte_pct,
+      DEFAULT_ASSUMPTIONS.regular_ed_per_pupil,
+      DEFAULT_ASSUMPTIONS.regionalization_factor || 1.0,
+    )
+    const rev = calcCommissionRevenue(enrollment, pctFrl, pctIep, pctEll, pctHicap, DEFAULT_ASSUMPTIONS, 1, sse)
     return rev.total
-  }, [enrollment, pctFrl, pctIep, pctEll, pctHicap, config, tuitionRate, financialAidPct, perPupilRate, registrationFees, fundraisingAmount, isTuitionBased])
+  }, [enrollment, pctFrl, pctIep, pctEll, pctHicap, openingGrades, config, tuitionRate, financialAidPct, perPupilRate, registrationFees, fundraisingAmount, isTuitionBased])
 
   const authorizerFee = useMemo(() => {
     if (!showAuthorizerFee) return 0

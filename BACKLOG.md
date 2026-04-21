@@ -227,6 +227,27 @@ this helper.
 
 ---
 
+## Revenue engine — resolved
+
+### R-REV-01 · LAP High Poverty missing 50% FRL gate + SSE double-accounting
+**Status:** `RESOLVED` · **Opened:** 2026-04-21 · **Resolved:** 2026-04-21
+
+Two related defects in `calcCommissionRevenue` (`src/lib/calculations.ts`): (1) LAP
+High Poverty was computed as a flat `enrollment × rate`, missing OSPI's 50% FRPL
+threshold gate and the `(pctFrl / 100)` scaling factor — the UI showed a
+constant $17,952 regardless of FRL; and (2) `rev.total` excluded Small School
+Enhancement, but one caller (`budgetEngine.ts:533`, `computeMultiYearDetailed`)
+added SSE externally while 8 other sites used bare `rev.total` — so sub-threshold
+schools silently under-reported revenue everywhere except the multi-year engine,
+and Step 2's `totalGrants = rev.total - baseRevenue` could go negative.
+
+**Fix (Option A-wide):** gate LAP HP at 50% FRL and multiply by `pctFrl/100`; add
+an optional `sse` param to `calcCommissionRevenue` so `rev.total` is now a true
+total; drop the external `+ smallSchoolEnhancement` add at `budgetEngine.ts:533`;
+thread SSE through all remaining callers. Regression guardrail: `tests/session4/revenue-integrity.spec.ts` — 4 tests pinning the threshold gate, SSE inclusion in `rev.total`, Step 2/Step 3 cross-consistency, and the constituent-sum invariant.
+
+---
+
 ## Session 4 audit — deferred items
 
 These came out of the Session 4 audit and weren't addressed in that

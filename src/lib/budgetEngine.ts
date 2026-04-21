@@ -43,6 +43,8 @@ export interface RevenueProfile {
   pct_iep: number
   pct_ell: number
   pct_hicap: number
+  /** Optional — when provided, SSE is computed and folded into rev.total */
+  opening_grades?: string[] | null
 }
 
 // --- Grant Revenue Utility ---
@@ -145,6 +147,13 @@ export function computeSummaryFromProjections(
   // Compute revenue live from profile demographics if available (avoids stale budget_projections)
   let operatingRevenue: number
   if (revenueProfile) {
+    const sse = calcSmallSchoolEnhancementFromGrades(
+      revenueProfile.target_enrollment_y1,
+      revenueProfile.opening_grades || [],
+      a.aafte_pct,
+      a.regular_ed_per_pupil,
+      a.regionalization_factor || 1.0,
+    )
     const rev = calcCommissionRevenue(
       revenueProfile.target_enrollment_y1,
       revenueProfile.pct_frl,
@@ -152,6 +161,8 @@ export function computeSummaryFromProjections(
       revenueProfile.pct_ell,
       revenueProfile.pct_hicap,
       a,
+      1,
+      sse,
     )
     operatingRevenue = rev.total
   } else {
@@ -230,8 +241,16 @@ export function computeScenario(
   const benefitsRate = a.benefits_load_pct / 100
   const feeRate = a.authorizer_fee_pct / 100
 
-  // Revenue — use Commission revenue structure
-  const rev = calcCommissionRevenue(enrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, a)
+  // Revenue — use Commission revenue structure. SSE is folded into rev.total via the sse param
+  // so downstream ratios (personnel %, facility %) reflect true operating revenue.
+  const sse = calcSmallSchoolEnhancementFromGrades(
+    enrollment,
+    profile.opening_grades || [],
+    a.aafte_pct,
+    a.regular_ed_per_pupil,
+    a.regionalization_factor || 1.0,
+  )
+  const rev = calcCommissionRevenue(enrollment, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, a, 1, sse)
   const operatingRevenue = rev.total
   const totalRevenue = operatingRevenue + grantRevenue
 
@@ -517,12 +536,13 @@ export function computeMultiYearDetailed(
   for (let y = 1; y <= 5; y++) {
     const enr = enrollments[y - 1] || enrollments[enrollments.length - 1] || enrollments[0]
 
-    // Revenue — Commission-aligned with COLA
-    const rev = calcCommissionRevenue(enr, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions, y)
-    // Small School Enhancement — uses grade expansion plan for grade-band enrollment
+    // Small School Enhancement — uses grade expansion plan for grade-band enrollment.
+    // Computed before calcCommissionRevenue so it folds into rev.total as a true total.
     const smallSchoolEnhancement = hasExpansion
       ? calcSmallSchoolEnhancement(gradeExpansionPlan!, y, assumptions.aafte_pct, assumptions.regular_ed_per_pupil, assumptions.regionalization_factor || 1.0, y, assumptions.revenue_cola_pct)
       : 0
+    // Revenue — Commission-aligned with COLA. SSE passed in so rev.total is complete.
+    const rev = calcCommissionRevenue(enr, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions, y, smallSchoolEnhancement)
     // Interest income on prior year ending cash balance
     const priorCash = cumulativeNet
     const interestIncome = y === 1
@@ -530,7 +550,7 @@ export function computeMultiYearDetailed(
       : Math.round(Math.max(0, priorCash) * interestRate)
     // Grant revenue for this year from startup funding allocations
     const yearGrantRevenue = getGrantRevenueForYear(startupFunding, y)
-    const operatingRevenue = rev.total + smallSchoolEnhancement + interestIncome // rev.total already includes foodServiceRev + transportationRev
+    const operatingRevenue = rev.total + interestIncome // rev.total now includes SSE + foodServiceRev + transportationRev
     const totalRevenue = operatingRevenue + yearGrantRevenue
     // State apportionment (canonical — see stateApportionmentBase). Used for authorizer fee + OSPI cash flow.
     const stateApport = stateApportionmentBase(rev, smallSchoolEnhancement)
