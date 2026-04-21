@@ -1,0 +1,17 @@
+﻿test(e2e): Session 4 Playwright suite (11 passed, 2 design skips)
+
+New E2E coverage for Session 4 audit fixes against live dev server.
+
+Specs (tests/session4/e2e/):
+- advisory-cache-invalidation.spec.ts (AUDIT 5.2) - 1 passed
+- scenario-staleness.spec.ts (AUDIT 6.2) - 1 passed
+- total-personnel-row.spec.ts (Session 2 follow-up) - 3 passed
+- alignment-injection-defense.spec.ts (AUDIT 5.4) - 3 passed (clean/injection/false-positive)
+- anthropic-retry.spec.ts (AUDIT 5.5) - 2 passed, 1 skipped (retry happy-path not E2E-testable via page.route since Anthropic calls are server-side; covered by tests/session4/anthropic-retry.spec.ts unit suite)
+- fpf-tooltip.spec.ts (Polish) - 1 passed, 1 skipped (native HTML title rendered outside DOM; verified by code inspection at 09d0dc7)
+
+Fixtures: fixtures.ts (login + Supabase service helpers), three narrative test files (clean, injection, false-positive).
+
+DB state: 2 new rows in alignment_security_events by design (append-only audit log per AUDIT 5.4). Staffing + budget_projections baselines restored after each spec.
+
+Manual check noted in test output: Commission Excel export Total Personnel P&L line value (Playwright confirms download triggers, 61453 bytes; xlsx content inspection remains manual).
