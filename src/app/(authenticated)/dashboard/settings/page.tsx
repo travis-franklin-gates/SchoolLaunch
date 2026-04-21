@@ -693,7 +693,7 @@ export default function SettingsPage() {
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
             <h3 className="text-lg font-semibold text-slate-900 mb-2">Reset School Data</h3>
             <p className="text-sm text-slate-600 mb-4">
-              This will permanently delete all your school&apos;s financial data and restart the onboarding process. This cannot be undone.
+              This will clear all planning data &mdash; staffing, budgets, scenarios, and grade plans &mdash; and restart onboarding. Your school record, team, and account are preserved. The cleared data cannot be recovered.
             </p>
             <p className="text-sm text-slate-700 mb-2">
               Type <span className="font-semibold">{schoolName}</span> to confirm:
@@ -733,7 +733,7 @@ export default function SettingsPage() {
                 }}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {resetting ? 'Resetting...' : 'Permanently Reset'}
+                {resetting ? 'Resetting...' : 'Reset School Data'}
               </button>
             </div>
           </div>

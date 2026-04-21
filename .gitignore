@@ -47,6 +47,7 @@ test-screenshots/
 /test-results/
 /playwright-report/
 tests/session1/artifacts/
+tests/session4/e2e/__fixtures-out__/
 
 # scratch / session notes (root-level)
 final-*.md
@@ -65,3 +66,6 @@ verify-*.md
 verify-*.png
 wa-*.md
 tests/*-smoke-*.png
+
+# Claude Code runtime artifacts
+.claude/
