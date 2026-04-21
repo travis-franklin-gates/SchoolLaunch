@@ -5,6 +5,7 @@ import { ALL_GRADES, sortGrades, gradeIndex, deriveGradeConfig } from '@/lib/gra
 import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
 import { US_STATES, derivePathway, getStateConfig } from '@/lib/stateConfig'
 import type { Pathway } from '@/lib/stateConfig'
+import Tooltip from '@/components/ui/Tooltip'
 
 const COUNTY_KEYS = Object.keys(REGIONALIZATION_FACTORS)
 
@@ -323,24 +324,24 @@ export default function StepIdentity({ initialData, onNext }: Props) {
             const selected = buildoutGrades.includes(g)
             const isFounding = foundingGrades.includes(g)
             return (
-              <button
-                key={g}
-                type="button"
-                onClick={() => toggleBuildoutGrade(g)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all ${
-                  selected
-                    ? isFounding
-                      ? 'border-teal-600 bg-teal-100 text-teal-800 cursor-default'
-                      : 'border-teal-600 bg-teal-50 text-teal-700'
-                    : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
-                }`}
-                title={isFounding ? 'Founding grade (included automatically)' : undefined}
-              >
-                {g}
-                {isFounding && selected && (
-                  <span className="ml-1 text-xs text-teal-500">F</span>
-                )}
-              </button>
+              <Tooltip key={g} content={isFounding ? 'Founding grade (included automatically)' : null}>
+                <button
+                  type="button"
+                  onClick={() => toggleBuildoutGrade(g)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all ${
+                    selected
+                      ? isFounding
+                        ? 'border-teal-600 bg-teal-100 text-teal-800 cursor-default'
+                        : 'border-teal-600 bg-teal-50 text-teal-700'
+                      : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                  }`}
+                >
+                  {g}
+                  {isFounding && selected && (
+                    <span className="ml-1 text-xs text-teal-500">F</span>
+                  )}
+                </button>
+              </Tooltip>
             )
           })}
         </div>

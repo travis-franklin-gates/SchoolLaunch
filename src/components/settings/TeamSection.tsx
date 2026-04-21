@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Tooltip from '@/components/ui/Tooltip'
 
 interface TeamMember {
   id: string
@@ -173,13 +174,14 @@ export default function TeamSection({ schoolId, currentUserId }: { schoolId: str
                         </button>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => setConfirmRemove(m.user_id)}
-                        className="text-xs text-red-500 hover:text-red-700 px-2 py-1"
-                        title="Remove from team"
-                      >
-                        Remove
-                      </button>
+                      <Tooltip content="Remove from team">
+                        <button
+                          onClick={() => setConfirmRemove(m.user_id)}
+                          className="text-xs text-red-500 hover:text-red-700 px-2 py-1"
+                        >
+                          Remove
+                        </button>
+                      </Tooltip>
                     )}
                   </>
                 )}

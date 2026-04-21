@@ -6,6 +6,7 @@ import { computeCashFlow } from '@/lib/budgetEngine'
 import { createClient } from '@/lib/supabase/client'
 import type { StartupFundingSource, PreOpeningExpense, PreOpeningTransaction } from '@/lib/types'
 import { useStateConfig } from '@/contexts/StateConfigContext'
+import Tooltip from '@/components/ui/Tooltip'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -479,13 +480,15 @@ export default function CashFlowPage() {
                           {variance !== 0 && (variance > 0 ? '+' : '')}{fmt(variance)}
                         </td>
                         <td className="px-3 py-2 text-center">
-                          <button
-                            onClick={() => removeExpense(exp.id)}
-                            className="text-red-400 hover:text-red-600 text-lg leading-none"
-                            title="Remove"
-                          >
-                            &times;
-                          </button>
+                          <Tooltip content="Remove">
+                            <button
+                              onClick={() => removeExpense(exp.id)}
+                              className="text-red-400 hover:text-red-600 text-lg leading-none"
+                              aria-label="Remove"
+                            >
+                              &times;
+                            </button>
+                          </Tooltip>
                         </td>
                       </tr>
                     )
@@ -845,13 +848,15 @@ function MonthSection({
                 </select>
               </td>
               <td className="px-2 py-1.5 text-center">
-                <button
-                  onClick={(e) => { e.stopPropagation(); onRemoveTx(tx.id) }}
-                  className="text-red-400 hover:text-red-600 text-sm leading-none"
-                  title="Remove transaction"
-                >
-                  &times;
-                </button>
+                <Tooltip content="Remove transaction">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onRemoveTx(tx.id) }}
+                    className="text-red-400 hover:text-red-600 text-sm leading-none"
+                    aria-label="Remove transaction"
+                  >
+                    &times;
+                  </button>
+                </Tooltip>
               </td>
             </tr>
           )) : (

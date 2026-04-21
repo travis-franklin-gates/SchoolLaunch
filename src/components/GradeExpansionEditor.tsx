@@ -12,6 +12,7 @@ import {
   defaultYearNewGrades,
   computeExpansionEnrollments,
 } from '@/lib/gradeExpansion'
+import Tooltip from '@/components/ui/Tooltip'
 
 interface Props {
   gradeConfig: string
@@ -461,26 +462,26 @@ export default function GradeExpansionEditor({
                           <span className="ml-2 font-normal normal-case tracking-normal">
                             {/* New grade toggle badges */}
                             {yearAssigned.map((g) => (
-                              <button
-                                key={g}
-                                type="button"
-                                onClick={() => toggleYearGrade(year, g)}
-                                className="px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-700 border border-teal-300 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors cursor-pointer ml-1"
-                                title={`Remove grade ${g} from Year ${year}`}
-                              >
-                                +{g}
-                              </button>
+                              <Tooltip key={g} content={`Remove grade ${g} from Year ${year}`}>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleYearGrade(year, g)}
+                                  className="px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-700 border border-teal-300 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors cursor-pointer ml-1"
+                                >
+                                  +{g}
+                                </button>
+                              </Tooltip>
                             ))}
                             {(availableByYear.get(year) || []).map((g) => (
-                              <button
-                                key={g}
-                                type="button"
-                                onClick={() => toggleYearGrade(year, g)}
-                                className="px-2 py-0.5 rounded text-xs font-medium bg-white text-slate-400 border border-dashed border-slate-300 hover:border-teal-400 hover:text-teal-600 hover:bg-teal-50 transition-colors cursor-pointer ml-1"
-                                title={`Add grade ${g} to Year ${year}`}
-                              >
-                                {g}
-                              </button>
+                              <Tooltip key={g} content={`Add grade ${g} to Year ${year}`}>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleYearGrade(year, g)}
+                                  className="px-2 py-0.5 rounded text-xs font-medium bg-white text-slate-400 border border-dashed border-slate-300 hover:border-teal-400 hover:text-teal-600 hover:bg-teal-50 transition-colors cursor-pointer ml-1"
+                                >
+                                  {g}
+                                </button>
+                              </Tooltip>
                             ))}
                           </span>
                         )}
@@ -528,14 +529,16 @@ export default function GradeExpansionEditor({
                         <td className="px-3 py-2 text-slate-400 text-xs flex items-center gap-1">
                           {entry.is_new_grade ? `Year ${year}` : 'Year 1'}
                           {entry.is_new_grade && year > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => toggleYearGrade(year, entry.grade_level)}
-                              className="ml-1 w-4 h-4 inline-flex items-center justify-center rounded text-[10px] text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                              title={`Remove grade ${entry.grade_level} from Year ${year}`}
-                            >
-                              ✕
-                            </button>
+                            <Tooltip content={`Remove grade ${entry.grade_level} from Year ${year}`}>
+                              <button
+                                type="button"
+                                onClick={() => toggleYearGrade(year, entry.grade_level)}
+                                className="ml-1 w-4 h-4 inline-flex items-center justify-center rounded text-[10px] text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                aria-label={`Remove grade ${entry.grade_level} from Year ${year}`}
+                              >
+                                ✕
+                              </button>
+                            </Tooltip>
                           )}
                         </td>
                       </tr>

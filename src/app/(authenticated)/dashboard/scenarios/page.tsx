@@ -5,6 +5,7 @@ import { useScenario } from '@/lib/ScenarioContext'
 import { createClient } from '@/lib/supabase/client'
 import { computeAdvisoryHash } from '@/lib/buildSchoolContext'
 import type { ScenarioAssumptions, ScenarioResults, ScenarioYearResult } from '@/lib/scenarioEngine'
+import Tooltip from '@/components/ui/Tooltip'
 
 interface ScenarioRecord {
   id: string
@@ -535,7 +536,9 @@ function LeverControl({ label, tooltip, value, onChange, min, max, step, format,
     <div>
       <div className="flex items-center gap-1.5 mb-1">
         <label className="text-xs font-medium text-slate-600">{label}</label>
-        <span className="text-[10px] text-slate-400 cursor-help" title={tooltip}>?</span>
+        <Tooltip content={tooltip} position="top" multiline>
+          <span className="text-[10px] text-slate-400 cursor-help" tabIndex={0}>?</span>
+        </Tooltip>
       </div>
       <div className="text-lg font-semibold text-slate-800 mb-2" style={{ fontFamily: 'var(--font-heading-var)' }}>{format(value)}</div>
       {isCurrency ? (
@@ -630,7 +633,9 @@ function FPFComplianceGrid({ scenarios, activeTab }: { scenarios: ScenarioRecord
         <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">Meets</span>
         <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Approaching</span>
         <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">Does Not Meet</span>
-        <span className="ml-1 text-slate-400 cursor-help" title={legendTooltip} aria-label="FPF legend details">?</span>
+        <Tooltip content={legendTooltip} position="bottom" multiline>
+          <span className="ml-1 text-slate-400 cursor-help" aria-label="FPF legend details" tabIndex={0}>?</span>
+        </Tooltip>
       </div>
       {scenarios.map(s => {
         const colors = SCENARIO_COLORS[s.name] || SCENARIO_COLORS['Base Case']

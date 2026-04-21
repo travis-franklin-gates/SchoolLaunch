@@ -8,6 +8,7 @@ import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward, typ
 import type { SchoolProfile, StaffingPosition, BudgetProjection, GradeExpansionEntry, FinancialAssumptions } from '@/lib/types'
 import { getAssumptions } from '@/lib/types'
 import SchoolLogo from '@/components/SchoolLogo'
+import Tooltip from '@/components/ui/Tooltip'
 
 interface SchoolCard {
   id: string
@@ -741,9 +742,11 @@ export default function PortfolioPage() {
                           <span className="font-medium text-slate-800">{s.name}</span>
                         </Link>
                         {s.notes.length > 0 && (
-                          <button onClick={() => setNotesModal(s.id)} className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 hover:bg-teal-100 hover:text-teal-600" title="View notes">
-                            {s.notes.length}
-                          </button>
+                          <Tooltip content="View notes">
+                            <button onClick={() => setNotesModal(s.id)} className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 hover:bg-teal-100 hover:text-teal-600" aria-label="View notes">
+                              {s.notes.length}
+                            </button>
+                          </Tooltip>
                         )}
                       </div>
                     </td>

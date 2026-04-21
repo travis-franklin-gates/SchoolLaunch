@@ -5,6 +5,7 @@ import { calcBenefits, calcCommissionRevenue } from '@/lib/calculations'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import type { Pathway } from '@/lib/stateConfig'
 import { getStateConfig } from '@/lib/stateConfig'
+import Tooltip from '@/components/ui/Tooltip'
 
 interface LocalPosition {
   key: string
@@ -346,8 +347,12 @@ export default function StepStaffing({ enrollment, maxClassSize, sectionsY1, gra
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={() => handleDrop(i)}
                 >
-                  <td className="py-2 w-6 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 select-none" title="Drag to reorder">
-                    <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor" className="mx-auto"><circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/><circle cx="3" cy="8" r="1.5"/><circle cx="9" cy="8" r="1.5"/><circle cx="3" cy="14" r="1.5"/><circle cx="9" cy="14" r="1.5"/></svg>
+                  <td className="py-2 w-6 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 select-none">
+                    <Tooltip content="Drag to reorder">
+                      <span className="inline-flex mx-auto" aria-label="Drag to reorder">
+                        <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor"><circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/><circle cx="3" cy="8" r="1.5"/><circle cx="9" cy="8" r="1.5"/><circle cx="3" cy="14" r="1.5"/><circle cx="9" cy="14" r="1.5"/></svg>
+                      </span>
+                    </Tooltip>
                   </td>
                   <td className="py-2 pr-3">
                     <input
@@ -391,14 +396,16 @@ export default function StepStaffing({ enrollment, maxClassSize, sectionsY1, gra
                   <td className="py-2 pr-3 text-right text-slate-500">{fmt(benefits)}</td>
                   <td className="py-2 pr-3 text-right font-medium text-slate-800">{fmt(total)}</td>
                   <td className="py-2">
-                    <button
-                      type="button"
-                      onClick={() => removePosition(p.key)}
-                      className="text-red-400 hover:text-red-600 text-lg leading-none"
-                      title="Remove position"
-                    >
-                      &times;
-                    </button>
+                    <Tooltip content="Remove position">
+                      <button
+                        type="button"
+                        onClick={() => removePosition(p.key)}
+                        className="text-red-400 hover:text-red-600 text-lg leading-none"
+                        aria-label="Remove position"
+                      >
+                        &times;
+                      </button>
+                    </Tooltip>
                   </td>
                 </tr>
               )

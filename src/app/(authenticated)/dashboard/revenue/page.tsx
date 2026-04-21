@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { StartupFundingSource } from '@/lib/types'
 import { useStateConfig } from '@/contexts/StateConfigContext'
 import GenericRevenueView from '@/components/dashboard/GenericRevenueView'
+import Tooltip from '@/components/ui/Tooltip'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -535,13 +536,15 @@ export default function RevenuePage() {
                               </td>
                               <td className="px-3 py-2 text-center">
                                 {canEdit && (
-                                  <button
-                                    onClick={() => removeSource(idx)}
-                                    className="text-slate-400 hover:text-red-500 text-lg leading-none"
-                                    title="Remove"
-                                  >
-                                    &times;
-                                  </button>
+                                  <Tooltip content="Remove">
+                                    <button
+                                      onClick={() => removeSource(idx)}
+                                      className="text-slate-400 hover:text-red-500 text-lg leading-none"
+                                      aria-label="Remove"
+                                    >
+                                      &times;
+                                    </button>
+                                  </Tooltip>
                                 )}
                               </td>
                             </tr>

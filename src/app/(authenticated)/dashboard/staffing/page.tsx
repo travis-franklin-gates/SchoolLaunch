@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { COMMISSION_POSITIONS, getCommissionPosition } from '@/lib/types'
 import { expansionToEnrollmentArray } from '@/lib/gradeExpansion'
 import { usePermissions } from '@/hooks/usePermissions'
+import Tooltip from '@/components/ui/Tooltip'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -912,8 +913,12 @@ function PositionRow({
       onDrop={canEdit ? () => onDrop(pos.id) : undefined}
     >
       {canEdit ? (
-        <td className="px-1 py-1.5 w-6 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 select-none" title="Drag to reorder">
-          <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor" className="mx-auto"><circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/><circle cx="3" cy="8" r="1.5"/><circle cx="9" cy="8" r="1.5"/><circle cx="3" cy="14" r="1.5"/><circle cx="9" cy="14" r="1.5"/></svg>
+        <td className="px-1 py-1.5 w-6 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 select-none">
+          <Tooltip content="Drag to reorder">
+            <span className="inline-flex mx-auto" aria-label="Drag to reorder">
+              <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor"><circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/><circle cx="3" cy="8" r="1.5"/><circle cx="9" cy="8" r="1.5"/><circle cx="3" cy="14" r="1.5"/><circle cx="9" cy="14" r="1.5"/></svg>
+            </span>
+          </Tooltip>
         </td>
       ) : (
         <td className="px-1 py-1.5 w-6" />
