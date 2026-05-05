@@ -282,19 +282,23 @@ export default function CashFlowPage() {
         {pathwayConfig.pathway === 'wa_charter' ? 'Month-by-month projections using the OSPI apportionment payment schedule.' : 'Month-by-month projections using your payment schedule.'}
       </p>
 
-      {/* View toggle */}
-      <div data-tour="cashflow-tabs" className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit mb-6">
+      {/* Year toggle — segmented control */}
+      <div role="tablist" aria-label="Cash flow year" data-tour="cashflow-tabs" className="inline-flex bg-slate-100 rounded-lg p-1 mb-6">
         <button
+          role="tab"
+          aria-selected={view === 'year0'}
           onClick={() => setView('year0')}
-          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
             view === 'year0' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
           }`}
         >
           Year 0 (Pre-Opening)
         </button>
         <button
+          role="tab"
+          aria-selected={view === 'year1'}
           onClick={() => setView('year1')}
-          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
             view === 'year1' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
           }`}
         >
