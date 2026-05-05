@@ -22,13 +22,17 @@
 
   /* Warning — amber */
   --amber-50: #FFFBEB;
+  --amber-100: #FEF3C7;
   --amber-500: #F59E0B;
   --amber-600: #D97706;
+  --amber-700: #B45309;
 
   /* Danger — rose */
   --rose-50: #FFF1F2;
+  --rose-100: #FFE4E6;
   --rose-500: #F43F5E;
   --rose-600: #E11D48;
+  --rose-700: #BE123C;
 
   /* Backgrounds */
   --bg-page: #F8FAFC;
@@ -50,6 +54,38 @@
   --font-heading-var: 'DM Sans', sans-serif;
   --font-body-var: 'IBM Plex Sans', sans-serif;
   --font-mono-var: 'IBM Plex Mono', monospace;
+
+  /* ===== STATUS PALETTE (semantic) ===== */
+  --status-meets-bg: var(--teal-50);
+  --status-meets-fg: var(--teal-700);
+  --status-meets-border: var(--teal-100);
+  --status-approaching-bg: var(--amber-50);
+  --status-approaching-fg: var(--amber-700);
+  --status-approaching-border: var(--amber-100);
+  --status-fails-bg: var(--rose-50);
+  --status-fails-fg: var(--rose-700);
+  --status-fails-border: var(--rose-100);
+
+  /* ===== SURFACE ELEVATION ===== */
+  --shadow-1: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-2: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-3: 0 12px 32px rgba(15, 23, 42, 0.12);
+
+  /* ===== SPACING SCALE (semantic mirror of Tailwind) ===== */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ===== RADIUS SCALE ===== */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
 }
 
 body {
@@ -234,6 +270,13 @@ input[type="range"] {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
   font-family: var(--font-mono-var);
+}
+
+@layer utilities {
+  .font-tabular {
+    font-variant-numeric: tabular-nums;
+    font-family: var(--font-mono);
+  }
 }
 
 /* Scrollbar styling */
