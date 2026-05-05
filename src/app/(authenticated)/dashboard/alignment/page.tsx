@@ -7,6 +7,7 @@ import { computeMultiYearDetailed, computeFPFScorecard } from '@/lib/budgetEngin
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { usePermissions } from '@/hooks/usePermissions'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 interface Misalignment {
   severity: 'critical' | 'important' | 'minor'
@@ -68,6 +69,7 @@ export default function AlignmentPage() {
   } = useScenario()
   const supabase = createClient()
   const { canEdit } = usePermissions()
+  useDocumentTitle('Alignment Review', schoolName)
 
   const multiYear = useMemo(
     () => computeMultiYearDetailed(profile, positions, projections, assumptions, 0, gradeExpansionPlan, allPositions, profile.startup_funding),

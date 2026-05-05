@@ -6,6 +6,7 @@ import { computeMultiYearDetailed, getGrantRevenueForYear, computeCarryForward, 
 import type { StartupFundingSource, PreOpeningTransaction } from '@/lib/types'
 import Link from 'next/link'
 import { useStateConfig } from '@/contexts/StateConfigContext'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -13,10 +14,11 @@ function fmt(n: number) {
 
 export default function MultiYearPage() {
   const {
-    schoolData: { profile, positions, allPositions, projections, gradeExpansionPlan, loading },
+    schoolData: { schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, loading },
     assumptions,
   } = useScenario()
   const { config: pathwayConfig } = useStateConfig()
+  useDocumentTitle('Multi-Year', schoolName)
 
   const fundingSources: StartupFundingSource[] = profile.startup_funding && profile.startup_funding.length > 0
     ? profile.startup_funding

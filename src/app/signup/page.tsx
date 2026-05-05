@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { SELECTED_SCHOOL_KEY } from '@/lib/useSchoolData'
 import Link from 'next/link'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export default function SignupPage() {
+  useDocumentTitle('Sign up')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

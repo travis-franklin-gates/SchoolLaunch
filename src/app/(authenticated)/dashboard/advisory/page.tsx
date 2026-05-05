@@ -6,6 +6,7 @@ import { buildSchoolContextString, buildAgentContextString, computeAdvisoryHash 
 import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward, computeGenericProjections, computeGenericHealthScorecard } from '@/lib/budgetEngine'
 import { createClient } from '@/lib/supabase/client'
 import { useStateConfig } from '@/contexts/StateConfigContext'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import type { AdvisoryCache } from '@/lib/types'
 import Link from 'next/link'
 
@@ -85,6 +86,7 @@ export default function AdvisoryPage() {
   } = useScenario()
   const { config: pathwayConfig } = useStateConfig()
   const supabase = createClient()
+  useDocumentTitle('Advisory Panel', schoolName)
 
   // Carry-forward from Year 0 — same computation as Overview page
   const preOpenCash = useMemo(() => computeCarryForward(profile), [profile])

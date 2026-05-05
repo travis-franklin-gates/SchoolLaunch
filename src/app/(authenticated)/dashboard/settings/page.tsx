@@ -13,6 +13,7 @@ import TeamSection from '@/components/settings/TeamSection'
 import LogoUpload from '@/components/settings/LogoUpload'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useStateConfig } from '@/contexts/StateConfigContext'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -30,6 +31,7 @@ export default function SettingsPage() {
   const { canEdit, canManageTeam, canResetSchool, canEditIdentity } = usePermissions()
   const { config: pathwayConfig } = useStateConfig()
   const isWaCharter = pathwayConfig.pathway === 'wa_charter'
+  useDocumentTitle('Settings', schoolName)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   const [name, setName] = useState(schoolName)

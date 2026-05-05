@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward, computeGenericProjections, computeGenericHealthScorecard } from '@/lib/budgetEngine'
 import { useStateConfig } from '@/contexts/StateConfigContext'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import GenericScorecard from '@/components/dashboard/GenericScorecard'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -15,10 +16,11 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function ScorecardPage() {
   const {
-    schoolData: { profile, positions, allPositions, projections, gradeExpansionPlan, loading },
+    schoolData: { schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, loading },
     assumptions,
   } = useScenario()
   const { config: pathwayConfig } = useStateConfig()
+  useDocumentTitle('Commission Scorecard', schoolName)
 
   const [notesOpen, setNotesOpen] = useState(false)
 

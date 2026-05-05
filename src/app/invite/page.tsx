@@ -1,5 +1,10 @@
+import type { Metadata } from 'next'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import InviteForm from './InviteForm'
+
+export const metadata: Metadata = {
+  title: 'SchoolLaunch — Accept invitation',
+}
 
 export default async function InvitePage({
   searchParams,

@@ -5,6 +5,7 @@ import { useScenario } from '@/lib/ScenarioContext'
 import { buildSchoolContextString } from '@/lib/buildSchoolContext'
 import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward, computeGenericProjections } from '@/lib/budgetEngine'
 import { useStateConfig } from '@/contexts/StateConfigContext'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 interface Message {
   role: 'user' | 'assistant' | 'system'
@@ -34,6 +35,7 @@ export default function AskPage() {
   const { config: pathwayConfig } = useStateConfig()
   const isWaCharter = pathwayConfig.pathway === 'wa_charter'
   const { schoolId, schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, loading } = schoolData
+  useDocumentTitle('Ask SchoolLaunch', schoolName)
 
   const preOpenCash = useMemo(() => computeCarryForward(profile), [profile])
   const multiYear = useMemo(

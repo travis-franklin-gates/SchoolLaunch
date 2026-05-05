@@ -10,6 +10,7 @@ import type { AdvisoryCache } from '@/lib/types'
 import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
 import Link from 'next/link'
 import { usePermissions } from '@/hooks/usePermissions'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import SchoolLogo from '@/components/SchoolLogo'
 
 type AdvisoryData = AdvisoryCache
@@ -74,6 +75,7 @@ export default function DashboardPage() {
   const { role } = usePermissions()
   const { config: pathwayConfig } = useStateConfig()
   const isWaCharter = pathwayConfig.pathway === 'wa_charter'
+  useDocumentTitle('Overview', schoolName)
 
   const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
 

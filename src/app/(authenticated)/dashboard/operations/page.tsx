@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { createClient } from '@/lib/supabase/client'
 import { usePermissions } from '@/hooks/usePermissions'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import type { FinancialAssumptions } from '@/lib/types'
 
 function fmt(n: number) {
@@ -67,13 +68,14 @@ function getGroup(lineItem: string): string {
 
 export default function OperationsPage() {
   const {
-    schoolData: { schoolId, profile, projections, positions, loading, reload },
+    schoolData: { schoolId, schoolName, profile, projections, positions, loading, reload },
     assumptions,
     currentSummary,
     isModified,
     baseApportionment,
   } = useScenario()
   const { canEdit } = usePermissions()
+  useDocumentTitle('Operations', schoolName)
   const [rows, setRows] = useState<OpsRow[]>([])
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)

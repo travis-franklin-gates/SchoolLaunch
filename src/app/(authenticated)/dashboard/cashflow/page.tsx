@@ -6,6 +6,7 @@ import { computeCashFlow } from '@/lib/budgetEngine'
 import { createClient } from '@/lib/supabase/client'
 import type { StartupFundingSource, PreOpeningExpense, PreOpeningTransaction } from '@/lib/types'
 import { useStateConfig } from '@/contexts/StateConfigContext'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import Tooltip from '@/components/ui/Tooltip'
 
 function fmt(n: number) {
@@ -35,7 +36,7 @@ function getY0Allocation(src: StartupFundingSource): number {
 
 export default function CashFlowPage() {
   const {
-    schoolData: { schoolId, profile, loading, reload },
+    schoolData: { schoolId, schoolName, profile, loading, reload },
     baseSummary,
     currentSummary,
     baseApportionment,
@@ -43,6 +44,7 @@ export default function CashFlowPage() {
     isModified,
   } = useScenario()
   const { config: pathwayConfig } = useStateConfig()
+  useDocumentTitle('Cash Flow', schoolName)
 
   const supabase = createClient()
   const [view, setView] = useState<'year0' | 'year1'>('year0')

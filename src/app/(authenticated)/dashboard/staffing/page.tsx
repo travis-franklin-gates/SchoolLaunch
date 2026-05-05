@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { calcBenefits } from '@/lib/calculations'
 import { createClient } from '@/lib/supabase/client'
 import { COMMISSION_POSITIONS, getCommissionPosition } from '@/lib/types'
@@ -258,12 +259,13 @@ function recomputePerPupilFte(
 
 export default function StaffingPage() {
   const {
-    schoolData: { schoolId, positions: dbPositions, allPositions: dbAllPositions, projections, gradeExpansionPlan, profile, loading, reload },
+    schoolData: { schoolId, schoolName, positions: dbPositions, allPositions: dbAllPositions, projections, gradeExpansionPlan, profile, loading, reload },
     assumptions,
     baseSummary,
     isModified,
   } = useScenario()
   const { canEdit } = usePermissions()
+  useDocumentTitle('Staffing', schoolName)
   const [positions, setPositions] = useState<MultiYearPosition[]>([])
   const [saving, setSaving] = useState(false)
   const [seeding, setSeeding] = useState(false)

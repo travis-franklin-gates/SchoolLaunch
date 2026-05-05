@@ -4,11 +4,13 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 type View = 'login' | 'forgot' | 'verify' | 'reset'
 
 export default function LoginPage() {
   const [view, setView] = useState<View>('login')
+  useDocumentTitle(view === 'forgot' ? 'Forgot password' : view === 'reset' ? 'Reset password' : view === 'verify' ? 'Verify email' : 'Sign in')
 
   // Login form state
   const [email, setEmail] = useState('')

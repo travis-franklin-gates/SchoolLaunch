@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { computeAdvisoryHash } from '@/lib/buildSchoolContext'
 import type { ScenarioAssumptions, ScenarioResults, ScenarioYearResult } from '@/lib/scenarioEngine'
 import Tooltip from '@/components/ui/Tooltip'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 interface ScenarioRecord {
   id: string
@@ -78,7 +79,8 @@ function Delta({ value, base, suffix = '', invert = false }: { value: number; ba
 }
 
 export default function ScenariosPage() {
-  const { schoolData: { schoolId, profile, positions, allPositions, projections, gradeExpansionPlan, loading } } = useScenario()
+  const { schoolData: { schoolId, schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, loading } } = useScenario()
+  useDocumentTitle('Scenarios', schoolName)
   const supabase = createClient()
   const [scenarios, setScenarios] = useState<ScenarioRecord[]>([])
   const [activeTab, setActiveTab] = useState('Base Case')
