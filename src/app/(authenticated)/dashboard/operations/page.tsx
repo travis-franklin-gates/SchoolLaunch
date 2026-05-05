@@ -5,6 +5,7 @@ import { useScenario } from '@/lib/ScenarioContext'
 import { createClient } from '@/lib/supabase/client'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useStateConfig } from '@/contexts/StateConfigContext'
 import type { FinancialAssumptions } from '@/lib/types'
 
 function fmt(n: number) {
@@ -75,6 +76,8 @@ export default function OperationsPage() {
     baseApportionment,
   } = useScenario()
   const { canEdit } = usePermissions()
+  const { config: pathwayConfig } = useStateConfig()
+  const authorizerFeeEditable = pathwayConfig.authorizer_fee_editable
   useDocumentTitle('Operations', schoolName)
   const [rows, setRows] = useState<OpsRow[]>([])
   const [saving, setSaving] = useState(false)
@@ -358,6 +361,7 @@ export default function OperationsPage() {
                   updateRate={updateRate}
                   getBenchmarkText={getBenchmarkText}
                   canEdit={canEdit}
+                  authorizerFeeEditable={authorizerFeeEditable}
                 />
               ))}
             </tbody>
@@ -393,6 +397,7 @@ function GroupSection({
   updateRate,
   getBenchmarkText,
   canEdit,
+  authorizerFeeEditable,
 }: {
   group: string
   rows: OpsRow[]
@@ -402,6 +407,7 @@ function GroupSection({
   updateRate: (idx: number, rate: number) => void
   getBenchmarkText: (lineItem: string) => string
   canEdit: boolean
+  authorizerFeeEditable: boolean
 }) {
   return (
     <>
@@ -412,14 +418,29 @@ function GroupSection({
       </tr>
       {rows.map((row) => {
         const globalIdx = allRows.indexOf(row)
-        const isReadOnly = row.lineItem === 'Authorizer Fee'
+        const isAuthorizerFee = row.lineItem === 'Authorizer Fee'
+        const isLocked = isAuthorizerFee && !authorizerFeeEditable
         const hasRate = row.rateKey !== null
         const unit = row.perFte ? '/FTE' : '/student'
         return (
-          <tr key={row.lineItem} {...(isReadOnly && row.lineItem === 'Authorizer Fee' ? { 'data-tour': 'authorizer-fee' } : {})} className="border-b border-slate-100">
-            <td className="px-6 py-3 font-medium text-slate-800">{row.lineItem}</td>
+          <tr key={row.lineItem} {...(isAuthorizerFee ? { 'data-tour': 'authorizer-fee' } : {})} className="border-b border-slate-100">
+            <td className="px-6 py-3 font-medium text-slate-800">
+              {isLocked ? (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <svg aria-hidden="true" className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                  </svg>
+                  <span>{row.lineItem}</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">WA mandated</span>
+                </div>
+              ) : (
+                row.lineItem
+              )}
+            </td>
             <td className="px-6 py-3">
-              {hasRate ? (
+              {isLocked ? (
+                <span className="text-xs text-slate-500 num">{getBenchmarkText(row.lineItem).split('=')[0] || '—'}</span>
+              ) : hasRate ? (
                 <div className="flex items-center gap-1">
                   <span className="text-slate-400 text-xs">$</span>
                   <input
@@ -439,7 +460,9 @@ function GroupSection({
             </td>
             <td className="px-6 py-3 text-xs text-slate-500 hidden sm:table-cell">{getBenchmarkText(row.lineItem)}</td>
             <td className="px-6 py-3 text-right">
-              {isReadOnly ? (
+              {isLocked ? (
+                <span className="text-slate-700 num">{fmt(row.amount)}</span>
+              ) : isAuthorizerFee ? (
                 <span className="text-slate-500 num">{fmt(row.amount)}</span>
               ) : (
                 <input
