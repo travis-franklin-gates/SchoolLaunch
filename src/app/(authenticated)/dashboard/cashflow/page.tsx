@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, type ReactNode } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { computeCashFlow } from '@/lib/budgetEngine'
 import { createClient } from '@/lib/supabase/client'
@@ -8,10 +8,10 @@ import type { StartupFundingSource, PreOpeningExpense, PreOpeningTransaction } f
 import { useStateConfig } from '@/contexts/StateConfigContext'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import Tooltip from '@/components/ui/Tooltip'
+import { DataTable, type DataTableColumn, type DataTableRow } from '@/components/ui/DataTable'
+import { formatCurrency } from '@/lib/format'
 
-function fmt(n: number) {
-  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
-}
+const fmt = (n: number) => formatCurrency(n, 'accounting')
 
 let _id = 0
 function uid() { return `poe-${++_id}-${Date.now()}` }
@@ -691,42 +691,43 @@ export default function CashFlowPage() {
             Starting cash balance: <strong>{fmt(year0EndingBalance)}</strong> (carried from Year 0 pre-opening)
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto sl-scroll shadow-sm">
-            <table className="w-full text-sm whitespace-nowrap sl-table">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Month</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">{pathwayConfig.pathway === 'wa_charter' ? 'Apport. %' : 'Revenue %'}</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Apport. $</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Other Revenue</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Total Inflow</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Payroll</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Other Expenses</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Net Cash Flow</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Cumulative Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cashFlow.map((m) => (
-                  <tr key={m.month} className="border-b border-slate-100">
-                    <td className="px-4 py-3 font-medium text-slate-800">{m.month}</td>
-                    <td className="px-4 py-3 text-right text-slate-500 num">{(m.apportionmentPct * 100).toFixed(1)}%</td>
-                    <td className="px-4 py-3 text-right text-slate-600 num">{fmt(m.apportionmentAmt)}</td>
-                    <td className="px-4 py-3 text-right text-slate-600 num">{fmt(m.otherRevenue)}</td>
-                    <td className="px-4 py-3 text-right text-slate-800 font-medium num">{fmt(m.totalInflow)}</td>
-                    <td className="px-4 py-3 text-right text-slate-600 num">{fmt(m.payroll)}</td>
-                    <td className="px-4 py-3 text-right text-slate-600 num">{fmt(m.otherExpenses)}</td>
-                    <td className={`px-4 py-3 text-right font-medium num ${m.netCashFlow >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {fmt(m.netCashFlow)}
-                    </td>
-                    <td className={`px-4 py-3 text-right font-bold num ${m.cumulativeBalance >= 0 ? 'text-slate-800' : 'text-red-600 bg-red-50'}`}>
-                      {fmt(m.cumulativeBalance)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {(() => {
+            type Y1Row = (typeof cashFlow)[number]
+            const dataRows: DataTableRow<Y1Row>[] = cashFlow.map((m) => ({
+              type: 'item',
+              key: m.month,
+              data: m,
+            }))
+
+            const renderNet = (m: Y1Row): ReactNode => (
+              <span className={`font-medium ${m.netCashFlow >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {fmt(m.netCashFlow)}
+              </span>
+            )
+            const renderCumulative = (m: Y1Row): ReactNode => (
+              <span className={`font-bold ${m.cumulativeBalance >= 0 ? 'text-slate-800' : 'text-rose-600'}`}>
+                {fmt(m.cumulativeBalance)}
+              </span>
+            )
+
+            const columns: DataTableColumn<Y1Row>[] = [
+              { key: 'month', header: 'Month', align: 'left', render: (m) => <span className="font-medium text-slate-800">{m.month}</span> },
+              { key: 'apport-pct', header: pathwayConfig.pathway === 'wa_charter' ? 'Apport. %' : 'Revenue %', numeric: true, render: (m) => <span className="text-slate-500">{(m.apportionmentPct * 100).toFixed(1)}%</span> },
+              { key: 'apport-amt', header: 'Apport. $', numeric: true, render: (m) => <span className="text-slate-600">{fmt(m.apportionmentAmt)}</span> },
+              { key: 'other-rev', header: 'Other Revenue', numeric: true, render: (m) => <span className="text-slate-600">{fmt(m.otherRevenue)}</span> },
+              { key: 'inflow', header: 'Total Inflow', numeric: true, render: (m) => <span className="font-medium text-slate-800">{fmt(m.totalInflow)}</span> },
+              { key: 'payroll', header: 'Payroll', numeric: true, render: (m) => <span className="text-slate-600">{fmt(m.payroll)}</span> },
+              { key: 'other-exp', header: 'Other Expenses', numeric: true, render: (m) => <span className="text-slate-600">{fmt(m.otherExpenses)}</span> },
+              { key: 'net', header: 'Net Cash Flow', numeric: true, render: renderNet },
+              { key: 'cumulative', header: 'Cumulative Balance', numeric: true, render: renderCumulative },
+            ]
+
+            return (
+              <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
+                <DataTable columns={columns} rows={dataRows} caption="Year 1 monthly cash flow" />
+              </div>
+            )
+          })()}
 
           {cashFlow.some((m) => m.cumulativeBalance < 0) && (
             <div className="mt-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
