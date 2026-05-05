@@ -266,7 +266,12 @@ export default function ScenariosPage() {
     <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[28px] font-semibold text-slate-900" style={{ fontFamily: 'var(--font-heading-var)' }}>Scenario Engine</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-[28px] font-semibold text-slate-900" style={{ fontFamily: 'var(--font-heading-var)' }}>Scenario Engine</h1>
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+              Sandbox · changes don&apos;t affect your real model
+            </span>
+          </div>
           <p className="text-sm text-slate-500 mt-1">Model conservative, base, and optimistic scenarios side-by-side.</p>
         </div>
         {calculating && (
