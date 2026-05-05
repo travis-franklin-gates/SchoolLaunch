@@ -5,6 +5,7 @@ import { useScenario } from '@/lib/ScenarioContext'
 import { buildSchoolContextString } from '@/lib/buildSchoolContext'
 import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward, computeGenericProjections } from '@/lib/budgetEngine'
 import { useStateConfig } from '@/contexts/StateConfigContext'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 interface Message {
   role: 'user' | 'assistant' | 'system'
@@ -34,6 +35,7 @@ export default function AskPage() {
   const { config: pathwayConfig } = useStateConfig()
   const isWaCharter = pathwayConfig.pathway === 'wa_charter'
   const { schoolId, schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, loading } = schoolData
+  useDocumentTitle('Ask SchoolLaunch', schoolName)
 
   const preOpenCash = useMemo(() => computeCarryForward(profile), [profile])
   const multiYear = useMemo(
@@ -173,7 +175,7 @@ export default function AskPage() {
             <p className="text-[15px] text-slate-400 mb-8">
               Ask questions about your financial model in plain English
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl w-full px-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-3xl w-full px-4">
               {(isWaCharter ? WA_SUGGESTED_QUESTIONS : GENERIC_SUGGESTED_QUESTIONS).map((q) => (
                 <button
                   key={q}

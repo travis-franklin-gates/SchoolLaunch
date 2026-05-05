@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { computeAdvisoryHash } from '@/lib/buildSchoolContext'
 import type { ScenarioAssumptions, ScenarioResults, ScenarioYearResult } from '@/lib/scenarioEngine'
 import Tooltip from '@/components/ui/Tooltip'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 interface ScenarioRecord {
   id: string
@@ -78,7 +79,8 @@ function Delta({ value, base, suffix = '', invert = false }: { value: number; ba
 }
 
 export default function ScenariosPage() {
-  const { schoolData: { schoolId, profile, positions, allPositions, projections, gradeExpansionPlan, loading } } = useScenario()
+  const { schoolData: { schoolId, schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, loading } } = useScenario()
+  useDocumentTitle('Scenarios', schoolName)
   const supabase = createClient()
   const [scenarios, setScenarios] = useState<ScenarioRecord[]>([])
   const [activeTab, setActiveTab] = useState('Base Case')
@@ -264,7 +266,12 @@ export default function ScenariosPage() {
     <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[28px] font-semibold text-slate-900" style={{ fontFamily: 'var(--font-heading-var)' }}>Scenario Engine</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-[28px] font-semibold text-slate-900" style={{ fontFamily: 'var(--font-heading-var)' }}>Scenario Engine</h1>
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+              Sandbox · changes don&apos;t affect your real model
+            </span>
+          </div>
           <p className="text-sm text-slate-500 mt-1">Model conservative, base, and optimistic scenarios side-by-side.</p>
         </div>
         {calculating && (
@@ -392,8 +399,8 @@ export default function ScenariosPage() {
               <ComparisonRow label="Total Revenue" scenarios={scenarios} getValue={y1 => y1?.total_revenue ?? 0} format={fmt} baseY1={baseY1} mobileScenario={mobileScenario} />
               <ComparisonRow label="Total Expenses" scenarios={scenarios} getValue={y1 => y1?.total_expenses ?? 0} format={fmt} baseY1={baseY1} invert />
               <ComparisonRow label="Net Position" scenarios={scenarios} getValue={y1 => y1?.net_position ?? 0} format={fmt} baseY1={baseY1} highlight />
-              <ComparisonRow label="Ending Cash" scenarios={scenarios} getValue={y1 => y1?.ending_cash ?? 0} format={v => v < 0 ? '$0' : fmt(v)} baseY1={baseY1} mobileScenario={mobileScenario} badge={v => v < 0 ? 'Cash Shortfall' : undefined} />
-              <ComparisonRow label="Reserve Days" scenarios={scenarios} getValue={y1 => y1?.reserve_days ?? 0} format={v => v < 0 ? '0 days' : `${v} days`} baseY1={baseY1} colorFn={v => v <= 0 ? 'text-red-600' : reserveColor(v)} suffix=" days" badge={v => v < 0 ? 'Cash Shortfall' : undefined} />
+              <ComparisonRow label="Ending Cash" scenarios={scenarios} getValue={y1 => y1?.ending_cash ?? 0} format={v => v < 0 ? '$0' : fmt(v)} baseY1={baseY1} mobileScenario={mobileScenario} badge={(v, y1) => v < 0 ? `Cash shortfall · ${Math.abs(Math.round(y1?.reserve_days ?? 0))} days short` : undefined} />
+              <ComparisonRow label="Reserve Days" scenarios={scenarios} getValue={y1 => y1?.reserve_days ?? 0} format={v => v < 0 ? '0 days' : `${v} days`} baseY1={baseY1} colorFn={v => v <= 0 ? 'text-red-600' : reserveColor(v)} suffix=" days" badge={v => v < 0 ? `Cash shortfall · ${Math.abs(Math.round(v))} days short` : undefined} />
               <ComparisonRow label="Personnel % Revenue" scenarios={scenarios} getValue={y1 => y1?.personnel_pct ?? 0} format={v => `${v.toFixed(1)}%`} baseY1={baseY1} colorFn={personnelColor} invert suffix="%" />
               <ComparisonRow label="Break-Even Enrollment" scenarios={scenarios} getValue={y1 => y1?.break_even_enrollment ?? 0} format={v => `${v} students`} baseY1={baseY1} invert suffix=" students" />
             </>
@@ -713,7 +720,7 @@ function ComparisonRow({ label, scenarios, getValue, format, baseY1, colorFn, in
   highlight?: boolean
   suffix?: string
   mobileScenario?: string
-  badge?: (v: number) => string | undefined
+  badge?: (v: number, y1: ScenarioYearResult | undefined) => string | undefined
 }) {
   const baseValue = baseY1 ? getValue(baseY1) : 0
   return (
@@ -730,7 +737,7 @@ function ComparisonRow({ label, scenarios, getValue, format, baseY1, colorFn, in
             <div key={s.id} className={`px-4 py-2 text-center ${isBase ? 'bg-blue-50/30' : ''}`}>
               <div className={`text-sm font-medium ${highlight ? 'font-semibold' : ''} ${color}`}>
                 {format(value)}
-                {badge?.(value) && <span className="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium whitespace-nowrap">{badge(value)}</span>}
+                {badge?.(value, y1) && <span className="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium whitespace-nowrap">{badge(value, y1)}</span>}
               </div>
               {!isBase && <Delta value={value} base={baseValue} suffix={suffix} invert={invert} />}
             </div>
@@ -746,7 +753,7 @@ function ComparisonRow({ label, scenarios, getValue, format, baseY1, colorFn, in
           const color = colorFn ? colorFn(value) : 'text-slate-800'
           return <span key={s.id} className={`text-sm font-medium ${color}`}>
             {format(value)}
-            {badge?.(value) && <span className="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium whitespace-nowrap">{badge(value)}</span>}
+            {badge?.(value, y1) && <span className="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium whitespace-nowrap">{badge(value, y1)}</span>}
           </span>
         })}
       </div>

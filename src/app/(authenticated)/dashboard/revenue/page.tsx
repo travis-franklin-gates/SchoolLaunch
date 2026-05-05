@@ -8,6 +8,7 @@ import { getGrantAllocationsForYear } from '@/lib/budgetEngine'
 import { createClient } from '@/lib/supabase/client'
 import type { StartupFundingSource } from '@/lib/types'
 import { useStateConfig } from '@/contexts/StateConfigContext'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import GenericRevenueView from '@/components/dashboard/GenericRevenueView'
 import Tooltip from '@/components/ui/Tooltip'
 
@@ -37,11 +38,12 @@ export default function RevenuePage() {
   const { canEdit } = usePermissions()
   const { config: pathwayConfig } = useStateConfig()
   const {
-    schoolData: { schoolId, profile, loading, reload, gradeExpansionPlan },
+    schoolData: { schoolId, schoolName, profile, loading, reload, gradeExpansionPlan },
     assumptions,
     isModified,
     scenarioInputs,
   } = useScenario()
+  useDocumentTitle('Revenue', schoolName)
   const supabase = createClient()
   const [overrides, setOverrides] = useState<Record<string, number>>({})
 

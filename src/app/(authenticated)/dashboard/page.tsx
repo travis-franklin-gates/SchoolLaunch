@@ -10,6 +10,7 @@ import type { AdvisoryCache } from '@/lib/types'
 import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
 import Link from 'next/link'
 import { usePermissions } from '@/hooks/usePermissions'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import SchoolLogo from '@/components/SchoolLogo'
 
 type AdvisoryData = AdvisoryCache
@@ -74,6 +75,7 @@ export default function DashboardPage() {
   const { role } = usePermissions()
   const { config: pathwayConfig } = useStateConfig()
   const isWaCharter = pathwayConfig.pathway === 'wa_charter'
+  useDocumentTitle('Overview', schoolName)
 
   const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
 
@@ -635,11 +637,11 @@ export default function DashboardPage() {
 
       {/* 9. Base Case table — Year 1 budget summary */}
       <div data-tour="budget-summary" className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-6 shadow-sm">
-        <table className="w-full text-sm">
+        <table className="sl-table">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50">
               <th className="text-left px-5 py-3 font-semibold text-slate-600"></th>
-              <th className="text-right px-5 py-3 font-semibold text-slate-600">Year 1 Base Case</th>
+              <th className="num text-right px-5 py-3 font-semibold text-slate-600">Year 1 Base Case</th>
             </tr>
           </thead>
           <tbody>
@@ -674,11 +676,11 @@ export default function DashboardPage() {
             </tr>
             <tr className="border-b border-slate-200">
               <td className="px-5 py-3 font-semibold text-slate-800">Net Position</td>
-              <td className={`px-5 py-3 text-right font-semibold tabular-nums ${y1Net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmt(y1Net)}</td>
+              <td className={`num px-5 py-3 text-right font-semibold tabular-nums ${y1Net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmt(y1Net)}</td>
             </tr>
             <tr>
               <td className="px-5 py-3 font-semibold text-slate-800">Days of Cash</td>
-              <td className={`px-5 py-3 text-right font-semibold tabular-nums ${daysOfCash >= 60 ? 'text-emerald-600' : daysOfCash >= 30 ? 'text-amber-600' : 'text-red-600'}`}>{daysOfCash} days</td>
+              <td className={`num px-5 py-3 text-right font-semibold tabular-nums ${daysOfCash >= 60 ? 'text-emerald-600' : daysOfCash >= 30 ? 'text-amber-600' : 'text-red-600'}`}>{daysOfCash} days</td>
             </tr>
           </tbody>
         </table>
@@ -782,7 +784,7 @@ function BudgetRow({ label, value, bold, borderTop }: {
   return (
     <tr className={`border-b border-slate-100 ${borderTop ? 'border-t border-t-slate-200' : ''}`}>
       <td className={`px-5 py-2.5 ${bold ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>{label}</td>
-      <td className={`px-5 py-2.5 text-right tabular-nums ${bold ? 'font-semibold text-slate-800' : 'text-slate-700'}`}>{fmt(value)}</td>
+      <td className={`num px-5 py-2.5 text-right tabular-nums ${bold ? 'font-semibold text-slate-800' : 'text-slate-700'}`}>{fmt(value)}</td>
     </tr>
   )
 }

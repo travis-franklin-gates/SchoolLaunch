@@ -4,21 +4,16 @@ import { useMemo, useState } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward, computeGenericProjections, computeGenericHealthScorecard } from '@/lib/budgetEngine'
 import { useStateConfig } from '@/contexts/StateConfigContext'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import GenericScorecard from '@/components/dashboard/GenericScorecard'
-
-const STATUS_LABELS: Record<string, string> = {
-  meets: 'Meets',
-  approaches: 'Approaching',
-  does_not_meet: 'Does Not Meet',
-  na: 'N/A',
-}
 
 export default function ScorecardPage() {
   const {
-    schoolData: { profile, positions, allPositions, projections, gradeExpansionPlan, loading },
+    schoolData: { schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, loading },
     assumptions,
   } = useScenario()
   const { config: pathwayConfig } = useStateConfig()
+  useDocumentTitle('Commission Scorecard', schoolName)
 
   const [notesOpen, setNotesOpen] = useState(false)
 
@@ -128,13 +123,6 @@ export default function ScorecardPage() {
                     return (
                       <td key={idx} className="px-3 py-2.5 text-center">
                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium tabular-nums ${color}`}>{display}</span>
-                        {s !== 'na' && (
-                          <div className={`text-[9px] mt-0.5 ${
-                            s === 'meets' ? 'text-emerald-500' : s === 'approaches' ? 'text-amber-500' : 'text-rose-500'
-                          }`}>
-                            {STATUS_LABELS[s]}
-                          </div>
-                        )}
                       </td>
                     )
                   })}
@@ -170,13 +158,13 @@ export default function ScorecardPage() {
         </div>
       </div>
 
-      {/* Collapsible "About This Scorecard" section */}
+      {/* Collapsible threshold-methodology disclosure */}
       <div className="mt-4 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <button
           onClick={() => setNotesOpen(!notesOpen)}
           className="w-full px-5 py-3 flex items-center justify-between text-left text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
         >
-          About This Scorecard
+          How thresholds are calculated
           <svg className={`w-4 h-4 text-slate-400 transition-transform ${notesOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>

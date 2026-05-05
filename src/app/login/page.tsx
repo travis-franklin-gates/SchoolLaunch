@@ -4,11 +4,13 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 type View = 'login' | 'forgot' | 'verify' | 'reset'
 
 export default function LoginPage() {
   const [view, setView] = useState<View>('login')
+  useDocumentTitle(view === 'forgot' ? 'Forgot password' : view === 'reset' ? 'Reset password' : view === 'verify' ? 'Verify email' : 'Sign in')
 
   // Login form state
   const [email, setEmail] = useState('')
@@ -332,7 +334,7 @@ export default function LoginPage() {
               <div className="text-center mt-1">
                 <Link
                   href="/signup"
-                  className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
+                  className="text-sm text-slate-600 hover:text-teal-700 underline-offset-4 hover:underline transition-colors"
                 >
                   Don&apos;t have an account? <span className="text-teal-600 font-medium">Sign up</span>
                 </Link>

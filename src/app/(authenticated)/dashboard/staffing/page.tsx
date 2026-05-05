@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { calcBenefits } from '@/lib/calculations'
 import { createClient } from '@/lib/supabase/client'
 import { COMMISSION_POSITIONS, getCommissionPosition } from '@/lib/types'
@@ -258,12 +259,13 @@ function recomputePerPupilFte(
 
 export default function StaffingPage() {
   const {
-    schoolData: { schoolId, positions: dbPositions, allPositions: dbAllPositions, projections, gradeExpansionPlan, profile, loading, reload },
+    schoolData: { schoolId, schoolName, positions: dbPositions, allPositions: dbAllPositions, projections, gradeExpansionPlan, profile, loading, reload },
     assumptions,
     baseSummary,
     isModified,
   } = useScenario()
   const { canEdit } = usePermissions()
+  useDocumentTitle('Staffing', schoolName)
   const [positions, setPositions] = useState<MultiYearPosition[]>([])
   const [saving, setSaving] = useState(false)
   const [seeding, setSeeding] = useState(false)
@@ -692,7 +694,6 @@ export default function StaffingPage() {
               <tr>
                 <th className="py-3 w-6"></th>
                 <th className="text-left px-3 py-3 min-w-[220px]">Position</th>
-                <th className="text-left px-2 py-3 w-[100px]">Classification</th>
                 <th data-tour="driver-column" className="text-left px-2 py-3 w-[80px]">Driver</th>
                 <th data-tour="bm-column" className="text-right px-2 py-3 w-[100px]">Salary (Y1)</th>
                 {[1, 2, 3, 4, 5].map((y) => (
@@ -724,7 +725,7 @@ export default function StaffingPage() {
             </tbody>
             <tfoot>
               <tr className="bg-slate-50 border-t border-slate-200">
-                <td className="px-3 py-2 font-semibold text-slate-700" colSpan={4}>Total FTE</td>
+                <td className="px-3 py-2 font-semibold text-slate-700" colSpan={3}>Total FTE</td>
                 <td className="px-2 py-2"></td>
                 {yearTotals.map((yt, i) => (
                   <td key={i} className="text-right px-2 py-2 font-semibold text-slate-800">{fmtFte(yt.totalFte)}</td>
@@ -732,7 +733,7 @@ export default function StaffingPage() {
                 <td></td>
               </tr>
               <tr className="bg-slate-50">
-                <td className="px-3 py-2 text-slate-600 font-medium" colSpan={4}>Total Salaries</td>
+                <td className="px-3 py-2 text-slate-600 font-medium" colSpan={3}>Total Salaries</td>
                 <td className="px-2 py-2"></td>
                 {yearTotals.map((yt, i) => (
                   <td key={i} className="text-right px-2 py-2 font-medium text-slate-700 text-xs">{fmt(yt.totalSalaries)}</td>
@@ -740,7 +741,7 @@ export default function StaffingPage() {
                 <td></td>
               </tr>
               <tr className="bg-slate-50">
-                <td className="px-3 py-2 text-slate-600 font-medium" colSpan={4}>
+                <td className="px-3 py-2 text-slate-600 font-medium" colSpan={3}>
                   Benefits ({assumptions.benefits_load_pct}%)
                 </td>
                 <td className="px-2 py-2"></td>
@@ -750,7 +751,7 @@ export default function StaffingPage() {
                 <td></td>
               </tr>
               <tr className="bg-slate-100 border-t border-slate-300">
-                <td className="px-3 py-3 font-bold text-slate-800" colSpan={4}>Total Personnel Cost</td>
+                <td className="px-3 py-3 font-bold text-slate-800" colSpan={3}>Total Personnel Cost</td>
                 <td className="px-2 py-3"></td>
                 {yearTotals.map((yt, i) => (
                   <td key={i} className="text-right px-2 py-3 font-bold text-slate-800 text-xs">{fmt(yt.totalPersonnel)}</td>
@@ -758,7 +759,7 @@ export default function StaffingPage() {
                 <td></td>
               </tr>
               <tr className="bg-slate-50 text-xs text-slate-500">
-                <td className="px-3 py-2" colSpan={5}>
+                <td className="px-3 py-2" colSpan={4}>
                   Staff: {fmtFte(y1Totals.adminFte)} Admin / {fmtFte(y1Totals.certFte)} Cert / {fmtFte(y1Totals.classFte)} Class (Y1)
                 </td>
                 {yearTotals.map((yt, i) => (
@@ -824,7 +825,7 @@ function GroupSection({
   return (
     <>
       <tr className="bg-slate-50/70">
-        <td colSpan={11} className="px-3 py-1.5">
+        <td colSpan={10} className="px-3 py-1.5">
           <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${color.bg} ${color.text}`}>
             {label}
           </span>
@@ -848,7 +849,7 @@ function GroupSection({
       ))}
       {canEdit && (
         <tr className="border-b border-slate-100">
-          <td colSpan={11} className="px-3 py-1.5">
+          <td colSpan={10} className="px-3 py-1.5">
             <button
               onClick={() => onAdd(classification)}
               className={`text-xs font-medium ${color.text} opacity-70 hover:opacity-100 transition-opacity`}
@@ -897,7 +898,6 @@ function PositionRow({
   canEdit: boolean
 }) {
   const driverLabel = DRIVER_LABELS[pos.driver] || pos.driver.replace(/_/g, ' ')
-  const clsColor = CLASSIFICATION_COLORS[pos.classification] || CLASSIFICATION_COLORS.Classified
 
   const sectionTypes = getTypesForClassification(classification)
   const isCustom = pos.positionType === 'custom'
@@ -944,11 +944,6 @@ function PositionRow({
             placeholder="Custom position name"
           />
         )}
-      </td>
-      <td className="px-2 py-1.5">
-        <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${clsColor.bg} ${clsColor.text}`}>
-          {pos.classification}
-        </span>
       </td>
       <td className="px-2 py-1.5">
         <span className="text-[10px] text-slate-500">{driverLabel}</span>

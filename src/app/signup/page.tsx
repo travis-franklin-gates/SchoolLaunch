@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { SELECTED_SCHOOL_KEY } from '@/lib/useSchoolData'
 import Link from 'next/link'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export default function SignupPage() {
+  useDocumentTitle('Sign up')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -166,7 +168,7 @@ export default function SignupPage() {
           <div className="text-center mt-6">
             <Link
               href="/login"
-              className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
+              className="text-sm text-slate-600 hover:text-teal-700 underline-offset-4 hover:underline transition-colors"
             >
               Already have an account? <span className="text-teal-600 font-medium">Sign in</span>
             </Link>
