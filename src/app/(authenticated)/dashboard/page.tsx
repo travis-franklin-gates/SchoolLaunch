@@ -14,6 +14,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import SchoolLogo from '@/components/SchoolLogo'
 import { HealthTile } from '@/components/ui/HealthTile'
 import type { Status } from '@/components/ui/StatusBadge'
+import { DataTable, type DataTableColumn, type DataTableRow } from '@/components/ui/DataTable'
 import { formatCurrency } from '@/lib/format'
 
 type AdvisoryData = AdvisoryCache
@@ -624,55 +625,92 @@ export default function DashboardPage() {
       </div>
 
       {/* 9. Base Case table — Year 1 budget summary */}
-      <div data-tour="budget-summary" className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-6 shadow-sm">
-        <table className="sl-table">
-          <thead>
-            <tr className="border-b border-slate-200 bg-slate-50">
-              <th className="text-left px-5 py-3 font-semibold text-slate-600"></th>
-              <th className="num text-right px-5 py-3 font-semibold text-slate-600">Year 1 Base Case</th>
-            </tr>
-          </thead>
-          <tbody>
-            {/* REVENUE section */}
-            <tr className="bg-slate-50/60">
-              <td colSpan={2} className="px-5 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Revenue</td>
-            </tr>
-            {!isWaCharter && multiYear.length > 0 && pathwayConfig.revenue_model === 'tuition' ? (
-              <>
-                <BudgetRow label="Net Tuition Revenue" value={multiYear[0].revenue.regularEd} />
-                {multiYear[0].revenue.interestIncome > 0 && <BudgetRow label="Interest Income" value={multiYear[0].revenue.interestIncome} />}
-              </>
-            ) : (
-              <BudgetRow label="Operating Revenue" value={multiYear.length > 0 ? multiYear[0].revenue.operatingRevenue : baseSummary.operatingRevenue} />
-            )}
-            {(multiYear.length > 0 ? multiYear[0].revenue.grantRevenue : baseSummary.grantRevenue) > 0 && (
-              <BudgetRow label="Startup Grants (Year 1)" value={multiYear.length > 0 ? multiYear[0].revenue.grantRevenue : baseSummary.grantRevenue} />
-            )}
-            <BudgetRow label="Total Revenue" value={y1Revenue} bold borderTop />
+      {(() => {
+        type SummaryRow = {
+          label: string
+          rendered: string
+          emphasized?: boolean
+          valueClass?: string
+        }
+        const fmtAccounting = (n: number) => formatCurrency(n, 'accounting')
+        const useTuition = !isWaCharter && multiYear.length > 0 && pathwayConfig.revenue_model === 'tuition'
+        const grantRevenue = multiYear.length > 0 ? multiYear[0].revenue.grantRevenue : baseSummary.grantRevenue
 
-            {/* EXPENSES section */}
-            <tr className="bg-slate-50/60">
-              <td colSpan={2} className="px-5 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Expenses</td>
-            </tr>
-            <BudgetRow label="Total Personnel" value={y1Personnel} />
-            <BudgetRow label="Total Operations" value={y1Operations} />
-            <BudgetRow label="Total Expenses" value={y1Expenses} bold borderTop />
+        const rows: DataTableRow<SummaryRow>[] = [
+          { type: 'header', key: 'rev-h', label: 'Revenue' },
+          ...(useTuition
+            ? [
+                { type: 'item' as const, key: 'rev-tuition', data: { label: 'Net Tuition Revenue', rendered: fmtAccounting(multiYear[0].revenue.regularEd) } },
+                ...(multiYear[0].revenue.interestIncome > 0
+                  ? [{ type: 'item' as const, key: 'rev-interest', data: { label: 'Interest Income', rendered: fmtAccounting(multiYear[0].revenue.interestIncome) } }]
+                  : []),
+              ]
+            : [
+                {
+                  type: 'item' as const,
+                  key: 'rev-operating',
+                  data: {
+                    label: 'Operating Revenue',
+                    rendered: fmtAccounting(multiYear.length > 0 ? multiYear[0].revenue.operatingRevenue : baseSummary.operatingRevenue),
+                  },
+                },
+              ]),
+          ...(grantRevenue > 0
+            ? [{ type: 'item' as const, key: 'rev-grants', data: { label: 'Startup Grants (Year 1)', rendered: fmtAccounting(grantRevenue) } }]
+            : []),
+          { type: 'subtotal', key: 'rev-total', label: 'Total Revenue', values: { value: fmtAccounting(y1Revenue) } },
 
-            {/* BOTTOM LINE section */}
-            <tr className="border-t-2 border-slate-300 bg-slate-50/30">
-              <td colSpan={2} className="px-5 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Bottom Line</td>
-            </tr>
-            <tr className="border-b border-slate-200">
-              <td className="px-5 py-3 font-semibold text-slate-800">Net Position</td>
-              <td className={`num px-5 py-3 text-right font-semibold tabular-nums ${y1Net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmt(y1Net)}</td>
-            </tr>
-            <tr>
-              <td className="px-5 py-3 font-semibold text-slate-800">Days of Cash</td>
-              <td className={`num px-5 py-3 text-right font-semibold tabular-nums ${daysOfCash >= 60 ? 'text-emerald-600' : daysOfCash >= 30 ? 'text-amber-600' : 'text-red-600'}`}>{daysOfCash} days</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+          { type: 'header', key: 'exp-h', label: 'Expenses' },
+          { type: 'item', key: 'exp-personnel', data: { label: 'Total Personnel', rendered: fmtAccounting(y1Personnel) } },
+          { type: 'item', key: 'exp-ops', data: { label: 'Total Operations', rendered: fmtAccounting(y1Operations) } },
+          { type: 'subtotal', key: 'exp-total', label: 'Total Expenses', values: { value: fmtAccounting(y1Expenses) } },
+
+          { type: 'header', key: 'bl-h', label: 'Bottom Line' },
+          {
+            type: 'item',
+            key: 'bl-net',
+            data: {
+              label: 'Net Position',
+              rendered: fmtAccounting(y1Net),
+              emphasized: true,
+              valueClass: y1Net >= 0 ? 'text-emerald-600' : 'text-red-600',
+            },
+          },
+          {
+            type: 'item',
+            key: 'bl-days',
+            data: {
+              label: 'Days of Cash',
+              rendered: `${daysOfCash} days`,
+              emphasized: true,
+              valueClass: daysOfCash >= 60 ? 'text-emerald-600' : daysOfCash >= 30 ? 'text-amber-600' : 'text-red-600',
+            },
+          },
+        ]
+
+        const columns: DataTableColumn<SummaryRow>[] = [
+          {
+            key: 'label',
+            header: '',
+            align: 'left',
+            render: (r) => (r.emphasized ? <span className="font-semibold text-slate-800">{r.label}</span> : r.label),
+          },
+          {
+            key: 'value',
+            header: 'Year 1 Base Case',
+            numeric: true,
+            render: (r) => (
+              <span className={`${r.valueClass ?? ''} ${r.emphasized ? 'font-semibold' : ''}`.trim()}>{r.rendered}</span>
+            ),
+          },
+        ]
+
+        return (
+          <div data-tour="budget-summary" className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-6 shadow-sm">
+            <DataTable columns={columns} rows={rows} caption="Year 1 Base Case budget summary" />
+          </div>
+        )
+      })()}
 
       {/* 9.5 Scenario Summary (only if scenarios have been seeded) */}
       <ScenarioSummaryCard schoolId={schoolId} />
@@ -763,16 +801,3 @@ function ScenarioSummaryCard({ schoolId }: { schoolId: string }) {
   )
 }
 
-function BudgetRow({ label, value, bold, borderTop }: {
-  label: string
-  value: number
-  bold?: boolean
-  borderTop?: boolean
-}) {
-  return (
-    <tr className={`border-b border-slate-100 ${borderTop ? 'border-t border-t-slate-200' : ''}`}>
-      <td className={`px-5 py-2.5 ${bold ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>{label}</td>
-      <td className={`num px-5 py-2.5 text-right tabular-nums ${bold ? 'font-semibold text-slate-800' : 'text-slate-700'}`}>{fmt(value)}</td>
-    </tr>
-  )
-}
