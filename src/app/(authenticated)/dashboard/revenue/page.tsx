@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import { useState, useMemo, type ReactNode } from 'react'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useScenario } from '@/lib/ScenarioContext'
 import { calcCommissionRevenue, calcAAFTE, calcSmallSchoolEnhancement, calcSmallSchoolEnhancementFromGrades, SMALL_SCHOOL_THRESHOLDS } from '@/lib/calculations'
@@ -11,10 +11,10 @@ import { useStateConfig } from '@/contexts/StateConfigContext'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import GenericRevenueView from '@/components/dashboard/GenericRevenueView'
 import Tooltip from '@/components/ui/Tooltip'
+import { DataTable, type DataTableColumn, type DataTableRow } from '@/components/ui/DataTable'
+import { formatCurrency } from '@/lib/format'
 
-function fmt(n: number) {
-  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
-}
+const fmt = (n: number) => formatCurrency(n, 'accounting')
 
 const FUNDING_TYPES: StartupFundingSource['type'][] = ['grant', 'donation', 'debt', 'other']
 const FUNDING_STATUSES: StartupFundingSource['status'][] = ['received', 'pledged', 'applied', 'projected', 'n/a']
@@ -312,7 +312,6 @@ export default function RevenuePage() {
 
   // Group rows for display
   const groups = ['State & Local', 'Federal', 'State Categorical', 'Program Revenue']
-  const colSpan = isModified ? 6 : 5
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
@@ -359,268 +358,311 @@ export default function RevenuePage() {
         </div>
       )}
 
-      <div data-tour="revenue-table" className="bg-white border border-slate-200 rounded-xl overflow-x-auto sl-scroll shadow-sm">
-        <table className="sl-table w-full text-sm">
-          <thead>
-            <tr>
-              <th className="text-left px-6 py-3">Revenue Source</th>
-              <th className="text-left px-6 py-3">Formula</th>
-              <th className="text-right px-6 py-3">Base Case</th>
-              {isModified && <th className="text-right px-6 py-3 text-teal-600">Scenario</th>}
-              <th className="text-right px-6 py-3">Override</th>
-              <th className="text-right px-6 py-3">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {groups.map((group) => {
-              const groupRows = rows.filter((r) => r.group === group)
+      {(() => {
+        type DTRow = RevenueRow & { overrideKey: string }
+
+        const operatingRows: DTRow[] = rows.map((r) => ({ ...r, overrideKey: r.label }))
+        const grantDTRows: DTRow[] = grantRows.map((r) => ({ ...r, overrideKey: `grant:${r.label}` }))
+
+        const dataRows: DataTableRow<DTRow>[] = []
+        for (const group of groups) {
+          const inGroup = operatingRows.filter((r) => r.group === group)
+          if (inGroup.length === 0) continue
+          dataRows.push({ type: 'header', key: `h-${group}`, label: group })
+          for (const r of inGroup) dataRows.push({ type: 'item', key: r.label, data: r })
+        }
+        // Operating Revenue subtotal
+        const opSubtotal: Record<string, ReactNode> = {
+          base: fmt(operatingBase),
+          scenario: fmt(operatingScenario),
+          override: '',
+          amount: fmt(isModified ? operatingScenario : operatingBase),
+        }
+        dataRows.push({ type: 'subtotal', key: 'op-sub', label: 'Operating Revenue', values: opSubtotal })
+
+        // Startup & Other Grants
+        dataRows.push({
+          type: 'header',
+          key: 'h-startup',
+          label: (
+            <>
+              Startup &amp; Other Grants
+              <span className="ml-2 font-normal normal-case text-[10px]">(one-time — not included in sustainability metrics)</span>
+            </>
+          ),
+        })
+        for (const r of grantDTRows) dataRows.push({ type: 'item', key: r.overrideKey, data: r })
+        const grantSubtotal: Record<string, ReactNode> = {
+          base: fmt(grantBase),
+          scenario: fmt(grantScenario),
+          override: '',
+          amount: fmt(isModified ? grantScenario : grantBase),
+        }
+        dataRows.push({ type: 'subtotal', key: 'grant-sub', label: 'Startup Grants Subtotal (Year 1)', values: grantSubtotal })
+
+        const totalValues: Record<string, ReactNode> = {
+          base: fmt(totalBase),
+          scenario: fmt(totalScenario),
+          override: '',
+          amount: fmt(isModified ? totalScenario : totalBase),
+        }
+        dataRows.push({
+          type: 'total',
+          key: 'total',
+          label: `Total Revenue ${grantRows.length > 0 ? '(incl. Grants)' : ''}`.trim(),
+          values: totalValues,
+        })
+
+        const renderLabel = (row: DTRow) => (
+          <div className="flex items-start gap-2">
+            {row.override !== null && (
+              <span
+                aria-label="Override active"
+                title="Override active"
+                className="mt-1.5 inline-block w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ background: 'var(--teal-500)' }}
+              />
+            )}
+            <div>
+              <div className="font-medium text-slate-800">{row.label}</div>
+              {row.helperNote && (
+                <div className="text-[10px] text-slate-400 mt-0.5">{row.helperNote}</div>
+              )}
+            </div>
+          </div>
+        )
+
+        const renderOverride = (row: DTRow) => (
+          <input
+            type="number"
+            placeholder="—"
+            value={row.override ?? ''}
+            onChange={(e) => {
+              const v = e.target.value
+              setOverrides((prev) => {
+                const next = { ...prev }
+                if (v === '') { delete next[row.overrideKey] } else { next[row.overrideKey] = Number(v) }
+                return next
+              })
+            }}
+            disabled={!canEdit}
+            className="w-28 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
+          />
+        )
+
+        const columns: DataTableColumn<DTRow>[] = [
+          { key: 'label', header: 'Revenue Source', align: 'left', render: renderLabel },
+          { key: 'formula', header: 'Formula', align: 'left', render: (r) => <span className="text-slate-500 text-xs">{r.formula}</span> },
+          { key: 'base', header: 'Base Case', numeric: true, render: (r) => <span className="text-slate-500">{fmt(r.calculated)}</span> },
+          ...(isModified
+            ? [{
+                key: 'scenario',
+                header: <span className="text-teal-600">Scenario</span>,
+                numeric: true as const,
+                render: (r: DTRow) => (
+                  <span className={r.scenarioCalc !== r.calculated ? 'text-teal-600 font-medium' : 'text-slate-500'}>
+                    {fmt(r.scenarioCalc)}
+                  </span>
+                ),
+              }]
+            : []),
+          { key: 'override', header: 'Override', numeric: true, render: renderOverride },
+          {
+            key: 'amount',
+            header: 'Amount',
+            numeric: true,
+            render: (r) => {
+              const effective = r.override ?? (isModified ? r.scenarioCalc : r.calculated)
               return (
-                <React.Fragment key={`group-${group}`}>
-                  <tr className="section-header">
-                    <td colSpan={colSpan} className="px-6 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide">
-                      {group}
+                <span className={`font-medium ${r.override !== null ? 'text-teal-600' : 'text-slate-800'}`}>
+                  {fmt(effective)}
+                </span>
+              )
+            },
+          },
+        ]
+
+        return (
+          <div data-tour="revenue-table" className="bg-white border border-slate-200 rounded-xl shadow-sm">
+            <DataTable columns={columns} rows={dataRows} caption="Year 1 revenue breakdown" />
+          </div>
+        )
+      })()}
+
+      {/* Funding Sources management — lifted out of the revenue table for Phase 2's
+          DataTable consistency. Logically separate from the breakdown above. */}
+      <div data-tour="startup-grants" className="bg-white border border-slate-200 rounded-xl shadow-sm mt-4 px-6 py-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-700">Startup &amp; Other Grants — Funding Sources</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Manage funding sources and year-by-year allocations</p>
+          </div>
+          {canEdit && (
+            <div className="flex gap-2">
+              <button
+                onClick={addSource}
+                className="px-3 py-1.5 text-xs font-medium text-teal-600 border border-teal-200 rounded-lg hover:bg-teal-50 transition-colors"
+              >
+                + Add Source
+              </button>
+              <button
+                onClick={saveFunding}
+                disabled={savingFunding}
+                className="px-3 py-1.5 text-xs font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+              >
+                {savingFunding ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="overflow-x-auto sl-scroll">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-white border-b border-slate-200">
+                <th className="text-left px-3 py-2 font-semibold text-slate-600 text-xs">Source</th>
+                <th className="text-right px-3 py-2 font-semibold text-slate-600 text-xs w-32">Total Amount</th>
+                <th className="text-left px-3 py-2 font-semibold text-slate-600 text-xs w-24">Type</th>
+                <th className="text-left px-3 py-2 font-semibold text-slate-600 text-xs w-24">Status</th>
+                <th className="text-left px-3 py-2 font-semibold text-slate-600 text-xs">Year Allocation</th>
+                <th className="px-3 py-2 w-8"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {fundingSources.map((src, idx) => {
+                const selected = src.selectedYears || []
+                const allocs = src.yearAllocations || {}
+                const allocTotal = selected.reduce((s, y) => s + (allocs[y] || 0), 0)
+                const allocMismatch = selected.length > 0 && allocTotal !== src.amount
+                return (
+                  <tr key={idx} className="border-b border-slate-100 align-top bg-white">
+                    <td className="px-3 py-2">
+                      <input
+                        type="text"
+                        value={src.source}
+                        onChange={(e) => updateSource(idx, 'source', e.target.value)}
+                        placeholder="Funding source name..."
+                        disabled={!canEdit}
+                        className="w-full border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="number"
+                        step={1000}
+                        value={src.amount}
+                        onChange={(e) => updateSource(idx, 'amount', Number(e.target.value))}
+                        disabled={!canEdit}
+                        className="w-full text-right border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <select
+                        value={src.type}
+                        onChange={(e) => updateSource(idx, 'type', e.target.value)}
+                        disabled={!canEdit}
+                        className="w-full border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
+                      >
+                        {FUNDING_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-3 py-2">
+                      <select
+                        value={src.status}
+                        onChange={(e) => updateSource(idx, 'status', e.target.value)}
+                        disabled={!canEdit}
+                        className="w-full border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
+                      >
+                        {FUNDING_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex gap-1 mb-1.5">
+                        {[0, 1, 2, 3, 4].map((y) => (
+                          <button
+                            key={y}
+                            onClick={() => toggleYear(idx, y)}
+                            disabled={!canEdit}
+                            className={`px-2 py-0.5 text-xs rounded font-medium transition-colors ${
+                              selected.includes(y)
+                                ? 'bg-teal-600 text-white'
+                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            } disabled:opacity-50`}
+                          >
+                            Y{y}
+                          </button>
+                        ))}
+                      </div>
+                      {selected.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {selected.map((y) => (
+                            <div key={y} className="flex items-center gap-1">
+                              <span className="text-[10px] text-slate-400 font-medium w-5">Y{y}</span>
+                              <input
+                                type="number"
+                                step={1000}
+                                value={allocs[y] || 0}
+                                onChange={(e) => updateYearAllocation(idx, y, Number(e.target.value))}
+                                disabled={!canEdit}
+                                className="w-20 text-right border border-slate-200 rounded px-1.5 py-0.5 text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
+                              />
+                            </div>
+                          ))}
+                          {allocMismatch && (
+                            <span className="text-[10px] text-amber-600 self-center">
+                              ({fmt(allocTotal)} of {fmt(src.amount)})
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {selected.length === 0 && (
+                        <span className="text-[10px] text-slate-400">Select years above</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {canEdit && (
+                        <Tooltip content="Remove">
+                          <button
+                            onClick={() => removeSource(idx)}
+                            className="text-slate-400 hover:text-red-500 text-lg leading-none"
+                            aria-label="Remove"
+                          >
+                            &times;
+                          </button>
+                        </Tooltip>
+                      )}
                     </td>
                   </tr>
-                  {groupRows.map((row) => (
-                    <RevenueRowComponent key={row.label} row={row} isModified={isModified} overrides={overrides} setOverrides={setOverrides} overrideKey={row.label} canEdit={canEdit} />
-                  ))}
-                </React.Fragment>
-              )
-            })}
+                )
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="bg-slate-50 border-t border-slate-200">
+                <td className="px-3 py-2 font-bold text-slate-800 text-xs">Total</td>
+                <td className="px-3 py-2 text-right font-bold text-slate-800 text-xs">{fmt(totalFunding)}</td>
+                <td colSpan={4}></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
 
-            {/* Operating Revenue subtotal */}
-            <tr data-tour="operating-revenue" className="border-b border-slate-200 bg-slate-50">
-              <td className="px-6 py-3 font-bold text-slate-800" colSpan={2}>Operating Revenue</td>
-              <td className="num px-6 py-3 font-bold text-slate-800">{fmt(operatingBase)}</td>
-              {isModified && (
-                <td className="num px-6 py-3 font-bold text-teal-600">{fmt(operatingScenario)}</td>
-              )}
-              <td></td>
-              <td className="num px-6 py-3 font-bold text-slate-800">
-                {fmt(isModified ? operatingScenario : operatingBase)}
-              </td>
-            </tr>
+        <div className="flex flex-wrap gap-3 mt-3">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 text-xs">
+            <span className="text-emerald-600 font-semibold">Secured:</span>
+            <span className="text-emerald-700 font-bold ml-1">{fmt(securedFunding)}</span>
+          </div>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 text-xs">
+            <span className="text-amber-600 font-semibold">Pending:</span>
+            <span className="text-amber-700 font-bold ml-1">{fmt(totalFunding - securedFunding)}</span>
+          </div>
+        </div>
 
-            {/* Startup & Other Grants section — full management UI */}
-            <tr data-tour="startup-grants" className="section-header">
-              <td colSpan={colSpan} className="px-6 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide">
-                Startup &amp; Other Grants
-                <span className="ml-2 font-normal normal-case text-[10px]">(one-time — not included in sustainability metrics)</span>
-              </td>
-            </tr>
-            {/* Inline funding source editor */}
-            <tr>
-              <td colSpan={colSpan} className="p-0">
-                <div className="bg-slate-50/50 border-y border-slate-100 px-6 py-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs text-slate-500">Manage funding sources and year-by-year allocations</span>
-                    {canEdit && (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={addSource}
-                          className="px-3 py-1.5 text-xs font-medium text-teal-600 border border-teal-200 rounded-lg hover:bg-teal-50 transition-colors"
-                        >
-                          + Add Source
-                        </button>
-                        <button
-                          onClick={saveFunding}
-                          disabled={savingFunding}
-                          className="px-3 py-1.5 text-xs font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
-                        >
-                          {savingFunding ? 'Saving...' : 'Save'}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="overflow-x-auto sl-scroll">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-white border-b border-slate-200">
-                          <th className="text-left px-3 py-2 font-semibold text-slate-600 text-xs">Source</th>
-                          <th className="text-right px-3 py-2 font-semibold text-slate-600 text-xs w-32">Total Amount</th>
-                          <th className="text-left px-3 py-2 font-semibold text-slate-600 text-xs w-24">Type</th>
-                          <th className="text-left px-3 py-2 font-semibold text-slate-600 text-xs w-24">Status</th>
-                          <th className="text-left px-3 py-2 font-semibold text-slate-600 text-xs">Year Allocation</th>
-                          <th className="px-3 py-2 w-8"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {fundingSources.map((src, idx) => {
-                          const selected = src.selectedYears || []
-                          const allocs = src.yearAllocations || {}
-                          const allocTotal = selected.reduce((s, y) => s + (allocs[y] || 0), 0)
-                          const allocMismatch = selected.length > 0 && allocTotal !== src.amount
-                          return (
-                            <tr key={idx} className="border-b border-slate-100 align-top bg-white">
-                              <td className="px-3 py-2">
-                                <input
-                                  type="text"
-                                  value={src.source}
-                                  onChange={(e) => updateSource(idx, 'source', e.target.value)}
-                                  placeholder="Funding source name..."
-                                  disabled={!canEdit}
-                                  className="w-full border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
-                                />
-                              </td>
-                              <td className="px-3 py-2">
-                                <input
-                                  type="number"
-                                  step={1000}
-                                  value={src.amount}
-                                  onChange={(e) => updateSource(idx, 'amount', Number(e.target.value))}
-                                  disabled={!canEdit}
-                                  className="w-full text-right border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
-                                />
-                              </td>
-                              <td className="px-3 py-2">
-                                <select
-                                  value={src.type}
-                                  onChange={(e) => updateSource(idx, 'type', e.target.value)}
-                                  disabled={!canEdit}
-                                  className="w-full border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
-                                >
-                                  {FUNDING_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                                </select>
-                              </td>
-                              <td className="px-3 py-2">
-                                <select
-                                  value={src.status}
-                                  onChange={(e) => updateSource(idx, 'status', e.target.value)}
-                                  disabled={!canEdit}
-                                  className="w-full border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
-                                >
-                                  {FUNDING_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                                </select>
-                              </td>
-                              <td className="px-3 py-2">
-                                <div className="flex gap-1 mb-1.5">
-                                  {[0, 1, 2, 3, 4].map((y) => (
-                                    <button
-                                      key={y}
-                                      onClick={() => toggleYear(idx, y)}
-                                      disabled={!canEdit}
-                                      className={`px-2 py-0.5 text-xs rounded font-medium transition-colors ${
-                                        selected.includes(y)
-                                          ? 'bg-teal-600 text-white'
-                                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                                      } disabled:opacity-50`}
-                                    >
-                                      Y{y}
-                                    </button>
-                                  ))}
-                                </div>
-                                {selected.length > 0 && (
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {selected.map((y) => (
-                                      <div key={y} className="flex items-center gap-1">
-                                        <span className="text-[10px] text-slate-400 font-medium w-5">Y{y}</span>
-                                        <input
-                                          type="number"
-                                          step={1000}
-                                          value={allocs[y] || 0}
-                                          onChange={(e) => updateYearAllocation(idx, y, Number(e.target.value))}
-                                          disabled={!canEdit}
-                                          className="w-20 text-right border border-slate-200 rounded px-1.5 py-0.5 text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
-                                        />
-                                      </div>
-                                    ))}
-                                    {allocMismatch && (
-                                      <span className="text-[10px] text-amber-600 self-center">
-                                        ({fmt(allocTotal)} of {fmt(src.amount)})
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-                                {selected.length === 0 && (
-                                  <span className="text-[10px] text-slate-400">Select years above</span>
-                                )}
-                              </td>
-                              <td className="px-3 py-2 text-center">
-                                {canEdit && (
-                                  <Tooltip content="Remove">
-                                    <button
-                                      onClick={() => removeSource(idx)}
-                                      className="text-slate-400 hover:text-red-500 text-lg leading-none"
-                                      aria-label="Remove"
-                                    >
-                                      &times;
-                                    </button>
-                                  </Tooltip>
-                                )}
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                      <tfoot>
-                        <tr className="bg-slate-50 border-t border-slate-200">
-                          <td className="px-3 py-2 font-bold text-slate-800 text-xs">Total</td>
-                          <td className="px-3 py-2 text-right font-bold text-slate-800 text-xs">{fmt(totalFunding)}</td>
-                          <td colSpan={4}></td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-
-                  {/* Secured vs Pending badges */}
-                  <div className="flex flex-wrap gap-3 mt-3">
-                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 text-xs">
-                      <span className="text-emerald-600 font-semibold">Secured:</span>
-                      <span className="text-emerald-700 font-bold ml-1">{fmt(securedFunding)}</span>
-                    </div>
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 text-xs">
-                      <span className="text-amber-600 font-semibold">Pending:</span>
-                      <span className="text-amber-700 font-bold ml-1">{fmt(totalFunding - securedFunding)}</span>
-                    </div>
-                  </div>
-
-                  {securedFunding < totalFunding * 0.5 && (
-                    <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-700">
-                      <strong>Warning:</strong> Less than 50% of startup funding is secured (received or pledged).
-                      Authorizers typically want to see committed funding before approving a charter.
-                    </div>
-                  )}
-                </div>
-              </td>
-            </tr>
-
-            {/* Year 1 grant allocations from the sources above */}
-            {grantRows.length > 0 && (
-              <>
-                {grantRows.map((row) => (
-                  <RevenueRowComponent key={row.label} row={row} isModified={isModified} overrides={overrides} setOverrides={setOverrides} overrideKey={`grant:${row.label}`} canEdit={canEdit} />
-                ))}
-              </>
-            )}
-            <tr className="border-b border-slate-200 bg-amber-50/50">
-              <td className="px-6 py-2.5 font-semibold text-slate-700" colSpan={2}>Startup Grants Subtotal (Year 1)</td>
-              <td className="num px-6 py-2.5 font-semibold text-slate-700">{fmt(grantBase)}</td>
-              {isModified && (
-                <td className="num px-6 py-2.5 font-semibold text-teal-600">{fmt(grantScenario)}</td>
-              )}
-              <td></td>
-              <td className="num px-6 py-2.5 font-semibold text-slate-700">
-                {fmt(isModified ? grantScenario : grantBase)}
-              </td>
-            </tr>
-          </tbody>
-          <tfoot>
-            <tr data-tour="total-revenue" className="border-t-2 border-slate-300">
-              <td className="px-6 py-3 font-bold text-slate-800" colSpan={2}>
-                Total Revenue {grantRows.length > 0 ? '(incl. Grants)' : ''}
-              </td>
-              <td className="num px-6 py-3 font-bold text-slate-800">{fmt(totalBase)}</td>
-              {isModified && (
-                <td className="num px-6 py-3 font-bold text-teal-600">{fmt(totalScenario)}</td>
-              )}
-              <td></td>
-              <td className="num px-6 py-3 font-bold text-slate-800">
-                {fmt(isModified ? totalScenario : totalBase)}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+        {securedFunding < totalFunding * 0.5 && (
+          <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-700">
+            <strong>Warning:</strong> Less than 50% of startup funding is secured (received or pledged).
+            Authorizers typically want to see committed funding before approving a charter.
+          </div>
+        )}
       </div>
 
       {grantRows.length > 0 && (
@@ -632,50 +674,3 @@ export default function RevenuePage() {
   )
 }
 
-function RevenueRowComponent({ row, isModified, overrides, setOverrides, overrideKey, canEdit }: {
-  row: RevenueRow
-  isModified: boolean
-  overrides: Record<string, number>
-  setOverrides: React.Dispatch<React.SetStateAction<Record<string, number>>>
-  overrideKey: string
-  canEdit: boolean
-}) {
-  const effective = row.override ?? (isModified ? row.scenarioCalc : row.calculated)
-  return (
-    <tr className="border-b border-slate-100">
-      <td className="px-6 py-3">
-        <span className="font-medium text-slate-800">{row.label}</span>
-        {row.helperNote && (
-          <span className="block text-[10px] text-slate-400 mt-0.5">{row.helperNote}</span>
-        )}
-      </td>
-      <td className="px-6 py-3 text-slate-500 text-xs">{row.formula}</td>
-      <td className="num px-6 py-3 text-slate-500">{fmt(row.calculated)}</td>
-      {isModified && (
-        <td className={`num px-6 py-3 ${row.scenarioCalc !== row.calculated ? 'text-teal-600 font-medium' : 'text-slate-500'}`}>
-          {fmt(row.scenarioCalc)}
-        </td>
-      )}
-      <td className="px-6 py-3 text-right">
-        <input
-          type="number"
-          placeholder="—"
-          value={row.override ?? ''}
-          onChange={(e) => {
-            const v = e.target.value
-            setOverrides((prev) => {
-              const next = { ...prev }
-              if (v === '') { delete next[overrideKey] } else { next[overrideKey] = Number(v) }
-              return next
-            })
-          }}
-          disabled={!canEdit}
-          className="w-28 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
-        />
-      </td>
-      <td className={`num px-6 py-3 font-medium ${row.override !== null ? 'text-teal-600' : 'text-slate-800'}`}>
-        {fmt(effective)}
-      </td>
-    </tr>
-  )
-}
