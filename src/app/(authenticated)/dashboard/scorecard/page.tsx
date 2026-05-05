@@ -7,13 +7,6 @@ import { useStateConfig } from '@/contexts/StateConfigContext'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import GenericScorecard from '@/components/dashboard/GenericScorecard'
 
-const STATUS_LABELS: Record<string, string> = {
-  meets: 'Meets',
-  approaches: 'Approaching',
-  does_not_meet: 'Does Not Meet',
-  na: 'N/A',
-}
-
 export default function ScorecardPage() {
   const {
     schoolData: { schoolName, profile, positions, allPositions, projections, gradeExpansionPlan, loading },
@@ -130,13 +123,6 @@ export default function ScorecardPage() {
                     return (
                       <td key={idx} className="px-3 py-2.5 text-center">
                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium tabular-nums ${color}`}>{display}</span>
-                        {s !== 'na' && (
-                          <div className={`text-[9px] mt-0.5 ${
-                            s === 'meets' ? 'text-emerald-500' : s === 'approaches' ? 'text-amber-500' : 'text-rose-500'
-                          }`}>
-                            {STATUS_LABELS[s]}
-                          </div>
-                        )}
                       </td>
                     )
                   })}
