@@ -6,6 +6,14 @@ import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward, com
 import { useStateConfig } from '@/contexts/StateConfigContext'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import GenericScorecard from '@/components/dashboard/GenericScorecard'
+import { StatusBadge, type Status } from '@/components/ui/StatusBadge'
+
+function fpfStatusToBadge(s: string): Status {
+  if (s === 'meets') return 'meets'
+  if (s === 'approaches') return 'approaching'
+  if (s === 'does_not_meet') return 'fails'
+  return 'na'
+}
 
 export default function ScorecardPage() {
   const {
@@ -101,10 +109,7 @@ export default function ScorecardPage() {
                   {[0, 1, 2, 3, 4].map((idx) => {
                     const v = m.values[idx]
                     const s = m.statuses[idx]
-                    const color = s === 'meets' ? 'bg-emerald-50 text-emerald-700'
-                      : s === 'approaches' ? 'bg-amber-50 text-amber-600'
-                      : s === 'does_not_meet' ? 'bg-rose-50 text-rose-600'
-                      : 'bg-slate-50 text-slate-400'
+                    const badgeStatus = fpfStatusToBadge(s)
                     const display = v === null
                       ? 'N/A'
                       : m.name.includes('Margin') || m.name === 'Enrollment Variance'
@@ -121,26 +126,38 @@ export default function ScorecardPage() {
                         ? v.toFixed(2)
                         : String(v)
                     return (
-                      <td key={idx} className="px-3 py-2.5 text-center">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium tabular-nums ${color}`}>{display}</span>
+                      <td key={idx} className="px-3 py-2.5 text-center align-middle">
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="font-tabular text-xs text-slate-700">{display}</span>
+                          <StatusBadge status={badgeStatus} />
+                        </div>
                       </td>
                     )
                   })}
                   <td className="px-3 py-2.5 text-center text-[10px] leading-snug">
                     {m.stage1Target === m.stage2Target ? (
-                      <div className="text-slate-500">{m.stage1Target}</div>
+                      <div className="font-tabular text-slate-500">{m.stage1Target}</div>
                     ) : (
                       <>
-                        <div className="text-slate-500"><span className="text-slate-400">S1:</span> {m.stage1Target}</div>
-                        <div className="text-slate-500"><span className="text-slate-400">S2:</span> {m.stage2Target}</div>
+                        <div className="font-tabular text-slate-500"><span className="text-slate-400">S1:</span> {m.stage1Target}</div>
+                        <div className="font-tabular text-slate-500"><span className="text-slate-400">S2:</span> {m.stage2Target}</div>
                       </>
                     )}
                     {(m.stage1Approaching || m.stage2Approaching) && (
-                      <div className="text-[9px] text-slate-400 mt-0.5">
-                        Approaching: {m.stage1Approaching === m.stage2Approaching
-                          ? m.stage1Approaching
-                          : `${m.stage1Approaching || 'N/A'} / ${m.stage2Approaching || 'N/A'}`}
-                      </div>
+                      m.stage1Approaching === m.stage2Approaching ? (
+                        <div className="font-tabular text-[9px] text-slate-400 mt-0.5">
+                          Approaching: {m.stage1Approaching}
+                        </div>
+                      ) : (
+                        <>
+                          <div className="font-tabular text-[9px] text-slate-400 mt-0.5">
+                            <span>S1 approaching:</span> {m.stage1Approaching || 'N/A'}
+                          </div>
+                          <div className="font-tabular text-[9px] text-slate-400">
+                            <span>S2 approaching:</span> {m.stage2Approaching || 'N/A'}
+                          </div>
+                        </>
+                      )
                     )}
                   </td>
                 </tr>
