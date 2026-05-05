@@ -158,13 +158,13 @@ export default function ScorecardPage() {
         </div>
       </div>
 
-      {/* Collapsible "About This Scorecard" section */}
+      {/* Collapsible threshold-methodology disclosure */}
       <div className="mt-4 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <button
           onClick={() => setNotesOpen(!notesOpen)}
           className="w-full px-5 py-3 flex items-center justify-between text-left text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
         >
-          About This Scorecard
+          How thresholds are calculated
           <svg className={`w-4 h-4 text-slate-400 transition-transform ${notesOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
