@@ -7,10 +7,9 @@ import type { StartupFundingSource, PreOpeningTransaction } from '@/lib/types'
 import Link from 'next/link'
 import { useStateConfig } from '@/contexts/StateConfigContext'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { formatCurrency } from '@/lib/format'
 
-function fmt(n: number) {
-  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
-}
+const fmt = (n: number) => formatCurrency(n, 'accounting')
 
 export default function MultiYearPage() {
   const {
