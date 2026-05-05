@@ -452,7 +452,19 @@ export default function RevenuePage() {
 
         const columns: DataTableColumn<DTRow>[] = [
           { key: 'label', header: 'Revenue Source', align: 'left', render: renderLabel },
-          { key: 'formula', header: 'Formula', align: 'left', render: (r) => <span className="text-slate-500 text-xs">{r.formula}</span> },
+          {
+            key: 'formula',
+            header: 'Formula',
+            align: 'left',
+            render: (r) => (
+              <span
+                className="font-tabular text-[13px]"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                {r.formula}
+              </span>
+            ),
+          },
           { key: 'base', header: 'Base Case', numeric: true, render: (r) => <span className="text-slate-500">{fmt(r.calculated)}</span> },
           ...(isModified
             ? [{
