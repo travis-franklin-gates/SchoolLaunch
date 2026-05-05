@@ -20,12 +20,6 @@ import { formatCurrency } from '@/lib/format'
 type AdvisoryData = AdvisoryCache
 
 
-function fmt(n: number) {
-  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
-  if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(0)}K`
-  return `$${n.toLocaleString()}`
-}
-
 function reserveStatus(days: number): Status {
   if (days >= 30) return 'meets'
   if (days >= 21) return 'approaching'
@@ -604,7 +598,7 @@ export default function DashboardPage() {
               <td className="px-5 py-2.5 text-slate-600">Net Position</td>
               {multiYear.map((y) => (
                 <td key={y.year} className={`px-4 py-2.5 text-center tabular-nums font-medium ${y.net >= 0 ? 'text-emerald-600' : 'text-red-600'} ${y.year === 1 ? 'bg-teal-50/30' : ''}`}>
-                  {fmt(y.net)}
+                  {formatCurrency(y.net, 'compact')}
                 </td>
               ))}
             </tr>
