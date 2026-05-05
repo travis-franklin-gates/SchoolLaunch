@@ -7,6 +7,7 @@ import { computeAdvisoryHash } from '@/lib/buildSchoolContext'
 import type { ScenarioAssumptions, ScenarioResults, ScenarioYearResult } from '@/lib/scenarioEngine'
 import Tooltip from '@/components/ui/Tooltip'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { formatCurrency } from '@/lib/format'
 
 interface ScenarioRecord {
   id: string
@@ -31,17 +32,11 @@ function scenarioLabel(s: { name: string; assumptions: ScenarioAssumptions }) {
   return `${s.name} (${Math.round(s.assumptions.enrollment_fill_rate * 100)}% Fill)`
 }
 
-function fmt(n: number) {
-  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
-  if (Math.abs(n) >= 1_000) return `$${Math.round(n / 1_000)}K`
-  return `$${n.toLocaleString()}`
-}
+const fmt = (n: number) => formatCurrency(n, 'compact')
 
 function fmtDelta(n: number) {
   const sign = n >= 0 ? '+' : ''
-  if (Math.abs(n) >= 1_000_000) return `${sign}$${(n / 1_000_000).toFixed(1)}M`
-  if (Math.abs(n) >= 1_000) return `${sign}$${Math.round(n / 1_000)}K`
-  return `${sign}$${n.toLocaleString()}`
+  return `${sign}${formatCurrency(n, 'compact')}`
 }
 
 function reserveColor(days: number) {
@@ -74,8 +69,8 @@ function Delta({ value, base, suffix = '', invert = false }: { value: number; ba
     : suffix === ' days' ? `${sign}${Math.round(diff)} days`
     : suffix === ' students' ? `${sign}${Math.round(diff)} students`
     : fmtDelta(diff)
-  const color = isZero ? 'text-slate-400' : favorable ? 'text-emerald-600' : 'text-red-500'
-  return <div className={`text-[10px] ${color}`}>{formatted}</div>
+  const color = isZero ? 'text-slate-400' : favorable ? 'text-emerald-600' : 'text-rose-600'
+  return <div className={`font-tabular text-[11px] mt-0.5 ${color}`}>{formatted}</div>
 }
 
 export default function ScenariosPage() {
