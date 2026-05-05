@@ -1,16 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { createClient } from '@/lib/supabase/client'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { useStateConfig } from '@/contexts/StateConfigContext'
 import type { FinancialAssumptions } from '@/lib/types'
+import { DataTable, type DataTableColumn, type DataTableRow } from '@/components/ui/DataTable'
+import { formatCurrency } from '@/lib/format'
 
-function fmt(n: number) {
-  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
-}
+const fmt = (n: number) => formatCurrency(n, 'accounting')
 
 interface OpsRow {
   lineItem: string
@@ -338,42 +338,126 @@ export default function OperationsPage() {
         </div>
       )}
 
-      <div data-tour="operations-table" className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-4">
-        <div className="overflow-x-auto sl-scroll">
-          <table className="w-full text-sm sl-table">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="text-left px-6 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Expense</th>
-                <th data-tour="rate-column" className="text-left px-6 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Rate</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide hidden sm:table-cell">Benchmark</th>
-                <th className="text-right px-6 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {grouped.map((g) => (
-                <GroupSection
-                  key={g.group}
-                  group={g.group}
-                  rows={g.rows}
-                  subtotal={g.subtotal}
-                  allRows={rows}
-                  updateAmount={updateAmount}
-                  updateRate={updateRate}
-                  getBenchmarkText={getBenchmarkText}
-                  canEdit={canEdit}
-                  authorizerFeeEditable={authorizerFeeEditable}
+      {(() => {
+        type OpsDTRow = OpsRow & { globalIdx: number; isLocked: boolean }
+
+        const dataRows: DataTableRow<OpsDTRow>[] = []
+        for (const g of grouped) {
+          dataRows.push({ type: 'header', key: `h-${g.group}`, label: g.group })
+          for (const r of g.rows) {
+            const globalIdx = rows.indexOf(r)
+            const isLocked = r.lineItem === 'Authorizer Fee' && !authorizerFeeEditable
+            dataRows.push({
+              type: 'item',
+              key: r.lineItem,
+              data: { ...r, globalIdx, isLocked },
+            })
+          }
+          dataRows.push({
+            type: 'subtotal',
+            key: `sub-${g.group}`,
+            label: `Subtotal: ${g.group}`,
+            values: { rate: '', benchmark: '', amount: fmt(g.subtotal) },
+          })
+        }
+        dataRows.push({
+          type: 'total',
+          key: 'total',
+          label: 'Total Operations',
+          values: { rate: '', benchmark: '', amount: fmt(totalOps) },
+        })
+
+        const lockedCellClass = 'bg-slate-50/60'
+
+        const renderExpense = (row: OpsDTRow): ReactNode => {
+          if (row.isLocked) {
+            return (
+              <div data-tour={row.lineItem === 'Authorizer Fee' ? 'authorizer-fee' : undefined} className="flex items-center gap-2 flex-wrap font-medium text-slate-800">
+                <svg aria-hidden="true" className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                </svg>
+                <span>{row.lineItem}</span>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">WA mandated</span>
+              </div>
+            )
+          }
+          return <span className="font-medium text-slate-800">{row.lineItem}</span>
+        }
+
+        const renderRate = (row: OpsDTRow): ReactNode => {
+          const hasRate = row.rateKey !== null
+          const unit = row.perFte ? '/FTE' : '/student'
+          if (row.isLocked) {
+            return <span className="font-tabular text-xs text-slate-500">{getBenchmarkText(row.lineItem).split('=')[0] || '—'}</span>
+          }
+          if (hasRate) {
+            return (
+              <div className="flex items-center gap-1">
+                <span className="text-slate-400 text-xs">$</span>
+                <input
+                  type="number"
+                  step={10}
+                  min={0}
+                  value={row.rate ?? 0}
+                  onChange={(e) => updateRate(row.globalIdx, Number(e.target.value))}
+                  disabled={!canEdit}
+                  className="w-16 text-right border border-slate-200 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
                 />
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="bg-slate-50 border-t border-slate-200">
-                <td className="px-6 py-3 font-bold text-slate-800" colSpan={3}>Total Operations</td>
-                <td className="px-6 py-3 text-right font-bold text-slate-800 num">{fmt(totalOps)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
+                <span className="text-slate-400 text-xs">{unit}</span>
+              </div>
+            )
+          }
+          return <span className="font-tabular text-xs text-slate-400">{getBenchmarkText(row.lineItem).split('=')[0] || '—'}</span>
+        }
+
+        const renderBenchmark = (row: OpsDTRow): ReactNode => (
+          <span className="text-xs text-slate-500">{getBenchmarkText(row.lineItem)}</span>
+        )
+
+        const renderAmount = (row: OpsDTRow): ReactNode => {
+          const isAuthorizerFee = row.lineItem === 'Authorizer Fee'
+          if (row.isLocked) {
+            return <span className="font-tabular text-slate-700">{fmt(row.amount)}</span>
+          }
+          if (isAuthorizerFee) {
+            return <span className="font-tabular text-slate-500">{fmt(row.amount)}</span>
+          }
+          return (
+            <input
+              type="number"
+              step={1000}
+              value={row.amount}
+              onChange={(e) => updateAmount(row.globalIdx, Number(e.target.value))}
+              disabled={!canEdit}
+              className="w-32 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
+            />
+          )
+        }
+
+        const columns: DataTableColumn<OpsDTRow>[] = [
+          { key: 'expense', header: 'Expense', align: 'left', render: renderExpense },
+          {
+            key: 'rate',
+            header: <span data-tour="rate-column">Rate</span>,
+            align: 'left',
+            render: renderRate,
+          },
+          {
+            key: 'benchmark',
+            header: 'Benchmark',
+            align: 'left',
+            render: renderBenchmark,
+            cellClassName: 'hidden sm:table-cell',
+          },
+          { key: 'amount', header: 'Amount', numeric: true, render: renderAmount },
+        ]
+
+        return (
+          <div data-tour="operations-table" className="bg-white border border-slate-200 rounded-xl shadow-sm mb-4">
+            <DataTable columns={columns} rows={dataRows} caption="Year 1 operations breakdown" />
+          </div>
+        )
+      })()}
 
       {canEdit && (
         <button
@@ -388,100 +472,3 @@ export default function OperationsPage() {
   )
 }
 
-function GroupSection({
-  group,
-  rows,
-  subtotal,
-  allRows,
-  updateAmount,
-  updateRate,
-  getBenchmarkText,
-  canEdit,
-  authorizerFeeEditable,
-}: {
-  group: string
-  rows: OpsRow[]
-  subtotal: number
-  allRows: OpsRow[]
-  updateAmount: (idx: number, amount: number) => void
-  updateRate: (idx: number, rate: number) => void
-  getBenchmarkText: (lineItem: string) => string
-  canEdit: boolean
-  authorizerFeeEditable: boolean
-}) {
-  return (
-    <>
-      <tr className="bg-slate-100 border-b border-slate-200 section-header">
-        <td className="px-6 py-2 text-xs font-medium text-slate-400 uppercase tracking-wide" colSpan={4}>
-          {group}
-        </td>
-      </tr>
-      {rows.map((row) => {
-        const globalIdx = allRows.indexOf(row)
-        const isAuthorizerFee = row.lineItem === 'Authorizer Fee'
-        const isLocked = isAuthorizerFee && !authorizerFeeEditable
-        const hasRate = row.rateKey !== null
-        const unit = row.perFte ? '/FTE' : '/student'
-        return (
-          <tr key={row.lineItem} {...(isAuthorizerFee ? { 'data-tour': 'authorizer-fee' } : {})} className="border-b border-slate-100">
-            <td className="px-6 py-3 font-medium text-slate-800">
-              {isLocked ? (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <svg aria-hidden="true" className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                  </svg>
-                  <span>{row.lineItem}</span>
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">WA mandated</span>
-                </div>
-              ) : (
-                row.lineItem
-              )}
-            </td>
-            <td className="px-6 py-3">
-              {isLocked ? (
-                <span className="text-xs text-slate-500 num">{getBenchmarkText(row.lineItem).split('=')[0] || '—'}</span>
-              ) : hasRate ? (
-                <div className="flex items-center gap-1">
-                  <span className="text-slate-400 text-xs">$</span>
-                  <input
-                    type="number"
-                    step={10}
-                    min={0}
-                    value={row.rate ?? 0}
-                    onChange={(e) => updateRate(globalIdx, Number(e.target.value))}
-                    disabled={!canEdit}
-                    className="w-16 text-right border border-slate-200 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
-                  />
-                  <span className="text-slate-400 text-xs">{unit}</span>
-                </div>
-              ) : (
-                <span className="text-xs text-slate-400">{getBenchmarkText(row.lineItem).split('=')[0] || '—'}</span>
-              )}
-            </td>
-            <td className="px-6 py-3 text-xs text-slate-500 hidden sm:table-cell">{getBenchmarkText(row.lineItem)}</td>
-            <td className="px-6 py-3 text-right">
-              {isLocked ? (
-                <span className="text-slate-700 num">{fmt(row.amount)}</span>
-              ) : isAuthorizerFee ? (
-                <span className="text-slate-500 num">{fmt(row.amount)}</span>
-              ) : (
-                <input
-                  type="number"
-                  step={1000}
-                  value={row.amount}
-                  onChange={(e) => updateAmount(globalIdx, Number(e.target.value))}
-                  disabled={!canEdit}
-                  className="w-32 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600"
-                />
-              )}
-            </td>
-          </tr>
-        )
-      })}
-      <tr className="border-b border-slate-200 bg-slate-50/50">
-        <td className="px-6 py-2 font-semibold text-slate-700 text-xs" colSpan={3}>Subtotal: {group}</td>
-        <td className="px-6 py-2 text-right font-semibold text-slate-700 text-xs num">{fmt(subtotal)}</td>
-      </tr>
-    </>
-  )
-}
