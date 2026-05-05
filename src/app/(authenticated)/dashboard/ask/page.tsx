@@ -175,7 +175,7 @@ export default function AskPage() {
             <p className="text-[15px] text-slate-400 mb-8">
               Ask questions about your financial model in plain English
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl w-full px-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-3xl w-full px-4">
               {(isWaCharter ? WA_SUGGESTED_QUESTIONS : GENERIC_SUGGESTED_QUESTIONS).map((q) => (
                 <button
                   key={q}
