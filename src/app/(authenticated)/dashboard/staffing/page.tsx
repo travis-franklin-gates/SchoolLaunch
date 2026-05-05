@@ -958,7 +958,12 @@ function PositionRow({
           className="w-24 text-right border border-slate-200 rounded px-2 py-1 text-sm disabled:bg-slate-50 disabled:text-slate-600"
         />
         {totalComp > 0 && (
-          <div className="text-[9px] text-slate-400 text-right mt-0.5">Total comp: {fmt(totalComp)}</div>
+          <div
+            className="font-tabular text-[13px] text-right mt-0.5"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            {fmt(totalComp)} <span className="text-slate-400">× {(1 + benefitsRate).toFixed(2)} benefits</span>
+          </div>
         )}
       </td>
       {[0, 1, 2, 3, 4].map((yi) => (
