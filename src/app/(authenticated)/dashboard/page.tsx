@@ -12,6 +12,9 @@ import Link from 'next/link'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import SchoolLogo from '@/components/SchoolLogo'
+import { HealthTile } from '@/components/ui/HealthTile'
+import type { Status } from '@/components/ui/StatusBadge'
+import { formatCurrency } from '@/lib/format'
 
 type AdvisoryData = AdvisoryCache
 
@@ -22,16 +25,16 @@ function fmt(n: number) {
   return `$${n.toLocaleString()}`
 }
 
-function reserveColor(days: number) {
-  if (days >= 30) return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
-  if (days >= 21) return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-l-amber-500' }
-  return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
+function reserveStatus(days: number): Status {
+  if (days >= 30) return 'meets'
+  if (days >= 21) return 'approaching'
+  return 'fails'
 }
 
-function facilityColor(pct: number) {
-  if (pct <= 12) return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
-  if (pct <= 15) return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-l-amber-500' }
-  return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
+function facilityStatus(pct: number): Status {
+  if (pct <= 12) return 'meets'
+  if (pct <= 15) return 'approaching'
+  return 'fails'
 }
 
 const STATUS_COLORS: Record<string, { dot: string; text: string; bg: string }> = {
@@ -44,24 +47,6 @@ const STATUS_LABELS: Record<string, string> = {
   strong: 'Strong',
   needs_attention: 'Attention',
   risk: 'Risk',
-}
-
-function HealthTile({ label, value, subtitle, colorClass }: {
-  label: string
-  value: string
-  subtitle?: string
-  colorClass?: { bg: string; text: string; border: string }
-}) {
-  const bg = colorClass?.bg || 'bg-white'
-  const text = colorClass?.text || 'text-slate-800'
-  const border = colorClass?.border || 'border-l-slate-300'
-  return (
-    <div className={`${bg} bg-white border border-slate-200 ${border} border-l-4 rounded-xl p-5 shadow-sm`}>
-      <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wide mb-1.5">{label}</div>
-      <div className={`text-[32px] leading-tight font-semibold tabular-nums ${text}`}>{value}</div>
-      {subtitle && <div className={`text-xs mt-1.5 ${text} opacity-75`}>{subtitle}</div>}
-    </div>
-  )
 }
 
 export default function DashboardPage() {
@@ -211,7 +196,7 @@ export default function DashboardPage() {
 
   // Days of Cash: use scorecard Y1 value (matches Multi-Year tab and Commission Scorecard)
   const daysOfCash = scorecard.measures.find(m => m.name === 'Days of Cash')?.values[0] ?? 0
-  const rc = reserveColor(daysOfCash)
+  const reserveTileStatus = reserveStatus(daysOfCash)
   // Use multiYear Y1 as single source of truth (matches Multi-Year tab, Trajectory, and AI briefing)
   const y1Net = multiYear.length > 0 ? multiYear[0].net : baseSummary.netPosition
   const y1Revenue = multiYear.length > 0 ? multiYear[0].revenue.total : baseSummary.totalRevenue
@@ -221,31 +206,29 @@ export default function DashboardPage() {
   // Personnel % uses baseSummary.operatingRevenue (excludes interest & grants) — single source of truth
   // shared with Staffing tab badge and AI briefing context
   const personnelPctRevenue = baseSummary.operatingRevenue > 0 ? (y1Personnel / baseSummary.operatingRevenue) * 100 : 0
-  const personnelColor = personnelPctRevenue < 72
-    ? { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
+  const personnelStatus: Status = personnelPctRevenue < 72
+    ? 'fails'
     : personnelPctRevenue <= 78
-    ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
+    ? 'meets'
     : personnelPctRevenue <= 80
-    ? { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-l-amber-500' }
-    : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
+    ? 'approaching'
+    : 'fails'
 
   const facilityCost = projections.find((p) => p.subcategory === 'Facilities' && !p.is_revenue)?.amount || 0
-  const fc = facilityColor(baseSummary.facilityPct)
+  const facilityTileStatus = facilityStatus(baseSummary.facilityPct)
 
   // Ending Cash Y1 (same as Multi-Year tab: cumulativeNet includes carry-forward)
   const endingCashY1 = multiYear.length > 0 ? multiYear[0].cumulativeNet : y1Net
-  const endingCashColor = endingCashY1 >= 0
-    ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
-    : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
+  const endingCashStatus: Status = endingCashY1 >= 0 ? 'meets' : 'fails'
 
   // Total Margin % = Net Income / Operating Revenue (excludes one-time startup grants)
   const y1OperatingRevenue = multiYear.length > 0 ? multiYear[0].revenue.operatingRevenue : baseSummary.operatingRevenue
   const totalMarginPct = y1OperatingRevenue > 0 ? (y1Net / y1OperatingRevenue) * 100 : 0
-  const totalMarginColor = totalMarginPct >= 0
-    ? { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' }
+  const totalMarginStatus: Status = totalMarginPct >= 0
+    ? 'meets'
     : totalMarginPct >= -5
-    ? { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-l-amber-500' }
-    : { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' }
+    ? 'approaching'
+    : 'fails'
   const totalMarginSubtitle = isWaCharter
     ? (totalMarginPct >= 0 ? 'Meets Stage 2' : totalMarginPct >= -5 ? 'Meets Stage 1' : 'Below Stage 1')
     : (totalMarginPct > 5 ? 'Healthy' : totalMarginPct >= 0 ? 'Watch' : 'Needs attention')
@@ -401,33 +384,38 @@ export default function DashboardPage() {
       <div data-tour="health-tiles" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
         <HealthTile
           label="Days of Cash Y1 End"
-          value={`${daysOfCash} days`}
-          subtitle={isWaCharter
+          value={daysOfCash}
+          status={reserveTileStatus}
+          valueFormat="days"
+          sublabel={isWaCharter
             ? (daysOfCash >= 60 ? 'Meets Stage 2' : daysOfCash >= 30 ? 'Meets Stage 1' : daysOfCash >= 21 ? 'Approaches Stage 1' : 'Below Stage 1 minimum')
             : (daysOfCash >= 60 ? 'Healthy' : daysOfCash >= 30 ? 'Watch' : 'Needs attention')}
-          colorClass={rc}
         />
         <HealthTile
           label="Ending Cash Y1"
-          value={fmt(endingCashY1)}
-          colorClass={endingCashColor}
+          value={endingCashY1}
+          status={endingCashStatus}
+          valueFormat="compact"
         />
         <HealthTile
           label="Total Margin %"
-          value={`${totalMarginPct.toFixed(1)}%`}
-          subtitle={totalMarginSubtitle}
-          colorClass={totalMarginColor}
+          value={totalMarginPct}
+          status={totalMarginStatus}
+          valueFormat="percent"
+          sublabel={totalMarginSubtitle}
         />
         <HealthTile
           label="Personnel % Revenue"
-          value={`${personnelPctRevenue.toFixed(1)}%`}
-          colorClass={personnelColor}
+          value={personnelPctRevenue}
+          status={personnelStatus}
+          valueFormat="percent"
         />
         <HealthTile
           label="Facility % Revenue"
-          value={`${baseSummary.facilityPct.toFixed(1)}%`}
-          subtitle={facilityCost > 0 ? `${fmt(facilityCost)}/yr` : undefined}
-          colorClass={fc}
+          value={baseSummary.facilityPct}
+          status={facilityTileStatus}
+          valueFormat="percent"
+          sublabel={facilityCost > 0 ? `${formatCurrency(facilityCost, 'compact')}/yr` : undefined}
         />
       </div>
 
