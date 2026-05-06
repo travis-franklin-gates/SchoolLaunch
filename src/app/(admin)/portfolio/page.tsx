@@ -468,9 +468,6 @@ export default function PortfolioPage() {
   const inProgressCount = schools.filter(s => s.readinessScore >= 1 && s.readinessScore < 4).length
   const notStartedCount = schools.filter(s => s.readinessScore === 0).length
 
-  // Deadline banner (date TBD)
-  const showDeadlineBanner = true
-
   // Table sorting
   // Filter counts
   const needsAttentionCount = schools.filter(s => {
@@ -533,12 +530,9 @@ export default function PortfolioPage() {
 
   return (
     <div className="animate-fade-in">
-      {/* Deadline banner */}
-      {showDeadlineBanner && (
-        <div className="mb-6 px-5 py-3 rounded-xl text-sm font-medium flex items-center justify-between bg-blue-50 text-blue-700 border border-blue-200">
-          <span>Charter Continuity RFP — Submission Deadline: TBD</span>
-        </div>
-      )}
+      {/* RFP deadline countdown */}
+      <RfpCountdown />
+
 
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
@@ -1145,6 +1139,64 @@ export default function PortfolioPage() {
 
       {/* Invite Modal */}
       {showInviteModal && <InviteModal onClose={() => setShowInviteModal(false)} onSuccess={loadData} />}
+    </div>
+  )
+}
+
+function RfpCountdown() {
+  // Charter Continuity RFP — fixed deadlines published by the WA Charter Commission.
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const execDeadline = new Date(2026, 4, 19) // May 19, 2026 — Exec Summary + Draft Financial Plan
+  const fullDeadline = new Date(2026, 6, 1) // July 1, 2026 — Full Proposal
+  const dayMs = 1000 * 60 * 60 * 24
+  const execDays = Math.ceil((execDeadline.getTime() - today.getTime()) / dayMs)
+  const fullDays = Math.ceil((fullDeadline.getTime() - today.getTime()) / dayMs)
+
+  if (execDays <= -1 && fullDays <= -1) return null
+
+  const variant = execDays < 14 ? 'crit' : execDays <= 30 ? 'warn' : 'info'
+  const variantStyles = {
+    crit: { bg: 'var(--status-fails-bg)', fg: 'var(--status-fails-fg)', border: 'var(--status-fails-border)', accent: 'var(--rose-600)' },
+    warn: { bg: 'var(--status-approaching-bg)', fg: 'var(--status-approaching-fg)', border: 'var(--status-approaching-border)', accent: 'var(--amber-600)' },
+    info: { bg: '#EFF6FF', fg: '#1D4ED8', border: '#BFDBFE', accent: '#2563EB' },
+  } as const
+  const styles = variantStyles[variant]
+
+  function formatDays(n: number) {
+    if (n < 0) return `${Math.abs(n)} day${Math.abs(n) === 1 ? '' : 's'} past`
+    if (n === 0) return 'today'
+    return `${n} day${n === 1 ? '' : 's'}`
+  }
+
+  return (
+    <div
+      role="status"
+      className="mb-6 rounded-xl border px-5 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2"
+      style={{ background: styles.bg, borderColor: styles.border, color: styles.fg }}
+    >
+      <div className="flex items-start gap-3">
+        <svg className="w-5 h-5 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke={styles.accent} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="18" rx="2" />
+          <path d="M16 2v4M8 2v4M3 10h18" />
+        </svg>
+        <div>
+          <div className="text-sm font-semibold" style={{ fontFamily: 'var(--font-heading-var)' }}>
+            Charter Continuity RFP — Executive Summary &amp; Draft Financial Plan
+          </div>
+          <div className="text-xs mt-0.5" style={{ color: styles.fg, opacity: 0.85 }}>
+            Due May 19, 2026 · Full Proposal due July 1, 2026 ({formatDays(fullDays)})
+          </div>
+        </div>
+      </div>
+      <div className="text-right shrink-0 md:text-right">
+        <div className="font-tabular text-2xl font-semibold leading-none" style={{ color: styles.accent }}>
+          {execDays < 0 ? `${Math.abs(execDays)}` : execDays}
+        </div>
+        <div className="text-[10px] uppercase tracking-wider mt-1" style={{ color: styles.fg, opacity: 0.8 }}>
+          {execDays < 0 ? 'days past due' : execDays === 1 ? 'day remaining' : 'days remaining'}
+        </div>
+      </div>
     </div>
   )
 }
