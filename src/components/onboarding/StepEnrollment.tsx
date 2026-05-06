@@ -10,6 +10,7 @@ import GradeExpansionEditor from '@/components/GradeExpansionEditor'
 import type { Pathway, StateConfig } from '@/lib/stateConfig'
 import { getStateConfig } from '@/lib/stateConfig'
 import { FormField } from '@/components/ui/FormField'
+import { Tabs } from '@/components/ui/Tabs'
 
 const GRADE_ENROLLMENT_DEFAULTS: Record<string, { classSize: number }> = {
   'K-5': { classSize: 24 },
@@ -186,79 +187,70 @@ export default function StepEnrollment({
         Enrollment drives nearly every financial metric. Choose your enrollment planning approach.
       </p>
 
-      {/* Mode toggle */}
-      <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
-        <button
-          type="button"
-          onClick={() => setMode('grade_expansion')}
-          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-            mode === 'grade_expansion'
-              ? 'bg-white text-teal-700 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          Grade Expansion Plan
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode('simple')}
-          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-            mode === 'simple'
-              ? 'bg-white text-teal-700 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          Enrollment Summary
-        </button>
-      </div>
+      {/* Mode toggle — Tabs primitive */}
+      <Tabs
+        variant="underlined"
+        value={mode}
+        onValueChange={(v) => setMode(v as EnrollmentMode)}
+        ariaLabel="Enrollment mode"
+        items={[
+          {
+            value: 'grade_expansion',
+            label: 'Grade Expansion Plan',
+            panel: (
+              <div className="space-y-4">
+                <div className="text-xs text-slate-400 italic">
+                  Grade expansion produces cohort-based projections that authorizers find more credible than flat growth rates.
+                </div>
+                <GradeExpansionEditor
+                  gradeConfig={gradeConfig}
+                  maxClassSize={maxClassSize}
+                  initialOpeningGrades={initialOpeningGrades}
+                  initialBuildoutGrades={initialBuildoutGrades}
+                  initialRetentionRate={initialRetentionRate}
+                  initialPlan={initialExpansionPlan}
+                  onChange={handleExpansionChange}
+                />
+              </div>
+            ),
+          },
+          {
+            value: 'simple',
+            label: 'Enrollment Summary',
+            panel: (
+              <div className="space-y-4">
+                <div className="text-xs text-slate-400 italic">
+                  Enrollment targets are calculated from your Grade Expansion Plan. Switch to the Grade Expansion Plan tab to adjust which grades are added each year.
+                </div>
 
-      {mode === 'grade_expansion' ? (
-        <>
-          <div className="text-xs text-slate-400 italic">
-            Grade expansion produces cohort-based projections that authorizers find more credible than flat growth rates.
-          </div>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  {[
+                    { label: 'Year 1', value: expansionEnrollments.y1 },
+                    { label: 'Year 2', value: expansionEnrollments.y2 },
+                    { label: 'Year 3', value: expansionEnrollments.y3 },
+                    { label: 'Year 4', value: expansionEnrollments.y4 },
+                    { label: 'Year 5', value: expansionEnrollments.y5 },
+                  ].map(({ label, value }) => (
+                    <FormField key={label} label={label}>
+                      {() => (
+                        <div className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold">
+                          {value > 0 ? value : '—'}
+                        </div>
+                      )}
+                    </FormField>
+                  ))}
+                </div>
 
-          <GradeExpansionEditor
-            gradeConfig={gradeConfig}
-            maxClassSize={maxClassSize}
-            initialOpeningGrades={initialOpeningGrades}
-            initialBuildoutGrades={initialBuildoutGrades}
-            initialRetentionRate={initialRetentionRate}
-            initialPlan={initialExpansionPlan}
-            onChange={handleExpansionChange}
-          />
-        </>
-      ) : (
-        <>
-          <div className="text-xs text-slate-400 italic">
-            Enrollment targets are calculated from your Grade Expansion Plan. Switch to the Grade Expansion Plan tab to adjust which grades are added each year.
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {[
-              { label: 'Year 1', value: expansionEnrollments.y1 },
-              { label: 'Year 2', value: expansionEnrollments.y2 },
-              { label: 'Year 3', value: expansionEnrollments.y3 },
-              { label: 'Year 4', value: expansionEnrollments.y4 },
-              { label: 'Year 5', value: expansionEnrollments.y5 },
-            ].map(({ label, value }) => (
-              <FormField key={label} label={label}>
-                {() => (
-                  <div className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold">
-                    {value > 0 ? value : '—'}
+                {expansionEnrollments.y1 === 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-700">
+                    No enrollment data yet. Switch to the Grade Expansion Plan tab to configure your grade rollout.
                   </div>
                 )}
-              </FormField>
-            ))}
-          </div>
-
-          {expansionEnrollments.y1 === 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-700">
-              No enrollment data yet. Switch to the Grade Expansion Plan tab to configure your grade rollout.
-            </div>
-          )}
-        </>
-      )}
+              </div>
+            ),
+          },
+        ]}
+      />
 
       {/* Tuition inputs — private/micro only */}
       {isTuitionBased && (
