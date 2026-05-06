@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { StartupFundingSource, PreOpeningExpense, PreOpeningTransaction } from '@/lib/types'
 import { useStateConfig } from '@/contexts/StateConfigContext'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { usePermissions } from '@/hooks/usePermissions'
 import Tooltip from '@/components/ui/Tooltip'
 import { DataTable, type DataTableColumn, type DataTableRow } from '@/components/ui/DataTable'
 import { formatCurrency } from '@/lib/format'
@@ -47,6 +48,7 @@ export default function CashFlowPage() {
     isModified,
   } = useScenario()
   const { config: pathwayConfig } = useStateConfig()
+  const { canEdit } = usePermissions()
   useDocumentTitle('Cash Flow', schoolName)
 
   const supabase = createClient()
@@ -642,22 +644,24 @@ export default function CashFlowPage() {
           </div>
 
           {/* Save action bar (sticky) */}
-          <div
-            data-testid="action-bar"
-            className="sticky bottom-0 z-10 -mx-4 md:-mx-8 px-4 md:px-8 py-3 mb-6 bg-white border-t border-slate-200"
-            style={{ boxShadow: 'var(--shadow-2)' }}
-          >
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-xs text-slate-500" />
-              <button
-                onClick={saveAll}
-                disabled={saving}
-                className="px-5 py-2.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
-              >
-                {saving ? 'Saving...' : 'Save All Changes'}
-              </button>
+          {canEdit && (
+            <div
+              data-testid="action-bar"
+              className="sticky bottom-0 z-10 -mx-4 md:-mx-8 px-4 md:px-8 py-3 mb-6 bg-white border-t border-slate-200"
+              style={{ boxShadow: 'var(--shadow-2)' }}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-xs text-slate-500" />
+                <button
+                  onClick={saveAll}
+                  disabled={saving}
+                  className="px-5 py-2.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save All Changes'}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Carry-forward note */}
           <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-600">

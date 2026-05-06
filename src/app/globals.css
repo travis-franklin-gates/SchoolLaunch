@@ -246,6 +246,51 @@ input[type="range"] {
   animation: streaming-blink 1s steps(1, end) infinite;
 }
 
+/* ===== VIEWER READ-ONLY MODE =====
+ * When a school_viewer is signed in, the dashboard root receives data-viewer="true".
+ * Editable form controls render as visual-only — pointer-events disabled and
+ * a light gray background. Buttons and read-only inputs are not affected here;
+ * surfaces hide save/edit affordances explicitly via `canEdit` checks.
+ */
+[data-viewer="true"] input[type="text"]:not([readonly]),
+[data-viewer="true"] input[type="number"]:not([readonly]),
+[data-viewer="true"] input[type="email"]:not([readonly]),
+[data-viewer="true"] input[type="password"]:not([readonly]),
+[data-viewer="true"] input[type="range"]:not([readonly]),
+[data-viewer="true"] input[type="checkbox"]:not([readonly]),
+[data-viewer="true"] textarea:not([readonly]),
+[data-viewer="true"] select:not(:disabled) {
+  pointer-events: none;
+  background: var(--bg-table-alt) !important;
+  cursor: not-allowed;
+  color: var(--text-secondary) !important;
+}
+
+[data-viewer="true"] [data-viewer-field] {
+  position: relative;
+}
+
+[data-viewer="true"] [data-viewer-field]::after {
+  content: 'View only — contact your school\'s admin to make changes';
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  background: var(--navy-dark);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms;
+  z-index: 10;
+}
+
+[data-viewer="true"] [data-viewer-field]:hover::after {
+  opacity: 1;
+}
+
 @keyframes slideInRight {
   from { opacity: 0; transform: translateX(100%); }
   to { opacity: 1; transform: translateX(0); }
