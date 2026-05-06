@@ -9,6 +9,8 @@ import type { SchoolProfile, StaffingPosition, BudgetProjection, GradeExpansionE
 import { getAssumptions } from '@/lib/types'
 import SchoolLogo from '@/components/SchoolLogo'
 import Tooltip from '@/components/ui/Tooltip'
+import { HealthTile } from '@/components/ui/HealthTile'
+import type { Status } from '@/components/ui/StatusBadge'
 
 interface SchoolCard {
   id: string
@@ -555,32 +557,47 @@ export default function PortfolioPage() {
         </div>
       </div>
 
-      {/* Enhanced Summary Tiles */}
+      {/* Summary Tiles */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-1">Total Schools</div>
-          <div className="text-xl font-bold text-slate-800">{totalSchools}</div>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-1">FPF Compliance</div>
-          <div className={`text-xl font-bold ${meetingStage1 === schoolsWithData.length ? 'text-emerald-600' : 'text-amber-600'}`}>{meetingStage1}/{schoolsWithData.length}</div>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-1">Avg Reserve Days</div>
-          <div className={`text-xl font-bold ${avgReserveDays >= 60 ? 'text-emerald-600' : avgReserveDays >= 30 ? 'text-amber-600' : 'text-red-600'}`}>{avgReserveDays}</div>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-1">Ready</div>
-          <div className="text-xl font-bold text-emerald-600">{readyCount}</div>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-1">In Progress</div>
-          <div className="text-xl font-bold text-amber-600">{inProgressCount}</div>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-1">Needs Attention</div>
-          <div className="text-xl font-bold text-red-600">{needsAttention}</div>
-        </div>
+        <HealthTile
+          label="Total Schools"
+          value={totalSchools}
+          status="na"
+          valueFormat="number"
+        />
+        <HealthTile
+          label="FPF Compliance"
+          value={meetingStage1}
+          status={schoolsWithData.length === 0 ? 'na' : meetingStage1 === schoolsWithData.length ? 'meets' : 'approaching'}
+          valueFormat="number"
+          sublabel={schoolsWithData.length > 0 ? `of ${schoolsWithData.length} with data` : 'no data yet'}
+        />
+        <HealthTile
+          label="Avg Reserve Days"
+          value={avgReserveDays}
+          status={
+            (avgReserveDays >= 60 ? 'meets' : avgReserveDays >= 30 ? 'approaching' : 'fails') as Status
+          }
+          valueFormat="days"
+        />
+        <HealthTile
+          label="Ready"
+          value={readyCount}
+          status={readyCount > 0 ? 'meets' : 'na'}
+          valueFormat="number"
+        />
+        <HealthTile
+          label="In Progress"
+          value={inProgressCount}
+          status={inProgressCount > 0 ? 'approaching' : 'na'}
+          valueFormat="number"
+        />
+        <HealthTile
+          label="Needs Attention"
+          value={needsAttention}
+          status={needsAttention > 0 ? 'fails' : 'meets'}
+          valueFormat="number"
+        />
       </div>
 
       {/* FPF Compliance Matrix (conditional) */}

@@ -1,7 +1,7 @@
 import { formatCurrency, formatPercent, formatDays } from '@/lib/format'
 import { StatusBadge, type Status } from './StatusBadge'
 
-export type ValueFormat = 'compact' | 'percent' | 'currency' | 'days'
+export type ValueFormat = 'compact' | 'percent' | 'currency' | 'days' | 'number'
 
 export interface HealthTileProps {
   label: string
@@ -22,6 +22,7 @@ function formatValue(value: number, format: ValueFormat): string {
   if (format === 'percent') return formatPercent(value)
   if (format === 'currency') return formatCurrency(value, 'accounting')
   if (format === 'days') return formatDays(value)
+  if (format === 'number') return Math.round(value).toLocaleString('en-US')
   return formatCurrency(value, 'compact')
 }
 
