@@ -263,21 +263,16 @@ ${criticalFindings ? `Key misalignments:\n${criticalFindings}` : 'No critical mi
         title="Advisory Panel"
         subtitle="Seven expert perspectives on your financial plan"
         actions={
-          <div className="flex items-center gap-3">
-            {data?.generatedAt && (
-              <span className="text-xs text-slate-400">Last analyzed {formatTimeAgo(data.generatedAt)}</span>
-            )}
-            <button
-              onClick={fetchAdvisory}
-              disabled={fetching}
-              className="px-4 py-2 text-sm font-medium text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
-            >
-              <svg className={`w-4 h-4 ${fetching ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              {fetching ? 'Analyzing...' : 'Refresh Analysis'}
-            </button>
-          </div>
+          <button
+            onClick={fetchAdvisory}
+            disabled={fetching}
+            className="px-4 py-2 text-sm font-medium text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+          >
+            <svg className={`w-4 h-4 ${fetching ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {fetching ? 'Analyzing...' : 'Refresh Analysis'}
+          </button>
         }
       />
 
@@ -338,6 +333,13 @@ ${criticalFindings ? `Key misalignments:\n${criticalFindings}` : 'No critical mi
           </div>
         </div>
       ) : null}
+
+      {/* Last-analyzed timestamp — inline above the agent cards */}
+      {data?.generatedAt && (
+        <div className="mb-3 text-xs text-slate-400">
+          Last analyzed {formatTimeAgo(data.generatedAt)}
+        </div>
+      )}
 
       {/* Agent cards */}
       <div data-tour="agent-cards" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
