@@ -279,6 +279,7 @@ export default function SettingsPage() {
             </select>
           </div>
         </div>
+        <SaveSectionButton saving={saving} canEdit={canEditIdentity} onClick={handleSave} />
       </div>
 
       {/* Section: Team Members (CEO only) */}
@@ -345,6 +346,7 @@ export default function SettingsPage() {
             <div className="flex justify-between"><span className="text-slate-600 font-semibold">Total</span><span className="font-bold text-slate-800">{fmt(totalGrants)}</span></div>
           </div>
         </div>
+        <SaveSectionButton saving={saving} canEdit={canEdit} onClick={handleSave} />
       </div>
 
       {/* Section: Grade Expansion Plan */}
@@ -362,6 +364,7 @@ export default function SettingsPage() {
           initialPlan={gradeExpansionPlan}
           onChange={handleExpansionChange}
         />
+        <SaveSectionButton saving={saving} canEdit={canEdit} onClick={handleSave} />
       </div>
 
       {/* Section 3: Programs */}
@@ -500,6 +503,7 @@ export default function SettingsPage() {
             </p>
           </div>
         </div>
+        <SaveSectionButton saving={saving} canEdit={canEdit} onClick={handleSave} />
       </div>
 
       {/* Section 4a: Small School Enhancement Thresholds */}
@@ -585,6 +589,7 @@ export default function SettingsPage() {
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
         </div>
+        <SaveSectionButton saving={saving} canEdit={canEdit} onClick={handleSave} />
       </div>
 
       {/* Section 5: Operations Benchmarks */}
@@ -676,26 +681,8 @@ export default function SettingsPage() {
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
           </div>
         </div>
+        <SaveSectionButton saving={saving} canEdit={canEdit} onClick={handleSave} />
       </div>
-
-      {canEdit && (
-        <div
-          data-testid="action-bar"
-          className="sticky bottom-0 z-10 -mx-4 md:-mx-8 px-4 md:px-8 py-3 bg-white border-t border-slate-200"
-          style={{ boxShadow: 'var(--shadow-2)' }}
-        >
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-xs text-slate-500" />
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-6 py-2.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Danger Zone — CEO only */}
       {canResetSchool && (
@@ -769,6 +756,35 @@ export default function SettingsPage() {
       )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function SaveSectionButton({
+  saving,
+  canEdit,
+  onClick,
+}: {
+  saving: boolean
+  canEdit: boolean
+  onClick: () => void
+}) {
+  if (!canEdit) return null
+  return (
+    <div className="mt-5 pt-4 border-t border-slate-100 flex justify-end">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={saving}
+        className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+      >
+        {saving && (
+          <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+            <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+          </svg>
+        )}
+        {saving ? 'Saving…' : 'Save'}
+      </button>
     </div>
   )
 }
