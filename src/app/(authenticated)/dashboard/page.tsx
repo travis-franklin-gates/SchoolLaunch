@@ -17,6 +17,7 @@ import type { Status } from '@/components/ui/StatusBadge'
 import { DataTable, type DataTableColumn, type DataTableRow } from '@/components/ui/DataTable'
 import { formatCurrency } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Callout } from '@/components/ui/Callout'
 
 type AdvisoryData = AdvisoryCache
 
@@ -430,16 +431,22 @@ export default function DashboardPage() {
       {(() => {
         const sc = isWaCharter ? scorecard : genericScorecard
         if (!sc) return null
+        const variant = sc.overallStatus === 'green' ? 'info' : sc.overallStatus === 'yellow' ? 'warn' : 'crit'
+        const title = sc.overallStatus === 'green'
+          ? (isWaCharter ? 'All FPF metrics meeting standards' : 'All health benchmarks meeting standards')
+          : sc.overallStatus === 'yellow'
+            ? (isWaCharter ? 'Stage 2 metrics need attention' : 'Some metrics in the watch range')
+            : (isWaCharter ? 'Stage 1 metrics failing' : 'Critical metrics need attention')
         return (
-          <div className={`mb-4 px-5 py-3 rounded-xl text-sm font-medium flex items-center justify-between ${
-            sc.overallStatus === 'green' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-              : sc.overallStatus === 'yellow' ? 'bg-amber-50 text-amber-700 border border-amber-200'
-              : 'bg-red-50 text-red-700 border border-red-200'
-          }`}>
-            <span>{sc.overallMessage}</span>
-            <Link href="/dashboard/scorecard" className="text-xs font-medium opacity-75 hover:opacity-100 transition-opacity whitespace-nowrap ml-4">
-              View Full {isWaCharter ? 'Scorecard' : 'Health Report'} &rarr;
-            </Link>
+          <div className="mb-4">
+            <Callout variant={variant} title={title}>
+              <div className="flex items-center justify-between gap-4">
+                <span>{sc.overallMessage}</span>
+                <Link href="/dashboard/scorecard" className="text-xs font-medium opacity-75 hover:opacity-100 transition-opacity whitespace-nowrap shrink-0">
+                  View Full {isWaCharter ? 'Scorecard' : 'Health Report'} &rarr;
+                </Link>
+              </div>
+            </Callout>
           </div>
         )
       })()}
