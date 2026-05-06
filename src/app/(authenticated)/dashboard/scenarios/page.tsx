@@ -9,6 +9,7 @@ import Tooltip from '@/components/ui/Tooltip'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { formatCurrency } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Callout } from '@/components/ui/Callout'
 
 interface ScenarioRecord {
   id: string
@@ -277,9 +278,19 @@ export default function ScenariosPage() {
       />
 
       {stale && (
-        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-700 flex items-center justify-between">
-          <span>Your base financial model has changed since these scenarios were last calculated.</span>
-          <button onClick={handleCalculateAll} className="font-medium underline hover:text-amber-900 ml-4 whitespace-nowrap">Recalculate All Scenarios</button>
+        <div className="mb-4">
+          <Callout variant="warn" title="Scenarios out of sync">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <span>Your base financial model has changed since these scenarios were last calculated.</span>
+              <button
+                onClick={handleCalculateAll}
+                disabled={calculating}
+                className="px-3 py-1.5 text-xs font-semibold rounded-md bg-amber-600 text-white hover:bg-amber-700 transition-colors disabled:opacity-50 whitespace-nowrap shrink-0"
+              >
+                {calculating ? 'Recalculating...' : 'Recalculate All Scenarios'}
+              </button>
+            </div>
+          </Callout>
         </div>
       )}
 
