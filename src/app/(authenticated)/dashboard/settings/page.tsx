@@ -670,13 +670,22 @@ export default function SettingsPage() {
       </div>
 
       {canEdit && (
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="px-6 py-2.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
+        <div
+          data-testid="action-bar"
+          className="sticky bottom-0 z-10 -mx-4 md:-mx-8 px-4 md:px-8 py-3 bg-white border-t border-slate-200"
+          style={{ boxShadow: 'var(--shadow-2)' }}
         >
-          {saving ? 'Saving...' : 'Save Changes'}
-        </button>
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-xs text-slate-500" />
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-6 py-2.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Danger Zone — CEO only */}

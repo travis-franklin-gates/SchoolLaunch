@@ -650,15 +650,22 @@ export default function CashFlowPage() {
             </div>
           </div>
 
-          {/* Save button */}
-          <div className="flex gap-3 mb-6">
-            <button
-              onClick={saveAll}
-              disabled={saving}
-              className="px-5 py-2.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Save All Changes'}
-            </button>
+          {/* Save action bar (sticky) */}
+          <div
+            data-testid="action-bar"
+            className="sticky bottom-0 z-10 -mx-4 md:-mx-8 px-4 md:px-8 py-3 mb-6 bg-white border-t border-slate-200"
+            style={{ boxShadow: 'var(--shadow-2)' }}
+          >
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-xs text-slate-500" />
+              <button
+                onClick={saveAll}
+                disabled={saving}
+                className="px-5 py-2.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save All Changes'}
+              </button>
+            </div>
           </div>
 
           {/* Carry-forward note */}

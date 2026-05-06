@@ -665,15 +665,6 @@ export default function StaffingPage() {
             <span className="text-[10px] opacity-70 ml-1">(Y1)</span>
           </div>
         }
-        actions={canEdit ? (
-          <button
-            data-tour="add-position"
-            onClick={() => addPosition()}
-            className="px-3 py-1.5 text-sm font-medium text-teal-600 border border-teal-300 rounded-lg hover:bg-teal-50 transition-colors"
-          >
-            + Add Position
-          </button>
-        ) : null}
       />
 
       {/* Enrollment context row */}
@@ -792,14 +783,30 @@ export default function StaffingPage() {
       </div>
 
       {canEdit && (
-        <div className="flex gap-3">
-          <button
-            onClick={save}
-            disabled={saving}
-            className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
+        <div
+          data-testid="action-bar"
+          className="sticky bottom-0 z-10 -mx-4 md:-mx-8 px-4 md:px-8 py-3 mt-4 bg-white border-t border-slate-200"
+          style={{ boxShadow: 'var(--shadow-2)' }}
+        >
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-xs text-slate-500" />
+            <div className="flex items-center gap-3">
+              <button
+                data-tour="add-position"
+                onClick={() => addPosition()}
+                className="px-3 py-1.5 text-sm font-medium text-teal-600 border border-teal-300 rounded-lg hover:bg-teal-50 transition-colors"
+              >
+                + Add Position
+              </button>
+              <button
+                onClick={save}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
