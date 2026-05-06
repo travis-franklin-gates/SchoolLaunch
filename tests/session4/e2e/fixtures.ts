@@ -44,8 +44,9 @@ function loadEnvLocal(): void {
 
 export async function loginAs(page: Page, account: TestAccount): Promise<void> {
   await page.goto('/login')
-  await page.locator('#email').fill(account.email)
-  await page.locator('#password').fill(account.password)
+  // FormField generates ids via React useId(), so target by input type rather than id.
+  await page.locator('input[type="email"]').fill(account.email)
+  await page.locator('input[type="password"]').fill(account.password)
   await Promise.all([
     page.waitForURL(/\/(dashboard|select-school|onboarding|portfolio)/, { timeout: 30_000 }),
     page.locator('button[type="submit"]').first().click(),
