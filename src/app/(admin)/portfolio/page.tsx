@@ -701,27 +701,47 @@ export default function PortfolioPage() {
         </div>
       </div>
 
-      {/* Filter pills */}
-      <div className="flex flex-wrap gap-2 mb-4">
+      {/* Filter chips */}
+      <div role="radiogroup" aria-label="Filter schools" className="flex flex-wrap gap-2 mb-4">
         {[
           { key: 'all', label: 'All', count: schools.length },
           { key: 'needsAttention', label: 'Needs Attention', count: needsAttentionCount },
           { key: 'onTrack', label: 'On Track', count: onTrackCount },
           { key: 'notStarted', label: 'Not Started', count: notStartedCount2 },
           { key: 'scenariosMissing', label: 'Scenarios Missing', count: scenariosMissingCount },
-        ].map(f => (
-          <button
-            key={f.key}
-            onClick={() => setActiveFilter(f.key)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-              activeFilter === f.key
-                ? 'bg-teal-600 text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            {f.label} ({f.count})
-          </button>
-        ))}
+        ].map(f => {
+          const active = activeFilter === f.key
+          return (
+            <button
+              key={f.key}
+              role="radio"
+              aria-checked={active}
+              onClick={() => setActiveFilter(f.key)}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                active
+                  ? 'text-white border-transparent'
+                  : 'bg-white border-slate-200 hover:border-slate-300'
+              }`}
+              style={
+                active
+                  ? { background: 'var(--navy-dark)' }
+                  : { color: 'var(--text-secondary)' }
+              }
+            >
+              <span>{f.label}</span>
+              <span
+                className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-semibold font-tabular"
+                style={
+                  active
+                    ? { background: 'rgba(255, 255, 255, 0.18)', color: '#fff' }
+                    : { background: 'var(--bg-table-alt)', color: 'var(--text-tertiary)' }
+                }
+              >
+                {f.count}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       {/* TABLE VIEW */}
