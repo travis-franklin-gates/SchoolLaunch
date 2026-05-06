@@ -1,3 +1,5 @@
+import { ToastProvider } from '@/components/ui/Toast'
+
 export default function OnboardingLayout({
   children,
 }: {
@@ -8,6 +10,7 @@ export default function OnboardingLayout({
       <main className="p-4 md:p-8">
         {children}
       </main>
+      <ToastProvider />
     </div>
   )
 }

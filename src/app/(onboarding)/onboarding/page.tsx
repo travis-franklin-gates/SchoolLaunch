@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { toast } from '@/components/ui/Toast'
 import { calcBenefits, calcCommissionRevenue, calcSmallSchoolEnhancementFromGrades } from '@/lib/calculations'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import StepIdentity from '@/components/onboarding/StepIdentity'
@@ -129,6 +130,8 @@ function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 }
 
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+
 export default function OnboardingPage() {
   const [step, setStep] = useState(-1) // -1 = welcome screen
   const [data, setData] = useState<WizardData>(initialWizardData)
@@ -137,8 +140,37 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [completed, setCompleted] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const router = useRouter()
   const supabase = createClient()
+
+  // Wrap a save attempt to drive the saveStatus indicator. Re-throws on failure
+  // so the caller can decide whether to advance the step or stay put.
+  const trackSave = useCallback(async <T,>(work: () => Promise<T>): Promise<T> => {
+    if (savedTimerRef.current) {
+      clearTimeout(savedTimerRef.current)
+      savedTimerRef.current = null
+    }
+    setSaveStatus('saving')
+    try {
+      const result = await work()
+      setSaveStatus('saved')
+      savedTimerRef.current = setTimeout(() => {
+        setSaveStatus('idle')
+        savedTimerRef.current = null
+      }, 3000)
+      return result
+    } catch (e) {
+      setSaveStatus('error')
+      toast.error('Save failed — please try again.')
+      throw e
+    }
+  }, [])
+
+  useEffect(() => () => {
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
+  }, [])
 
   // Load existing data on mount
   useEffect(() => {
@@ -262,37 +294,42 @@ export default function OnboardingPage() {
       ...tuitionDefaults,
     }))
 
-    // Update schools table with pathway fields
-    await supabase.from('schools').update({
-      name: stepData.schoolName,
-      pathway: stepData.pathway,
-      state: stepData.state,
-      school_type: stepData.schoolType,
-    }).eq('id', schoolId)
+    try {
+      await trackSave(async () => {
+        // Update schools table with pathway fields
+        const { error: schoolErr } = await supabase.from('schools').update({
+          name: stepData.schoolName,
+          pathway: stepData.pathway,
+          state: stepData.state,
+          school_type: stepData.schoolType,
+        }).eq('id', schoolId)
+        if (schoolErr) throw schoolErr
 
-    // Read existing financial_assumptions to merge regionalization_factor
-    const { data: existingProfile } = await supabase
-      .from('school_profiles')
-      .select('financial_assumptions')
-      .eq('school_id', schoolId)
-      .single()
+        // Read existing financial_assumptions to merge regionalization_factor
+        const { data: existingProfile } = await supabase
+          .from('school_profiles')
+          .select('financial_assumptions')
+          .eq('school_id', schoolId)
+          .single()
 
-    const existingFa = existingProfile?.financial_assumptions || {}
-    const updatedFa = { ...existingFa, regionalization_factor: stepData.regionalizationFactor }
+        const existingFa = existingProfile?.financial_assumptions || {}
+        const updatedFa = { ...existingFa, regionalization_factor: stepData.regionalizationFactor }
 
-    await supabase.from('school_profiles').upsert({
-      school_id: schoolId,
-      region: stepData.region,
-      planned_open_year: stepData.plannedOpenYear,
-      grade_config: stepData.gradeConfig,
-      opening_grades: stepData.foundingGrades,
-      buildout_grades: stepData.buildoutGrades,
-      financial_assumptions: updatedFa,
-      fiscal_year_start_month: stepData.fiscalYearStartMonth,
-    }, { onConflict: 'school_id' })
-
-    setStep(1)
-  }, [schoolId, supabase])
+        const { error: profileErr } = await supabase.from('school_profiles').upsert({
+          school_id: schoolId,
+          region: stepData.region,
+          planned_open_year: stepData.plannedOpenYear,
+          grade_config: stepData.gradeConfig,
+          opening_grades: stepData.foundingGrades,
+          buildout_grades: stepData.buildoutGrades,
+          financial_assumptions: updatedFa,
+          fiscal_year_start_month: stepData.fiscalYearStartMonth,
+        }, { onConflict: 'school_id' })
+        if (profileErr) throw profileErr
+      })
+      setStep(1)
+    } catch { /* trackSave already toasted */ }
+  }, [schoolId, supabase, trackSave])
 
   const saveStep2 = useCallback(async (stepData: {
     enrollmentY1: number; maxClassSize: number;
@@ -339,39 +376,49 @@ export default function OnboardingPage() {
       profileUpdate.retention_rate = stepData.retentionRate
     }
 
-    await supabase.from('school_profiles').upsert(profileUpdate, { onConflict: 'school_id' })
+    try {
+      await trackSave(async () => {
+        const { error: profileErr } = await supabase.from('school_profiles').upsert(profileUpdate, { onConflict: 'school_id' })
+        if (profileErr) throw profileErr
 
-    // Save grade expansion plan if in expansion mode
-    if (stepData.enrollmentMode === 'grade_expansion' && stepData.expansionPlan && stepData.expansionPlan.length > 0) {
-      await supabase.from('grade_expansion_plan').delete().eq('school_id', schoolId)
-      const rows = stepData.expansionPlan.map((e) => ({
-        school_id: schoolId,
-        year: e.year,
-        grade_level: e.grade_level,
-        sections: e.sections,
-        students_per_section: e.students_per_section,
-        is_new_grade: e.is_new_grade,
-      }))
-      await supabase.from('grade_expansion_plan').insert(rows)
-    }
-
-    setStep(2)
-  }, [schoolId, supabase])
+        // Save grade expansion plan if in expansion mode
+        if (stepData.enrollmentMode === 'grade_expansion' && stepData.expansionPlan && stepData.expansionPlan.length > 0) {
+          const { error: delErr } = await supabase.from('grade_expansion_plan').delete().eq('school_id', schoolId)
+          if (delErr) throw delErr
+          const rows = stepData.expansionPlan.map((e) => ({
+            school_id: schoolId,
+            year: e.year,
+            grade_level: e.grade_level,
+            sections: e.sections,
+            students_per_section: e.students_per_section,
+            is_new_grade: e.is_new_grade,
+          }))
+          const { error: insErr } = await supabase.from('grade_expansion_plan').insert(rows)
+          if (insErr) throw insErr
+        }
+      })
+      setStep(2)
+    } catch { /* trackSave already toasted */ }
+  }, [schoolId, supabase, trackSave])
 
   const saveStep3 = useCallback(async (stepData: { pctFrl: number; pctIep: number; pctEll: number; pctHicap: number }) => {
     if (!schoolId) return
     setData((prev) => ({ ...prev, ...stepData }))
 
-    await supabase.from('school_profiles').upsert({
-      school_id: schoolId,
-      pct_frl: stepData.pctFrl,
-      pct_iep: stepData.pctIep,
-      pct_ell: stepData.pctEll,
-      pct_hicap: stepData.pctHicap,
-    }, { onConflict: 'school_id' })
-
-    setStep(3)
-  }, [schoolId, supabase])
+    try {
+      await trackSave(async () => {
+        const { error: profileErr } = await supabase.from('school_profiles').upsert({
+          school_id: schoolId,
+          pct_frl: stepData.pctFrl,
+          pct_iep: stepData.pctIep,
+          pct_ell: stepData.pctEll,
+          pct_hicap: stepData.pctHicap,
+        }, { onConflict: 'school_id' })
+        if (profileErr) throw profileErr
+      })
+      setStep(3)
+    } catch { /* trackSave already toasted */ }
+  }, [schoolId, supabase, trackSave])
 
   const skipDemographics = useCallback(() => {
     // Leave demographics at 0 and advance to staffing
@@ -383,28 +430,33 @@ export default function OnboardingPage() {
     if (!schoolId) return
     setData((prev) => ({ ...prev, positions }))
 
-    // Delete old positions for year 1, then insert new
-    await supabase.from('staffing_positions').delete().eq('school_id', schoolId).eq('year', 1)
+    try {
+      await trackSave(async () => {
+        // Delete old positions for year 1, then insert new
+        const { error: delErr } = await supabase.from('staffing_positions').delete().eq('school_id', schoolId).eq('year', 1)
+        if (delErr) throw delErr
 
-    const rows = positions.map((p, i) => ({
-      school_id: schoolId,
-      year: 1,
-      title: p.title,
-      category: p.category,
-      fte: p.fte,
-      annual_salary: p.salary,
-      position_type: p.positionType || null,
-      driver: p.driver || null,
-      classification: p.classification || null,
-      sort_order: i,
-    }))
+        const rows = positions.map((p, i) => ({
+          school_id: schoolId,
+          year: 1,
+          title: p.title,
+          category: p.category,
+          fte: p.fte,
+          annual_salary: p.salary,
+          position_type: p.positionType || null,
+          driver: p.driver || null,
+          classification: p.classification || null,
+          sort_order: i,
+        }))
 
-    if (rows.length > 0) {
-      await supabase.from('staffing_positions').insert(rows)
-    }
-
-    setStep(4)
-  }, [schoolId, supabase])
+        if (rows.length > 0) {
+          const { error: insErr } = await supabase.from('staffing_positions').insert(rows)
+          if (insErr) throw insErr
+        }
+      })
+      setStep(4)
+    } catch { /* trackSave already toasted */ }
+  }, [schoolId, supabase, trackSave])
 
   const completeOnboarding = useCallback(async (opsData: WizardData['operations'], startupFunding: StartupFundingSource[], customRevenue?: { key: string; label: string; amount: number }[]) => {
     if (!schoolId) return
@@ -639,6 +691,7 @@ export default function OnboardingPage() {
       <div className="text-center mb-6">
         <h2 className="text-[24px] font-semibold text-slate-900" style={{ fontFamily: 'var(--font-heading-var)' }}>{STEPS[step].label}</h2>
         <p className="text-[15px] text-slate-400 mt-1">Step {step + 1} of {STEPS.length}</p>
+        <SaveStatusIndicator status={saveStatus} />
       </div>
 
       {error && (
@@ -751,6 +804,51 @@ export default function OnboardingPage() {
           onBack={() => setStep(3)}
           saving={saving}
         />
+      )}
+    </div>
+  )
+}
+
+function SaveStatusIndicator({ status }: { status: SaveStatus }) {
+  if (status === 'idle') {
+    return <div aria-hidden="true" className="h-4 mt-2" />
+  }
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="mt-2 inline-flex items-center gap-1.5 text-xs"
+      style={{
+        color:
+          status === 'error' ? 'var(--rose-700)' :
+            status === 'saved' ? 'var(--teal-700)' :
+              'var(--text-tertiary)',
+      }}
+    >
+      {status === 'saving' && (
+        <>
+          <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+            <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+          </svg>
+          <span>Saving&hellip;</span>
+        </>
+      )}
+      {status === 'saved' && (
+        <>
+          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Saved</span>
+        </>
+      )}
+      {status === 'error' && (
+        <>
+          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" strokeWidth={2} />
+            <path d="M15 9l-6 6M9 9l6 6" />
+          </svg>
+          <span>Save failed &mdash; press Continue again to retry.</span>
+        </>
       )}
     </div>
   )
