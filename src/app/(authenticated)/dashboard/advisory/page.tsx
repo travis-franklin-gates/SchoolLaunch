@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useStateConfig } from '@/contexts/StateConfigContext'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { AdvisorySkeleton } from '../_skeletons'
 
 function formatTimeAgo(iso: string): string {
   const now = Date.now()
@@ -233,7 +234,7 @@ ${criticalFindings ? `Key misalignments:\n${criticalFindings}` : 'No critical mi
   }, [loading, schoolId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
+    return <AdvisorySkeleton />
   }
 
   // Build alignment agent card if review exists

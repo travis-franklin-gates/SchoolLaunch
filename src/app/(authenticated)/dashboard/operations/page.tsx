@@ -10,6 +10,7 @@ import type { FinancialAssumptions } from '@/lib/types'
 import { DataTable, type DataTableColumn, type DataTableRow } from '@/components/ui/DataTable'
 import { formatCurrency } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { OperationsSkeleton } from '../_skeletons'
 import { Callout, type CalloutVariant } from '@/components/ui/Callout'
 
 const fmt = (n: number) => formatCurrency(n, 'accounting')
@@ -273,7 +274,7 @@ export default function OperationsPage() {
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
+    return <OperationsSkeleton />
   }
 
   // Group rows

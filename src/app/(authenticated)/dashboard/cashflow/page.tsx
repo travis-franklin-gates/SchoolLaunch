@@ -11,6 +11,7 @@ import Tooltip from '@/components/ui/Tooltip'
 import { DataTable, type DataTableColumn, type DataTableRow } from '@/components/ui/DataTable'
 import { formatCurrency } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { CashflowSkeleton } from '../_skeletons'
 
 const fmt = (n: number) => formatCurrency(n, 'accounting')
 

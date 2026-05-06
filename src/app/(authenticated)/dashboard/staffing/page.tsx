@@ -10,6 +10,7 @@ import { expansionToEnrollmentArray } from '@/lib/gradeExpansion'
 import { usePermissions } from '@/hooks/usePermissions'
 import Tooltip from '@/components/ui/Tooltip'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { StaffingSkeleton } from '../_skeletons'
 import { Callout } from '@/components/ui/Callout'
 
 function fmt(n: number) {
@@ -615,7 +616,7 @@ export default function StaffingPage() {
   }
 
   if (loading || seeding) {
-    return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">{seeding ? 'Setting up default positions...' : 'Loading...'}</p></div>
+    return <StaffingSkeleton />
   }
 
   // Group positions by classification for display

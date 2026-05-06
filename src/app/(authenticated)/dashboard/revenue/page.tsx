@@ -14,6 +14,7 @@ import Tooltip from '@/components/ui/Tooltip'
 import { DataTable, type DataTableColumn, type DataTableRow } from '@/components/ui/DataTable'
 import { formatCurrency } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { RevenueSkeleton } from '../_skeletons'
 
 const fmt = (n: number) => formatCurrency(n, 'accounting')
 
@@ -315,7 +316,7 @@ export default function RevenuePage() {
   const groups = ['State & Local', 'Federal', 'State Categorical', 'Program Revenue']
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
+    return <RevenueSkeleton />
   }
 
   // Generic pathway: use GenericRevenueView component

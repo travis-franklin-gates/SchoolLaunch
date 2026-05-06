@@ -17,6 +17,7 @@ import type { Status } from '@/components/ui/StatusBadge'
 import { DataTable, type DataTableColumn, type DataTableRow } from '@/components/ui/DataTable'
 import { formatCurrency } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { OverviewSkeleton } from './_skeletons'
 import { Callout } from '@/components/ui/Callout'
 
 type AdvisoryData = AdvisoryCache
@@ -169,7 +170,7 @@ export default function DashboardPage() {
   }, [loading, schoolId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
+    return <OverviewSkeleton />
   }
 
   // Non-CEO users viewing a school that hasn't finished onboarding

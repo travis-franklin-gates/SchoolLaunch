@@ -9,6 +9,7 @@ import { useStateConfig } from '@/contexts/StateConfigContext'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { formatCurrency } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { MultiYearSkeleton } from '../_skeletons'
 
 const fmt = (n: number) => formatCurrency(n, 'accounting')
 
@@ -59,7 +60,7 @@ export default function MultiYearPage() {
   const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
+    return <MultiYearSkeleton />
   }
 
   const yrs = [1, 2, 3, 4, 5]

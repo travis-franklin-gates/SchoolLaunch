@@ -9,6 +9,7 @@ import Tooltip from '@/components/ui/Tooltip'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { formatCurrency } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { ScenariosSkeleton } from '../_skeletons'
 import { Callout } from '@/components/ui/Callout'
 
 interface ScenarioRecord {
@@ -224,7 +225,7 @@ export default function ScenariosPage() {
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
+    return <ScenariosSkeleton />
   }
 
   // Empty state

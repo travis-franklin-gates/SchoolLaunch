@@ -8,6 +8,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import GenericScorecard from '@/components/dashboard/GenericScorecard'
 import { StatusBadge, type Status } from '@/components/ui/StatusBadge'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { ScorecardSkeleton } from '../_skeletons'
 
 function fpfStatusToBadge(s: string): Status {
   if (s === 'meets') return 'meets'
@@ -51,7 +52,7 @@ export default function ScorecardPage() {
   }, [multiYear, preOpenCash, pathwayConfig, profile])
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
+    return <ScorecardSkeleton />
   }
 
   // Generic pathway: use GenericScorecard component

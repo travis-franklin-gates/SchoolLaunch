@@ -7,6 +7,7 @@ import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward, com
 import { useStateConfig } from '@/contexts/StateConfigContext'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { AskSkeleton } from '../_skeletons'
 
 interface Message {
   role: 'user' | 'assistant' | 'system'
@@ -141,14 +142,7 @@ export default function AskPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-slate-500 text-sm">Loading school data...</p>
-        </div>
-      </div>
-    )
+    return <AskSkeleton />
   }
 
   return (

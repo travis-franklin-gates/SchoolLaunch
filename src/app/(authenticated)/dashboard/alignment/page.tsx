@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { AlignmentSkeleton } from '../_skeletons'
 
 interface Misalignment {
   severity: 'critical' | 'important' | 'minor'
@@ -244,7 +245,7 @@ export default function AlignmentPage() {
   }
 
   if (loading || loadingSaved) {
-    return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
+    return <AlignmentSkeleton />
   }
 
   const displayResult = result
