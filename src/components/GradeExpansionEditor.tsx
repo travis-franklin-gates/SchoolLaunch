@@ -389,7 +389,7 @@ export default function GradeExpansionEditor({
                       <select
                         value={entry.sections}
                         onChange={(e) => updatePlanEntry(1, entry.grade_level, 'sections', Number(e.target.value))}
-                        className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent cursor-text"
                       >
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                           <option key={n} value={n}>{n}</option>
@@ -405,13 +405,18 @@ export default function GradeExpansionEditor({
                         onChange={(e) => updatePlanEntry(1, entry.grade_level, 'students_per_section', Number(e.target.value))}
                         readOnly={consistentClassSize}
                         tabIndex={consistentClassSize ? -1 : undefined}
-                        className={`w-16 text-center border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
-                          consistentClassSize ? 'bg-slate-100 text-slate-500 cursor-default' : ''
+                        className={`w-16 text-center border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent cursor-text ${
+                          consistentClassSize ? 'bg-slate-100 text-slate-500 cursor-default' : 'bg-white'
                         }`}
                       />
                     </td>
-                    <td className="px-3 py-2.5 text-right font-semibold text-slate-800">
-                      {entry.sections * entry.students_per_section}
+                    <td className="px-3 py-2.5">
+                      <span
+                        className="block text-right font-semibold rounded-md px-2 py-1.5 cursor-default"
+                        style={{ background: 'var(--bg-table-alt)', color: 'var(--text-secondary)' }}
+                      >
+                        {entry.sections * entry.students_per_section}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -502,7 +507,7 @@ export default function GradeExpansionEditor({
                           <select
                             value={entry.sections}
                             onChange={(e) => updatePlanEntry(year, entry.grade_level, 'sections', Number(e.target.value))}
-                            className="border border-slate-200 rounded px-1.5 py-1 text-xs text-center bg-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                            className="border border-slate-200 rounded px-1.5 py-1 text-xs text-center bg-white focus:ring-2 focus:ring-teal-500 focus:border-transparent cursor-text"
                           >
                             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                               <option key={n} value={n}>{n}</option>
@@ -518,13 +523,18 @@ export default function GradeExpansionEditor({
                             onChange={(e) => updatePlanEntry(year, entry.grade_level, 'students_per_section', Number(e.target.value))}
                             readOnly={consistentClassSize}
                             tabIndex={consistentClassSize ? -1 : undefined}
-                            className={`w-14 text-center border border-slate-200 rounded px-1.5 py-1 text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
-                              consistentClassSize ? 'bg-slate-100 text-slate-500 cursor-default' : ''
+                            className={`w-14 text-center border border-slate-200 rounded px-1.5 py-1 text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent cursor-text ${
+                              consistentClassSize ? 'bg-slate-100 text-slate-500 cursor-default' : 'bg-white'
                             }`}
                           />
                         </td>
-                        <td className="px-3 py-2 text-right text-slate-700 font-medium">
-                          {entry.sections * entry.students_per_section}
+                        <td className="px-3 py-2">
+                          <span
+                            className="block text-right font-medium rounded px-1.5 py-1 cursor-default"
+                            style={{ background: 'var(--bg-table-alt)', color: 'var(--text-secondary)' }}
+                          >
+                            {entry.sections * entry.students_per_section}
+                          </span>
                         </td>
                         <td className="px-3 py-2 text-slate-400 text-xs flex items-center gap-1">
                           {entry.is_new_grade ? `Year ${year}` : 'Year 1'}
