@@ -294,7 +294,15 @@ ${criticalFindings ? `Key misalignments:\n${criticalFindings}` : 'No critical mi
       {/* Briefing */}
       {fetching && !data ? (
         <div className="bg-white border-l-4 border-l-teal-600 border border-slate-200 rounded-xl p-6 mb-8">
-          <div className="h-4 animate-shimmer rounded w-48 mb-4" />
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Financial Advisor Briefing</h2>
+            <span role="status" aria-live="polite" className="inline-flex items-center gap-1.5 text-xs text-slate-500 normal-case tracking-normal">
+              <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+              </svg>
+              Generating&hellip;
+            </span>
+          </div>
           <div className="space-y-3">
             <div className="h-3 animate-shimmer rounded w-full" />
             <div className="h-3 animate-shimmer rounded w-full" />

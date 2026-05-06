@@ -151,6 +151,14 @@ export default function AskPage() {
         title="Ask SchoolLaunch"
         subtitle="Ask questions about your financial model in plain English"
       />
+      {streaming && (
+        <div role="status" aria-live="polite" className="mb-2 inline-flex items-center gap-1.5 text-xs text-slate-500">
+          <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+            <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+          </svg>
+          <span>Generating&hellip;</span>
+        </div>
+      )}
       {/* Messages */}
       <div data-tour="chat-area" className="flex-1 overflow-y-auto bg-white border border-slate-200 rounded-xl p-4 mb-4 space-y-4 sl-scroll">
         {messages.length === 0 ? (
@@ -198,14 +206,22 @@ export default function AskPage() {
                       : 'bg-white text-slate-700 border border-slate-200 rounded-2xl rounded-bl-sm'
                 }`}
               >
-                {msg.content ||
-                  (streaming && i === messages.length - 1 ? (
+                {msg.content ? (
+                  <>
+                    {msg.content}
+                    {streaming && msg.role === 'assistant' && i === messages.length - 1 && (
+                      <span className="streaming-cursor" aria-hidden="true">|</span>
+                    )}
+                  </>
+                ) : (
+                  streaming && i === messages.length - 1 ? (
                     <span className="inline-flex gap-1 items-center text-slate-400">
                       <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                       <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                       <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     </span>
-                  ) : null)}
+                  ) : null
+                )}
               </div>
             </div>
           ))

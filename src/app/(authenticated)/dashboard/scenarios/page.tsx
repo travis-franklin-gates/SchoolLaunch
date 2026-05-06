@@ -498,7 +498,17 @@ export default function ScenariosPage() {
       {hasResults && (
         <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide">AI Scenario Analysis</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide">AI Scenario Analysis</h2>
+              {aiLoading && (
+                <span role="status" aria-live="polite" className="inline-flex items-center gap-1.5 text-xs text-slate-500">
+                  <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                    <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+                  </svg>
+                  Generating&hellip;
+                </span>
+              )}
+            </div>
             <button
               onClick={handleAiAnalysis}
               disabled={aiLoading}
@@ -517,15 +527,24 @@ export default function ScenariosPage() {
           )}
           {aiAnalysis ? (
             <div className="text-sm text-slate-700 leading-relaxed space-y-3">
-              {aiAnalysis.split('\n\n').filter(Boolean).map((para, i) => (
-                <p key={i}>
-                  {para.split(/(\*\*[^*]+\*\*)/).map((seg, j) =>
-                    seg.startsWith('**') && seg.endsWith('**')
-                      ? <strong key={j} className="font-semibold text-slate-800">{seg.slice(2, -2)}</strong>
-                      : seg
-                  )}
-                </p>
-              ))}
+              {(() => {
+                const paras = aiAnalysis.split('\n\n').filter(Boolean)
+                return paras.map((para, i) => {
+                  const isLast = i === paras.length - 1
+                  return (
+                    <p key={i}>
+                      {para.split(/(\*\*[^*]+\*\*)/).map((seg, j) =>
+                        seg.startsWith('**') && seg.endsWith('**')
+                          ? <strong key={j} className="font-semibold text-slate-800">{seg.slice(2, -2)}</strong>
+                          : seg
+                      )}
+                      {aiLoading && isLast && (
+                        <span className="streaming-cursor" aria-hidden="true">|</span>
+                      )}
+                    </p>
+                  )
+                })
+              })()}
             </div>
           ) : !aiLoading ? (
             <p className="text-sm text-slate-400">Click the button above to generate an AI-powered analysis comparing your three scenarios.</p>
