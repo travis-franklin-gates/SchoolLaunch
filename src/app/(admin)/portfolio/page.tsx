@@ -939,25 +939,47 @@ export default function PortfolioPage() {
               : 0
             const gradeLabel = formatGradeTrajectory(school.openingGrades, school.buildoutGrades, school.gradeConfig)
 
+            const cardClasses = school.onboardingComplete
+              ? 'bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200'
+              : 'bg-slate-50/60 border border-dashed border-slate-300 rounded-xl overflow-hidden hover:border-slate-400 hover:bg-slate-50 transition-all duration-200'
             return (
-              <div key={school.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+              <Link
+                key={school.id}
+                href={`/portfolio/${school.id}`}
+                className={`${cardClasses} block`}
+                aria-label={school.onboardingComplete ? `View ${school.name}` : `View ${school.name} — setup incomplete`}
+              >
                 {/* Card header */}
                 <div className="p-5 border-b border-slate-100">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2.5">
                       <SchoolLogo name={school.name} logoUrl={school.logoUrl} size={32} />
-                      <h3 className="font-semibold text-slate-800">{school.name}</h3>
+                      <h3 className={`font-semibold ${school.onboardingComplete ? 'text-slate-800' : 'text-slate-600'}`}>{school.name}</h3>
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0 ml-2" {...(idx === 0 ? { 'data-tour': 'status-badge' } : {})}>
-                      <StatusBadge status={school.status} />
-                      {school.onboardingComplete && <ReadinessBadge issues={school.stage1Issues} />}
+                      {school.onboardingComplete ? (
+                        <>
+                          <StatusBadge status={school.status} />
+                          <ReadinessBadge issues={school.stage1Issues} />
+                        </>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 6v6l4 2" />
+                          </svg>
+                          Setup incomplete
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500">
                     {school.plannedOpenYear > 0 && (
                       <span className="font-medium text-slate-600">Opening Fall {school.plannedOpenYear}</span>
                     )}
-                    <span>{gradeLabel}</span>
+                    {school.openingGrades?.length || school.gradeConfig !== 'Not set' ? (
+                      <span>{gradeLabel}</span>
+                    ) : null}
                     {school.enrollmentY1 > 0 && <span>{school.enrollmentY1} students Year 1</span>}
                   </div>
                 </div>
@@ -1019,15 +1041,22 @@ export default function PortfolioPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="p-5 text-center text-sm text-slate-400">
-                    Onboarding not yet complete
+                  <div className="p-5 text-center">
+                    <div className="inline-flex items-center justify-center w-10 h-10 rounded-full mb-2" style={{ background: 'var(--bg-table-alt)' }}>
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-tertiary)' }}>
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 6v6l4 2" />
+                      </svg>
+                    </div>
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Awaiting founder setup</p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>Metrics will appear once onboarding is complete.</p>
                   </div>
                 )}
 
                 {/* Notes */}
                 <div className="border-t border-slate-100 px-5 py-3">
                   <button
-                    onClick={() => setNotesModal(school.id)}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setNotesModal(school.id) }}
                     className="text-xs font-medium text-slate-500 hover:text-teal-600 flex items-center gap-1.5 transition-colors"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1036,19 +1065,7 @@ export default function PortfolioPage() {
                     Notes ({school.notes.length})
                   </button>
                 </div>
-
-                {/* View details link */}
-                {school.onboardingComplete && (
-                  <div className="border-t border-slate-100 px-5 py-3">
-                    <Link
-                      href={`/portfolio/${school.id}`}
-                      className="text-sm text-teal-600 hover:text-teal-800 font-medium"
-                    >
-                      View Details
-                    </Link>
-                  </div>
-                )}
-              </div>
+              </Link>
             )
           })}
         </div>
