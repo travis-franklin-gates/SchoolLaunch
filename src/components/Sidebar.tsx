@@ -16,6 +16,12 @@ interface SidebarSchool {
   logo_url: string | null
 }
 
+interface PortfolioSchool {
+  school_id: string
+  school_name: string
+  logo_url: string | null
+}
+
 const ROLE_BADGE: Record<string, { label: string; className: string }> = {
   school_ceo: { label: 'Owner', className: 'bg-teal-500/20 text-teal-300' },
   school_editor: { label: 'Editor', className: 'bg-blue-500/20 text-blue-300' },
@@ -72,9 +78,11 @@ export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [schools, setSchools] = useState<SidebarSchool[]>([])
+  const [portfolioSchools, setPortfolioSchools] = useState<PortfolioSchool[]>([])
   const { role } = usePermissions()
   const { config: pathwayConfig } = useStateConfig()
-  const roleBadge = role && role !== 'org_admin' && role !== 'super_admin' ? ROLE_BADGE[role] : null
+  const isAdmin = role === 'org_admin' || role === 'super_admin'
+  const roleBadge = role && !isAdmin ? ROLE_BADGE[role] : null
 
   useEffect(() => {
     async function loadSchools() {
@@ -82,16 +90,39 @@ export default function Sidebar() {
       if (!user) return
       const { data: roles } = await supabase
         .from('user_roles')
-        .select('school_id, role')
+        .select('school_id, role, organization_id')
         .eq('user_id', user.id)
-        .in('role', ['school_ceo', 'school_editor', 'school_viewer'])
-      if (!roles || roles.length <= 1) return
-      const schoolIds = roles.map((r) => r.school_id).filter(Boolean)
+
+      if (!roles || roles.length === 0) return
+
+      // Admin path: load all schools in the org for the portfolio nav.
+      const adminRole = roles.find((r) => r.role === 'org_admin' || r.role === 'super_admin')
+      if (adminRole && adminRole.organization_id) {
+        const { data: orgSchools } = await supabase
+          .from('schools')
+          .select('id, name')
+          .eq('organization_id', adminRole.organization_id)
+          .order('name')
+        const schoolIds = (orgSchools || []).map((s) => s.id)
+        const { data: profiles } = schoolIds.length > 0
+          ? await supabase.from('school_profiles').select('school_id, logo_url').in('school_id', schoolIds)
+          : { data: [] }
+        setPortfolioSchools((orgSchools || []).map((s) => ({
+          school_id: s.id,
+          school_name: s.name,
+          logo_url: profiles?.find((p) => p.school_id === s.id)?.logo_url || null,
+        })))
+      }
+
+      // School-roles path: school switcher (only when ≥2 school memberships).
+      const schoolRoles = roles.filter((r) => ['school_ceo', 'school_editor', 'school_viewer'].includes(r.role))
+      if (schoolRoles.length <= 1) return
+      const schoolIds = schoolRoles.map((r) => r.school_id).filter(Boolean)
       const [{ data: schoolData }, { data: profiles }] = await Promise.all([
         supabase.from('schools').select('id, name').in('id', schoolIds),
         supabase.from('school_profiles').select('school_id, logo_url').in('school_id', schoolIds),
       ])
-      setSchools(roles.map((r) => ({
+      setSchools(schoolRoles.map((r) => ({
         school_id: r.school_id,
         school_name: schoolData?.find((s) => s.id === r.school_id)?.name || 'Unnamed School',
         role: r.role,
@@ -177,38 +208,46 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav data-tour="sidebar-nav" className="flex-1 px-3 py-3 overflow-y-auto sl-scroll">
-        {navGroups.map((group, gi) => (
-          <div key={gi}>
-            {gi > 0 && <div className="mx-3 my-2 border-t border-white/[0.06]" />}
-            <div className="space-y-0.5">
-              {group.items.map(({ href, label: rawLabel, icon }) => {
-                const label = (href === '/dashboard/scorecard' && pathwayConfig.pathway !== 'wa_charter')
-                  ? 'Financial Health'
-                  : rawLabel
-                const active = pathname === href
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 relative ${
-                      active
-                        ? 'text-white font-medium'
-                        : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
-                    }`}
-                    style={active ? { background: 'rgba(16, 185, 129, 0.1)' } : undefined}
-                  >
-                    {active && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-emerald-500" />
-                    )}
-                    <NavIcon d={icon} active={active} />
-                    <span style={{ fontFamily: 'var(--font-heading-var)' }}>{label}</span>
-                  </Link>
-                )
-              })}
+        {isAdmin ? (
+          <AdminNav
+            pathname={pathname}
+            portfolioSchools={portfolioSchools}
+            onNavigate={() => setMobileOpen(false)}
+          />
+        ) : (
+          navGroups.map((group, gi) => (
+            <div key={gi}>
+              {gi > 0 && <div className="mx-3 my-2 border-t border-white/[0.06]" />}
+              <div className="space-y-0.5">
+                {group.items.map(({ href, label: rawLabel, icon }) => {
+                  const label = (href === '/dashboard/scorecard' && pathwayConfig.pathway !== 'wa_charter')
+                    ? 'Financial Health'
+                    : rawLabel
+                  const active = pathname === href
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={() => setMobileOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 relative ${
+                        active
+                          ? 'text-white font-medium'
+                          : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                      }`}
+                      style={active ? { background: 'rgba(16, 185, 129, 0.1)' } : undefined}
+                    >
+                      {active && (
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-emerald-500" />
+                      )}
+                      <NavIcon d={icon} active={active} />
+                      <span style={{ fontFamily: 'var(--font-heading-var)' }}>{label}</span>
+                    </Link>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </nav>
 
       {/* Bottom */}
@@ -257,5 +296,64 @@ export default function Sidebar() {
         {sidebarContent}
       </aside>
     </>
+  )
+}
+
+function AdminNav({
+  pathname,
+  portfolioSchools,
+  onNavigate,
+}: {
+  pathname: string
+  portfolioSchools: PortfolioSchool[]
+  onNavigate: () => void
+}) {
+  const portfolioActive = pathname === '/portfolio'
+  const portfolioIcon = 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2H7a2 2 0 00-2 2v2m4-3V5a2 2 0 012-2h2a2 2 0 012 2v3'
+  return (
+    <div className="space-y-0.5">
+      <Link
+        href="/portfolio"
+        onClick={onNavigate}
+        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 relative ${
+          portfolioActive ? 'text-white font-medium' : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+        }`}
+        style={portfolioActive ? { background: 'rgba(16, 185, 129, 0.1)' } : undefined}
+      >
+        {portfolioActive && (
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-emerald-500" />
+        )}
+        <NavIcon d={portfolioIcon} active={portfolioActive} />
+        <span style={{ fontFamily: 'var(--font-heading-var)' }}>Portfolio</span>
+      </Link>
+
+      {portfolioSchools.length > 0 && (
+        <>
+          <div className="mx-3 my-2 border-t border-white/[0.06]" />
+          <div className="px-3 mb-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-500">
+            Schools
+          </div>
+          <div className="space-y-0.5">
+            {portfolioSchools.map((s) => {
+              const href = `/portfolio/${s.school_id}`
+              const active = pathname === href
+              return (
+                <Link
+                  key={s.school_id}
+                  href={href}
+                  onClick={onNavigate}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    active ? 'text-white bg-white/[0.06]' : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <SchoolLogo name={s.school_name} logoUrl={s.logo_url} size={24} />
+                  <span className="truncate" style={{ fontFamily: 'var(--font-heading-var)' }}>{s.school_name}</span>
+                </Link>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </div>
   )
 }
