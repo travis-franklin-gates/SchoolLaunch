@@ -12,6 +12,7 @@ import { formatCurrency } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { OperationsSkeleton } from '../_skeletons'
 import { Callout, type CalloutVariant } from '@/components/ui/Callout'
+import { toast } from '@/components/ui/Toast'
 
 const fmt = (n: number) => formatCurrency(n, 'accounting')
 
@@ -84,7 +85,6 @@ export default function OperationsPage() {
   useDocumentTitle('Operations', schoolName)
   const [rows, setRows] = useState<OpsRow[]>([])
   const [saving, setSaving] = useState(false)
-  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [advisoriesOpen, setAdvisoriesOpen] = useState(false)
   // Local overrides for per-pupil rates (synced to settings on save)
   const [rateOverrides, setRateOverrides] = useState<Partial<Record<keyof FinancialAssumptions, number>>>({})
@@ -217,7 +217,6 @@ export default function OperationsPage() {
   async function save() {
     if (!schoolId) return
     setSaving(true)
-    setToast(null)
 
     let hadError = false
 
@@ -264,12 +263,11 @@ export default function OperationsPage() {
 
     setSaving(false)
     if (hadError) {
-      setToast({ type: 'error', message: 'Some operations failed to save. Check console for details.' })
+      toast.error('Save failed — changes not saved. Check console for details.', { duration: Infinity })
     } else {
-      setToast({ type: 'success', message: 'Operations saved successfully.' })
+      toast.success('Saved')
       setRateOverrides({})
       await reload()
-      setTimeout(() => setToast(null), 3000)
     }
   }
 
@@ -295,14 +293,6 @@ export default function OperationsPage() {
         title="Operations"
         subtitle="Non-personnel expenses for Year 1. Edit per-unit rates or totals — changes sync to Settings on save."
       />
-
-      {toast && (
-        <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium animate-slide-in-right ${
-          toast.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-        }`}>
-          {toast.message}
-        </div>
-      )}
 
       {isModified && (
         <div className="mb-4 bg-teal-50 border border-teal-200 rounded-lg px-4 py-3 text-sm text-teal-700">

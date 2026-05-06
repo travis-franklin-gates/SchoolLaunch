@@ -12,6 +12,7 @@ import Tooltip from '@/components/ui/Tooltip'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { StaffingSkeleton } from '../_skeletons'
 import { Callout } from '@/components/ui/Callout'
+import { toast } from '@/components/ui/Toast'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -273,7 +274,6 @@ export default function StaffingPage() {
   const [saving, setSaving] = useState(false)
   const [seeding, setSeeding] = useState(false)
   const seedingRef = useRef(false)
-  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const supabase = createClient()
   const benefitsRate = assumptions.benefits_load_pct / 100
   const salaryEscalator = assumptions.salary_escalator_pct / 100
@@ -548,7 +548,6 @@ export default function StaffingPage() {
   async function save() {
     if (!schoolId) return
     setSaving(true)
-    setToast(null)
 
     const { error: delError } = await supabase
       .from('staffing_positions')
@@ -558,7 +557,7 @@ export default function StaffingPage() {
     if (delError) {
       console.error('Delete staffing failed:', delError)
       setSaving(false)
-      setToast({ type: 'error', message: `Failed to save: ${delError.message}` })
+      toast.error(`Save failed — changes not saved: ${delError.message}`, { duration: Infinity })
       return
     }
 
@@ -601,7 +600,7 @@ export default function StaffingPage() {
       if (insertError) {
         console.error('Insert staffing failed:', insertError)
         setSaving(false)
-        setToast({ type: 'error', message: `Failed to save positions: ${insertError.message}` })
+        toast.error(`Save failed — changes not saved: ${insertError.message}`, { duration: Infinity })
         return
       }
     }
@@ -610,9 +609,8 @@ export default function StaffingPage() {
     // no Total Personnel row to maintain in budget_projections.
 
     setSaving(false)
-    setToast({ type: 'success', message: 'Staffing changes saved successfully.' })
+    toast.success('Saved')
     await reload()
-    setTimeout(() => setToast(null), 3000)
   }
 
   if (loading || seeding) {
@@ -632,14 +630,6 @@ export default function StaffingPage() {
 
   return (
     <div className="animate-fade-in">
-      {toast && (
-        <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium animate-slide-in-right ${
-          toast.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-        }`}>
-          {toast.message}
-        </div>
-      )}
-
       {!canEdit && (
         <div className="mb-4 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-600">
           You have view-only access. Contact the school owner to request edit permissions.

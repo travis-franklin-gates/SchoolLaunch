@@ -12,6 +12,7 @@ import { DataTable, type DataTableColumn, type DataTableRow } from '@/components
 import { formatCurrency } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CashflowSkeleton } from '../_skeletons'
+import { toast } from '@/components/ui/Toast'
 
 const fmt = (n: number) => formatCurrency(n, 'accounting')
 
@@ -51,7 +52,6 @@ export default function CashFlowPage() {
   const supabase = createClient()
   const [view, setView] = useState<'year0' | 'year1'>('year0')
   const [saving, setSaving] = useState(false)
-  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set())
 
   // Load expenses from profile or use defaults
@@ -245,7 +245,6 @@ export default function CashFlowPage() {
   const saveAll = useCallback(async () => {
     if (!schoolId) return
     setSaving(true)
-    setToast(null)
 
     const { error } = await supabase
       .from('school_profiles')
@@ -256,29 +255,20 @@ export default function CashFlowPage() {
       .eq('school_id', schoolId)
 
     if (error) {
-      setToast({ type: 'error', message: `Failed to save: ${error.message}` })
+      toast.error(`Save failed — changes not saved: ${error.message}`, { duration: Infinity })
     } else {
-      setToast({ type: 'success', message: 'Pre-opening data saved.' })
+      toast.success('Saved')
       await reload()
-      setTimeout(() => setToast(null), 3000)
     }
     setSaving(false)
   }, [schoolId, expenses, transactions, supabase, reload])
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-[400px]"><p className="text-slate-500">Loading...</p></div>
+    return <CashflowSkeleton />
   }
 
   return (
     <div className="animate-fade-in">
-      {toast && (
-        <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium animate-slide-in-right ${
-          toast.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-        }`}>
-          {toast.message}
-        </div>
-      )}
-
       <PageHeader
         title="Cash Flow"
         subtitle={pathwayConfig.pathway === 'wa_charter'

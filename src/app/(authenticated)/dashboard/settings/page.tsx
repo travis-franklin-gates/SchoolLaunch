@@ -16,6 +16,7 @@ import { useStateConfig } from '@/contexts/StateConfigContext'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SettingsSkeleton } from '../_skeletons'
+import { toast } from '@/components/ui/Toast'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -50,7 +51,6 @@ export default function SettingsPage() {
 
   const router = useRouter()
   const [saving, setSaving] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
   const [showResetModal, setShowResetModal] = useState(false)
   const [resetConfirmText, setResetConfirmText] = useState('')
   const [resetting, setResetting] = useState(false)
@@ -123,7 +123,6 @@ export default function SettingsPage() {
   async function handleSave() {
     if (!schoolId) return
     setSaving(true)
-    setToast(null)
 
     // Enforce pathway-level authorizer fee lock (e.g., WA Commission contract = 3%, non-negotiable).
     const faToSave: FinancialAssumptions = pathwayConfig.authorizer_fee_editable
@@ -173,12 +172,11 @@ export default function SettingsPage() {
 
     setSaving(false)
     if (schoolRes.error || profileRes.error) {
-      setToast('Error saving changes. Please try again.')
+      toast.error('Save failed — changes not saved. Please try again.', { duration: Infinity })
       console.error('Settings save error:', schoolRes.error, profileRes.error)
     } else {
-      setToast('Settings saved successfully.')
+      toast.success('Saved')
       await reload()
-      setTimeout(() => setToast(null), 3000)
     }
   }
 
@@ -194,14 +192,6 @@ export default function SettingsPage() {
           subtitle="School profile, demographics, financial assumptions, and team management."
         />
       </div>
-
-      {toast && (
-        <div className={`mb-6 px-4 py-3 rounded-lg text-sm font-medium animate-slide-in-right ${
-          toast.includes('Error') ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-        }`}>
-          {toast}
-        </div>
-      )}
 
       {!canEdit && (
         <div className="mb-4 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-600">
@@ -746,7 +736,7 @@ export default function SettingsPage() {
                     setResetting(false)
                     setShowResetModal(false)
                     setResetConfirmText('')
-                    setToast(`Error: ${err instanceof Error ? err.message : 'Reset failed'}`)
+                    toast.error(`Reset failed: ${err instanceof Error ? err.message : 'unknown error'}`, { duration: Infinity })
                   }
                 }}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"

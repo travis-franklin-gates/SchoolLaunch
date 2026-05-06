@@ -7,6 +7,7 @@ import TourRunner from '@/components/tour/TourRunner'
 import HelpButton from '@/components/tour/HelpButton'
 import TourBanner from '@/components/tour/TourBanner'
 import { StateConfigProvider } from '@/contexts/StateConfigContext'
+import { ToastProvider } from '@/components/ui/Toast'
 
 export default function AuthenticatedLayout({
   children,
@@ -26,6 +27,7 @@ export default function AuthenticatedLayout({
           <Suspense fallback={null}>
             <TourRunner />
           </Suspense>
+          <ToastProvider />
         </div>
       </TourProvider>
     </StateConfigProvider>
