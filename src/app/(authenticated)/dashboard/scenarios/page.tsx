@@ -230,24 +230,35 @@ export default function ScenariosPage() {
   // Empty state
   if (scenarios.length === 0) {
     return (
-      <div className="animate-fade-in flex items-center justify-center min-h-[400px]">
-        <div className="text-center max-w-md">
-          <div className="w-16 h-16 bg-teal-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-            </svg>
+      <div className="animate-fade-in">
+        <PageHeader
+          title="Scenario Engine"
+          subtitle="Model conservative, base, and optimistic scenarios side-by-side."
+          badges={
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+              Sandbox · changes don&apos;t affect your real model
+            </span>
+          }
+        />
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center max-w-md">
+            <div className="w-16 h-16 bg-teal-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold text-slate-800 mb-2" style={{ fontFamily: 'var(--font-heading-var)' }}>Stress-Test Your Financial Model</h2>
+            <p className="text-sm text-slate-500 mb-6">
+              Model conservative, base, and optimistic scenarios to show the Commission you&apos;ve planned for different outcomes. We&apos;ll start with smart defaults based on your current financial plan.
+            </p>
+            <button
+              onClick={handleSeed}
+              disabled={seeding}
+              className="bg-teal-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-teal-700 transition-colors disabled:opacity-50"
+            >
+              {seeding ? 'Building Scenarios...' : 'Build Scenarios'}
+            </button>
           </div>
-          <h2 className="text-xl font-semibold text-slate-800 mb-2" style={{ fontFamily: 'var(--font-heading-var)' }}>Stress-Test Your Financial Model</h2>
-          <p className="text-sm text-slate-500 mb-6">
-            Model conservative, base, and optimistic scenarios to show the Commission you&apos;ve planned for different outcomes. We&apos;ll start with smart defaults based on your current financial plan.
-          </p>
-          <button
-            onClick={handleSeed}
-            disabled={seeding}
-            className="bg-teal-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-teal-700 transition-colors disabled:opacity-50"
-          >
-            {seeding ? 'Building Scenarios...' : 'Build Scenarios'}
-          </button>
         </div>
       </div>
     )
