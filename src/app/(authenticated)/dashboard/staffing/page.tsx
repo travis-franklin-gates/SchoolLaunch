@@ -10,6 +10,7 @@ import { expansionToEnrollmentArray } from '@/lib/gradeExpansion'
 import { usePermissions } from '@/hooks/usePermissions'
 import Tooltip from '@/components/ui/Tooltip'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Callout } from '@/components/ui/Callout'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -685,6 +686,23 @@ export default function StaffingPage() {
           <span className="ml-auto">Salary escalator: {(salaryEscalator * 100).toFixed(1)}%/yr</span>
         )}
       </div>
+
+      {/* Personnel-% advisory — fires above 80% of revenue, escalates above 85% */}
+      {(() => {
+        const pct = Number(personnelPctY1)
+        if (pct <= 80) return null
+        const variant = pct > 85 ? 'crit' : 'warn'
+        const title = `Personnel at ${pct.toFixed(1)}% of Year 1 revenue`
+        return (
+          <div className="mb-4">
+            <Callout variant={variant} title={title}>
+              {pct > 85
+                ? 'Personnel costs are well above the healthy 72–78% range — most charters cannot sustain this load without enrollment growth or revenue offsets.'
+                : 'Personnel costs exceed the healthy 72–78% range. Plan reviewers will look closely at staffing decisions at this level.'}
+            </Callout>
+          </div>
+        )
+      })()}
 
       <div data-tour="staffing-table" className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-4">
         <div className="overflow-x-auto">
