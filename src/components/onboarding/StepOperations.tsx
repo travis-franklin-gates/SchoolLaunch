@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { calcCommissionRevenue, calcAuthorizerFeeCommission, calcSmallSchoolEnhancementFromGrades } from '@/lib/calculations'
+import { FormField } from '@/components/ui/FormField'
 import { stateApportionmentBase } from '@/lib/budgetEngine'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import type { StartupFundingSource } from '@/lib/types'
@@ -41,6 +42,42 @@ interface Props {
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+}
+
+function CheckboxRow({
+  id,
+  checked,
+  onChange,
+  textClassName,
+  containerClassName,
+  helperText,
+  children,
+}: {
+  id: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+  textClassName: string
+  containerClassName?: string
+  helperText?: string
+  children: React.ReactNode
+}) {
+  const labelId = `${id}-label`
+  return (
+    <div className={containerClassName ? `flex items-center gap-3 ${containerClassName}` : 'flex items-center gap-2 mt-3'}>
+      <input
+        type="checkbox"
+        id={id}
+        aria-labelledby={labelId}
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="w-4 h-4 accent-teal-600"
+      />
+      <div>
+        <span id={labelId} className={textClassName}>{children}</span>
+        {helperText && <p className="text-xs text-slate-400">{helperText}</p>}
+      </div>
+    </div>
+  )
 }
 
 export const defaultOperationsData: OperationsData = {
@@ -392,55 +429,59 @@ export default function StepOperations({
 
         {facilityMode === 'sqft' ? (
           <div className={`grid grid-cols-2 gap-4 ${facilityEstimate ? 'opacity-50 pointer-events-none' : ''}`}>
-            <div>
-              <label className="block text-xs text-slate-500 mb-1">Square Footage</label>
-              <input
-                type="number"
-                value={facilitySqft}
-                onChange={(e) => setFacilitySqft(Number(e.target.value))}
-                disabled={facilityEstimate}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:bg-slate-100"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-500 mb-1">$/sqft/yr</label>
-              <input
-                type="number"
-                value={facilityCostPerSqft}
-                onChange={(e) => setFacilityCostPerSqft(Number(e.target.value))}
-                step={0.5}
-                disabled={facilityEstimate}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:bg-slate-100"
-              />
-            </div>
+            <FormField label="Square Footage">
+              {(id) => (
+                <input
+                  id={id}
+                  type="number"
+                  value={facilitySqft}
+                  onChange={(e) => setFacilitySqft(Number(e.target.value))}
+                  disabled={facilityEstimate}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:bg-slate-100"
+                />
+              )}
+            </FormField>
+            <FormField label="$/sqft/yr">
+              {(id) => (
+                <input
+                  id={id}
+                  type="number"
+                  value={facilityCostPerSqft}
+                  onChange={(e) => setFacilityCostPerSqft(Number(e.target.value))}
+                  step={0.5}
+                  disabled={facilityEstimate}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:bg-slate-100"
+                />
+              )}
+            </FormField>
           </div>
         ) : (
           <div className={facilityEstimate ? 'opacity-50 pointer-events-none' : ''}>
-            <label className="block text-xs text-slate-500 mb-1">Monthly Lease Amount</label>
-            <input
-              type="number"
-              value={facilityMonthly}
-              onChange={(e) => setFacilityMonthly(Number(e.target.value))}
-              step={500}
-              disabled={facilityEstimate}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:bg-slate-100"
-            />
+            <FormField label="Monthly Lease Amount">
+              {(id) => (
+                <input
+                  id={id}
+                  type="number"
+                  value={facilityMonthly}
+                  onChange={(e) => setFacilityMonthly(Number(e.target.value))}
+                  step={500}
+                  disabled={facilityEstimate}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:bg-slate-100"
+                />
+              )}
+            </FormField>
           </div>
         )}
 
         {/* Facility estimate checkbox */}
-        <div className="flex items-center gap-2 mt-3">
-          <input
-            type="checkbox"
-            id="facilityEstimate"
-            checked={facilityEstimate}
-            onChange={(e) => setFacilityEstimate(e.target.checked)}
-            className="w-4 h-4 accent-teal-600"
-          />
-          <label htmlFor="facilityEstimate" className="text-xs text-slate-600">
-            I don&apos;t have facility costs yet — estimate for me
-          </label>
-        </div>
+        <CheckboxRow
+          id="facilityEstimate"
+          checked={facilityEstimate}
+          onChange={setFacilityEstimate}
+          textClassName="text-xs text-slate-600"
+        >
+          I don&apos;t have facility costs yet — estimate for me
+        </CheckboxRow>
 
         {facilityEstimate && (
           <p className="text-xs text-teal-600 mt-1">
@@ -459,19 +500,16 @@ export default function StepOperations({
 
       {/* Food program — hidden for micro */}
       {showFoodProgram && (
-        <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl p-4">
-          <input
-            type="checkbox"
-            id="foodProgram"
-            checked={foodProgram}
-            onChange={(e) => setFoodProgram(e.target.checked)}
-            className="w-4 h-4 accent-teal-600"
-          />
-          <div>
-            <label htmlFor="foodProgram" className="text-sm font-medium text-slate-700">Food Program</label>
-            <p className="text-xs text-slate-400">{isWaCharter || config.pathway === 'generic_charter' ? 'If enabled, assumes net neutral (federal reimbursement offsets cost)' : 'If enabled, adds food service as a budget line item. Adjust the per-student cost in your dashboard.'}</p>
-          </div>
-        </div>
+        <CheckboxRow
+          id="foodProgram"
+          checked={foodProgram}
+          onChange={setFoodProgram}
+          textClassName="text-sm font-medium text-slate-700"
+          containerClassName="bg-white border border-slate-200 rounded-xl p-4"
+          helperText={isWaCharter || config.pathway === 'generic_charter' ? 'If enabled, assumes net neutral (federal reimbursement offsets cost)' : 'If enabled, adds food service as a budget line item. Adjust the per-student cost in your dashboard.'}
+        >
+          Food Program
+        </CheckboxRow>
       )}
 
       {/* Revenue Configuration — generic pathways only */}
@@ -480,31 +518,37 @@ export default function StepOperations({
           <h3 className="text-sm font-semibold text-slate-800 mb-3">Revenue Configuration</h3>
           {config.pathway === 'generic_charter' && (
             <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">Per-Pupil Public Funding Rate (annual)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2 text-slate-400">$</span>
-                  <input
-                    type="number"
-                    value={perPupilRate}
-                    onChange={(e) => setPerPupilRate(Number(e.target.value))}
-                    className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                  />
-                </div>
-                <p className="text-xs text-slate-400 mt-1">Primary per-pupil funding from your state. {enrollment} students x {fmt(perPupilRate)} = {fmt(enrollment * perPupilRate)}</p>
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">Fundraising / Donations (annual)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2 text-slate-400">$</span>
-                  <input
-                    type="number"
-                    value={fundraisingAmount}
-                    onChange={(e) => setFundraisingAmount(Number(e.target.value))}
-                    className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                  />
-                </div>
-              </div>
+              <FormField
+                label="Per-Pupil Public Funding Rate (annual)"
+                helperText={`Primary per-pupil funding from your state. ${enrollment} students x ${fmt(perPupilRate)} = ${fmt(enrollment * perPupilRate)}`}
+              >
+                {(id) => (
+                  <div className="relative">
+                    <span className="absolute left-3 top-2 text-slate-400">$</span>
+                    <input
+                      id={id}
+                      type="number"
+                      value={perPupilRate}
+                      onChange={(e) => setPerPupilRate(Number(e.target.value))}
+                      className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                    />
+                  </div>
+                )}
+              </FormField>
+              <FormField label="Fundraising / Donations (annual)">
+                {(id) => (
+                  <div className="relative">
+                    <span className="absolute left-3 top-2 text-slate-400">$</span>
+                    <input
+                      id={id}
+                      type="number"
+                      value={fundraisingAmount}
+                      onChange={(e) => setFundraisingAmount(Number(e.target.value))}
+                      className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                    />
+                  </div>
+                )}
+              </FormField>
               {config.authorizer_fee_editable && (
                 <p className="text-xs text-slate-500 italic">Authorizer fee: {(config.authorizer_fee * 100).toFixed(0)}% — editable in Settings after onboarding.</p>
               )}
@@ -518,30 +562,34 @@ export default function StepOperations({
                   {(financialAidPct ?? 0) > 0 && <span className="text-slate-500"> (less {((financialAidPct ?? 0) * 100).toFixed(0)}% financial aid)</span>}
                 </p>
               </div>
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">Registration / Enrollment Fees (per student)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2 text-slate-400">$</span>
-                  <input
-                    type="number"
-                    value={registrationFees}
-                    onChange={(e) => setRegistrationFees(Number(e.target.value))}
-                    className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">Fundraising / Annual Fund</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2 text-slate-400">$</span>
-                  <input
-                    type="number"
-                    value={fundraisingAmount}
-                    onChange={(e) => setFundraisingAmount(Number(e.target.value))}
-                    className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                  />
-                </div>
-              </div>
+              <FormField label="Registration / Enrollment Fees (per student)">
+                {(id) => (
+                  <div className="relative">
+                    <span className="absolute left-3 top-2 text-slate-400">$</span>
+                    <input
+                      id={id}
+                      type="number"
+                      value={registrationFees}
+                      onChange={(e) => setRegistrationFees(Number(e.target.value))}
+                      className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                    />
+                  </div>
+                )}
+              </FormField>
+              <FormField label="Fundraising / Annual Fund">
+                {(id) => (
+                  <div className="relative">
+                    <span className="absolute left-3 top-2 text-slate-400">$</span>
+                    <input
+                      id={id}
+                      type="number"
+                      value={fundraisingAmount}
+                      onChange={(e) => setFundraisingAmount(Number(e.target.value))}
+                      className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                    />
+                  </div>
+                )}
+              </FormField>
             </div>
           )}
         </div>
@@ -651,21 +699,25 @@ export default function StepOperations({
                           <p className="text-xs font-medium text-slate-600 mb-1.5">Allocation</p>
                           <div className="flex flex-wrap gap-3">
                             {f.selectedYears.map((yr) => (
-                              <div key={yr} className="flex-1 min-w-[100px]">
-                                <label className="block text-[11px] text-slate-500 mb-1">
-                                  {yr === 0 ? 'Year 0 (Pre-Open)' : `Year ${yr}`}
-                                </label>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-slate-400 text-xs">$</span>
-                                  <input
-                                    type="number"
-                                    value={f.yearAllocations[yr] || 0}
-                                    onChange={(e) => updateAllocation(f.key, yr, Number(e.target.value))}
-                                    step={1000}
-                                    className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm text-right text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                                  />
-                                </div>
-                              </div>
+                              <FormField
+                                key={yr}
+                                label={yr === 0 ? 'Year 0 (Pre-Open)' : `Year ${yr}`}
+                                className="flex-1 min-w-[100px]"
+                              >
+                                {(id) => (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-slate-400 text-xs">$</span>
+                                    <input
+                                      id={id}
+                                      type="number"
+                                      value={f.yearAllocations[yr] || 0}
+                                      onChange={(e) => updateAllocation(f.key, yr, Number(e.target.value))}
+                                      step={1000}
+                                      className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm text-right text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                    />
+                                  </div>
+                                )}
+                              </FormField>
                             ))}
                           </div>
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useId } from 'react'
 import { calcCommissionRevenue, calcSmallSchoolEnhancementFromGrades } from '@/lib/calculations'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
@@ -306,14 +306,16 @@ function SliderField({
   max: number
   regional: number
 }) {
+  const labelId = useId()
   return (
     <div>
       <div className="flex justify-between mb-1">
-        <label className="text-sm font-medium text-slate-700">{label}</label>
+        <span id={labelId} className="text-sm font-medium text-slate-700">{label}</span>
         <span className="text-sm font-semibold text-slate-800">{value}%</span>
       </div>
       <input
         type="range"
+        aria-labelledby={labelId}
         min={min}
         max={max}
         value={value}

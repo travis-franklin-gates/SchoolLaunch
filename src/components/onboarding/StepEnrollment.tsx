@@ -9,6 +9,7 @@ import { expansionToEnrollmentArray } from '@/lib/gradeExpansion'
 import GradeExpansionEditor from '@/components/GradeExpansionEditor'
 import type { Pathway, StateConfig } from '@/lib/stateConfig'
 import { getStateConfig } from '@/lib/stateConfig'
+import { FormField } from '@/components/ui/FormField'
 
 const GRADE_ENROLLMENT_DEFAULTS: Record<string, { classSize: number }> = {
   'K-5': { classSize: 24 },
@@ -241,12 +242,13 @@ export default function StepEnrollment({
               { label: 'Year 4', value: expansionEnrollments.y4 },
               { label: 'Year 5', value: expansionEnrollments.y5 },
             ].map(({ label, value }) => (
-              <div key={label}>
-                <label className="block text-xs text-slate-500 mb-1">{label}</label>
-                <div className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold">
-                  {value > 0 ? value : '—'}
-                </div>
-              </div>
+              <FormField key={label} label={label}>
+                {() => (
+                  <div className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold">
+                    {value > 0 ? value : '—'}
+                  </div>
+                )}
+              </FormField>
             ))}
           </div>
 
@@ -263,32 +265,36 @@ export default function StepEnrollment({
         <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
           <h3 className="text-sm font-semibold text-slate-700">Tuition Configuration</h3>
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-slate-500 mb-1">Annual Tuition Per Student</label>
-              <div className="relative">
-                <span className="absolute left-3 top-2.5 text-slate-400">$</span>
-                <input
-                  type="number"
-                  value={tuitionRate}
-                  onChange={(e) => setTuitionRate(Number(e.target.value))}
-                  className="w-full pl-7 pr-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs text-slate-500 mb-1">Financial Aid Discount %</label>
-              <div className="relative">
-                <input
-                  type="number"
-                  value={financialAidPct}
-                  onChange={(e) => setFinancialAidPct(Number(e.target.value))}
-                  min={0}
-                  max={100}
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
-                />
-                <span className="absolute right-3 top-2.5 text-slate-400">%</span>
-              </div>
-            </div>
+            <FormField label="Annual Tuition Per Student">
+              {(id) => (
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-slate-400">$</span>
+                  <input
+                    id={id}
+                    type="number"
+                    value={tuitionRate}
+                    onChange={(e) => setTuitionRate(Number(e.target.value))}
+                    className="w-full pl-7 pr-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
+                  />
+                </div>
+              )}
+            </FormField>
+            <FormField label="Financial Aid Discount %">
+              {(id) => (
+                <div className="relative">
+                  <input
+                    id={id}
+                    type="number"
+                    value={financialAidPct}
+                    onChange={(e) => setFinancialAidPct(Number(e.target.value))}
+                    min={0}
+                    max={100}
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
+                  />
+                  <span className="absolute right-3 top-2.5 text-slate-400">%</span>
+                </div>
+              )}
+            </FormField>
           </div>
           {effectiveY1 > 0 && (
             <p className="text-xs text-slate-500">

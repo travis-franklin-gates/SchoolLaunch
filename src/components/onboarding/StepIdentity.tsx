@@ -6,6 +6,7 @@ import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
 import { US_STATES, derivePathway, getStateConfig } from '@/lib/stateConfig'
 import type { Pathway } from '@/lib/stateConfig'
 import Tooltip from '@/components/ui/Tooltip'
+import { FormField } from '@/components/ui/FormField'
 
 const COUNTY_KEYS = Object.keys(REGIONALIZATION_FACTORS)
 
@@ -166,188 +167,204 @@ export default function StepIdentity({ initialData, onNext }: Props) {
       </p>
 
       {/* State Selection */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">State</label>
-        <select
-          value={selectedState}
-          onChange={(e) => {
-            const newState = e.target.value
-            setSelectedState(newState)
-            // Update fiscal year default when pathway changes
-            const newPathway = derivePathway(newState, schoolType)
-            if (newPathway !== 'wa_charter') {
-              setFiscalYearStartMonth(getStateConfig(newPathway).fiscal_year_start_month)
-            }
-          }}
-          className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 bg-white"
-        >
-          {US_STATES.map((s) => (
-            <option key={s.code} value={s.code}>{s.name}</option>
-          ))}
-        </select>
-      </div>
+      <FormField label="State">
+        {(id) => (
+          <select
+            id={id}
+            value={selectedState}
+            onChange={(e) => {
+              const newState = e.target.value
+              setSelectedState(newState)
+              // Update fiscal year default when pathway changes
+              const newPathway = derivePathway(newState, schoolType)
+              if (newPathway !== 'wa_charter') {
+                setFiscalYearStartMonth(getStateConfig(newPathway).fiscal_year_start_month)
+              }
+            }}
+            className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 bg-white"
+          >
+            {US_STATES.map((s) => (
+              <option key={s.code} value={s.code}>{s.name}</option>
+            ))}
+          </select>
+        )}
+      </FormField>
 
       {/* School Type Selection */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">School Type</label>
-        <div className="grid grid-cols-3 gap-3">
-          {SCHOOL_TYPES.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              onClick={() => {
-                setSchoolType(t.value)
-                // Update fiscal year default from config when switching types
-                const newPathway = derivePathway(selectedState, t.value)
-                if (newPathway !== 'wa_charter') {
-                  setFiscalYearStartMonth(getStateConfig(newPathway).fiscal_year_start_month)
-                }
-              }}
-              className={`px-3 py-3 rounded-lg border-2 text-left transition-all ${
-                schoolType === t.value
-                  ? 'border-teal-600 bg-teal-50'
-                  : 'border-slate-200 bg-white hover:border-slate-300'
-              }`}
-            >
-              <div className={`text-sm font-medium ${schoolType === t.value ? 'text-teal-700' : 'text-slate-700'}`}>
-                {t.label}
-              </div>
-              <div className={`text-xs mt-0.5 ${schoolType === t.value ? 'text-teal-600' : 'text-slate-400'}`}>
-                {t.description}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
+      <FormField label="School Type">
+        {() => (
+          <div role="radiogroup" aria-label="School Type" className="grid grid-cols-3 gap-3">
+            {SCHOOL_TYPES.map((t) => (
+              <button
+                key={t.value}
+                type="button"
+                role="radio"
+                aria-checked={schoolType === t.value}
+                onClick={() => {
+                  setSchoolType(t.value)
+                  // Update fiscal year default from config when switching types
+                  const newPathway = derivePathway(selectedState, t.value)
+                  if (newPathway !== 'wa_charter') {
+                    setFiscalYearStartMonth(getStateConfig(newPathway).fiscal_year_start_month)
+                  }
+                }}
+                className={`px-3 py-3 rounded-lg border-2 text-left transition-all ${
+                  schoolType === t.value
+                    ? 'border-teal-600 bg-teal-50'
+                    : 'border-slate-200 bg-white hover:border-slate-300'
+                }`}
+              >
+                <div className={`text-sm font-medium ${schoolType === t.value ? 'text-teal-700' : 'text-slate-700'}`}>
+                  {t.label}
+                </div>
+                <div className={`text-xs mt-0.5 ${schoolType === t.value ? 'text-teal-600' : 'text-slate-400'}`}>
+                  {t.description}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </FormField>
 
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">School Name *</label>
-        <input
-          type="text"
-          value={schoolName}
-          onChange={(e) => { setSchoolName(e.target.value); setTouched(true) }}
-          className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 ${
-            nameError ? 'border-red-300 bg-red-50' : 'border-slate-300'
-          }`}
-          placeholder="e.g., Cascade Academy"
-        />
-        {nameError && <p className="text-xs text-red-600 mt-1">{nameError}</p>}
-      </div>
+      <FormField label="School Name" required errorText={nameError ?? undefined}>
+        {(id) => (
+          <input
+            id={id}
+            type="text"
+            value={schoolName}
+            onChange={(e) => { setSchoolName(e.target.value); setTouched(true) }}
+            className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 ${
+              nameError ? 'border-red-300 bg-red-50' : 'border-slate-300'
+            }`}
+            placeholder="e.g., Cascade Academy"
+          />
+        )}
+      </FormField>
 
       {/* WA County/Region — only for WA Charter pathway */}
       {isWaCharter && (
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">WA County / Region</label>
-          <select
-            value={region}
-            onChange={(e) => setRegion(e.target.value)}
-            className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 bg-white"
-          >
-            {COUNTY_KEYS.map((key) => (
-              <option key={key} value={key}>{REGIONALIZATION_FACTORS[key].label}</option>
-            ))}
-          </select>
-          <p className="text-xs text-slate-400 mt-1">
-            County sets the regionalization factor ({REGIONALIZATION_FACTORS[region]?.factor.toFixed(3) ?? '1.000'}×) which adjusts state funding rates based on your school&apos;s location.
-          </p>
-        </div>
+        <FormField
+          label="WA County / Region"
+          helperText={`County sets the regionalization factor (${REGIONALIZATION_FACTORS[region]?.factor.toFixed(3) ?? '1.000'}×) which adjusts state funding rates based on your school's location.`}
+        >
+          {(id) => (
+            <select
+              id={id}
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 bg-white"
+            >
+              {COUNTY_KEYS.map((key) => (
+                <option key={key} value={key}>{REGIONALIZATION_FACTORS[key].label}</option>
+              ))}
+            </select>
+          )}
+        </FormField>
       )}
 
       {/* Fiscal Year Start Month — only for non-WA pathways */}
       {!isWaCharter && (
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Fiscal Year Start Month</label>
-          <select
-            value={fiscalYearStartMonth}
-            onChange={(e) => setFiscalYearStartMonth(Number(e.target.value))}
-            className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 bg-white"
-          >
-            {FISCAL_YEAR_MONTHS.map((m) => (
-              <option key={m.value} value={m.value}>{m.label}</option>
-            ))}
-          </select>
-          <p className="text-xs text-slate-400 mt-1">
-            When your school&apos;s fiscal year begins. Most charter schools use July; most private schools use September.
-          </p>
-        </div>
+        <FormField
+          label="Fiscal Year Start Month"
+          helperText="When your school's fiscal year begins. Most charter schools use July; most private schools use September."
+        >
+          {(id) => (
+            <select
+              id={id}
+              value={fiscalYearStartMonth}
+              onChange={(e) => setFiscalYearStartMonth(Number(e.target.value))}
+              className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 bg-white"
+            >
+              {FISCAL_YEAR_MONTHS.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          )}
+        </FormField>
       )}
 
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Planned Opening Year</label>
-        <select
-          value={plannedOpenYear}
-          onChange={(e) => setPlannedOpenYear(Number(e.target.value))}
-          className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 bg-white"
-        >
-          {YEARS.map((y) => (
-            <option key={y} value={y}>{y}–{y + 1} School Year</option>
-          ))}
-        </select>
-      </div>
+      <FormField label="Planned Opening Year">
+        {(id) => (
+          <select
+            id={id}
+            value={plannedOpenYear}
+            onChange={(e) => setPlannedOpenYear(Number(e.target.value))}
+            className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 bg-white"
+          >
+            {YEARS.map((y) => (
+              <option key={y} value={y}>{y}–{y + 1} School Year</option>
+            ))}
+          </select>
+        )}
+      </FormField>
 
       {/* Founding Grades */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">
-          Founding Grades *
-          <span className="font-normal text-slate-400 ml-1">— grades you will serve in Year 1</span>
-        </label>
-        <div className="flex flex-wrap gap-1.5">
-          {ALL_GRADES.map((g) => {
-            const selected = foundingGrades.includes(g)
-            return (
-              <button
-                key={g}
-                type="button"
-                onClick={() => toggleFoundingGrade(g)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all ${
-                  selected
-                    ? 'border-teal-600 bg-teal-50 text-teal-700'
-                    : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
-                }`}
-              >
-                {g}
-              </button>
-            )
-          })}
-        </div>
-        {gradesError && <p className="text-xs text-red-600 mt-1">{gradesError}</p>}
-      </div>
-
-      {/* Build-Out Grades */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">
-          Grades at Full Build-Out *
-          <span className="font-normal text-slate-400 ml-1">— all grades you will eventually serve</span>
-        </label>
-        <div className="flex flex-wrap gap-1.5">
-          {ALL_GRADES.map((g) => {
-            const selected = buildoutGrades.includes(g)
-            const isFounding = foundingGrades.includes(g)
-            return (
-              <Tooltip key={g} content={isFounding ? 'Founding grade (included automatically)' : null}>
+      <FormField
+        label="Founding Grades — grades you will serve in Year 1"
+        required
+        errorText={gradesError ?? undefined}
+      >
+        {() => (
+          <div role="group" aria-label="Founding Grades" className="flex flex-wrap gap-1.5">
+            {ALL_GRADES.map((g) => {
+              const selected = foundingGrades.includes(g)
+              return (
                 <button
+                  key={g}
                   type="button"
-                  onClick={() => toggleBuildoutGrade(g)}
+                  aria-pressed={selected}
+                  onClick={() => toggleFoundingGrade(g)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all ${
                     selected
-                      ? isFounding
-                        ? 'border-teal-600 bg-teal-100 text-teal-800 cursor-default'
-                        : 'border-teal-600 bg-teal-50 text-teal-700'
+                      ? 'border-teal-600 bg-teal-50 text-teal-700'
                       : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
                   }`}
                 >
                   {g}
-                  {isFounding && selected && (
-                    <span className="ml-1 text-xs text-teal-500">F</span>
-                  )}
                 </button>
-              </Tooltip>
-            )
-          })}
-        </div>
-        <p className="text-xs text-slate-400 mt-1">Founding grades are pre-selected. Additional grades will be added during expansion years.</p>
-        {buildoutError && <p className="text-xs text-red-600 mt-1">{buildoutError}</p>}
-      </div>
+              )
+            })}
+          </div>
+        )}
+      </FormField>
+
+      {/* Build-Out Grades */}
+      <FormField
+        label="Grades at Full Build-Out — all grades you will eventually serve"
+        required
+        helperText="Founding grades are pre-selected. Additional grades will be added during expansion years."
+        errorText={buildoutError ?? undefined}
+      >
+        {() => (
+          <div role="group" aria-label="Grades at Full Build-Out" className="flex flex-wrap gap-1.5">
+            {ALL_GRADES.map((g) => {
+              const selected = buildoutGrades.includes(g)
+              const isFounding = foundingGrades.includes(g)
+              return (
+                <Tooltip key={g} content={isFounding ? 'Founding grade (included automatically)' : null}>
+                  <button
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => toggleBuildoutGrade(g)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all ${
+                      selected
+                        ? isFounding
+                          ? 'border-teal-600 bg-teal-100 text-teal-800 cursor-default'
+                          : 'border-teal-600 bg-teal-50 text-teal-700'
+                        : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                    }`}
+                  >
+                    {g}
+                    {isFounding && selected && (
+                      <span className="ml-1 text-xs text-teal-500">F</span>
+                    )}
+                  </button>
+                </Tooltip>
+              )
+            })}
+          </div>
+        )}
+      </FormField>
 
       {/* Dynamic Summary */}
       {summary && (
