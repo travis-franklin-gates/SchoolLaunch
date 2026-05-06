@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { AuthShell } from '@/components/auth/AuthShell'
 
 type View = 'login' | 'forgot' | 'verify' | 'reset'
 
@@ -261,21 +262,35 @@ export default function LoginPage() {
     }
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-slate-800">SchoolLaunch</h1>
-            <p className="text-slate-500 mt-2">
-              {view === 'login' && 'Charter School Financial Planning'}
-              {view === 'forgot' && 'Reset Your Password'}
-              {view === 'verify' && 'Enter Verification Code'}
-              {view === 'reset' && (resetSuccess ? 'Password Updated' : 'Choose a New Password')}
-            </p>
-          </div>
+  const subhead =
+    view === 'login' ? 'Sign in to continue planning your school finances.'
+      : view === 'forgot' ? 'Enter your email and we will send you a verification code.'
+        : view === 'verify' ? 'Enter the 8-digit code from your email.'
+          : view === 'reset' && resetSuccess ? 'Your password has been updated.'
+            : 'Choose a new password for your account.'
 
-          {/* ---- LOGIN FORM ---- */}
+  const heading =
+    view === 'login' ? 'Welcome back'
+      : view === 'forgot' ? 'Reset your password'
+        : view === 'verify' ? 'Enter verification code'
+          : view === 'reset' && resetSuccess ? 'Password updated'
+            : 'Choose a new password'
+
+  return (
+    <AuthShell>
+      <div className="mb-6">
+        <h1
+          className="text-2xl font-semibold"
+          style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-heading-var)' }}
+        >
+          {heading}
+        </h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+          {subhead}
+        </p>
+      </div>
+
+      {/* ---- LOGIN FORM ---- */}
           {view === 'login' && (
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
@@ -500,22 +515,20 @@ export default function LoginPage() {
             </form>
           )}
 
-          {/* ---- RESET SUCCESS ---- */}
-          {view === 'reset' && resetSuccess && (
-            <div className="text-center space-y-4">
-              <div className="bg-emerald-50 text-emerald-700 text-sm px-4 py-3 rounded-lg">
-                Password updated successfully.
-              </div>
-              <button
-                onClick={() => { setResetSuccess(false); setView('login') }}
-                className="text-sm text-teal-600 hover:text-teal-800 font-medium transition-colors"
-              >
-                Sign in with your new password
-              </button>
-            </div>
-          )}
+      {/* ---- RESET SUCCESS ---- */}
+      {view === 'reset' && resetSuccess && (
+        <div className="text-center space-y-4">
+          <div className="bg-emerald-50 text-emerald-700 text-sm px-4 py-3 rounded-lg">
+            Password updated successfully.
+          </div>
+          <button
+            onClick={() => { setResetSuccess(false); setView('login') }}
+            className="text-sm text-teal-600 hover:text-teal-800 font-medium transition-colors"
+          >
+            Sign in with your new password
+          </button>
         </div>
-      </div>
-    </div>
+      )}
+    </AuthShell>
   )
 }

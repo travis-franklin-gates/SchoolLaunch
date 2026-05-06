@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import InviteForm from './InviteForm'
+import { AuthShell } from '@/components/auth/AuthShell'
 
 export const metadata: Metadata = {
   title: 'SchoolLaunch — Accept invitation',
@@ -15,16 +16,17 @@ export default async function InvitePage({
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="w-full max-w-md">
-          <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-            <h1 className="text-2xl font-bold text-slate-800 mb-4">SchoolLaunch</h1>
-            <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg">
-              No invitation token provided.
-            </div>
-          </div>
+      <AuthShell>
+        <h1
+          className="text-2xl font-semibold mb-4"
+          style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-heading-var)' }}
+        >
+          Invitation link not found
+        </h1>
+        <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg">
+          No invitation token provided.
         </div>
-      </div>
+      </AuthShell>
     )
   }
 
@@ -41,16 +43,17 @@ export default async function InvitePage({
 
   if (error || !invitation) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="w-full max-w-md">
-          <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-            <h1 className="text-2xl font-bold text-slate-800 mb-4">SchoolLaunch</h1>
-            <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg">
-              This invitation is invalid or has expired.
-            </div>
-          </div>
+      <AuthShell>
+        <h1
+          className="text-2xl font-semibold mb-4"
+          style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-heading-var)' }}
+        >
+          Invitation expired
+        </h1>
+        <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg">
+          This invitation is invalid or has expired.
         </div>
-      </div>
+      </AuthShell>
     )
   }
 

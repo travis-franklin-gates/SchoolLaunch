@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { SELECTED_SCHOOL_KEY } from '@/lib/useSchoolData'
+import { AuthShell } from '@/components/auth/AuthShell'
 
 interface Invitation {
   id: string
@@ -142,17 +143,20 @@ export default function InviteForm({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-slate-800">SchoolLaunch</h1>
-            <p className="text-slate-500 mt-2">
-              {existingUser ? 'Join a school' : 'Set up your account'}
-            </p>
-          </div>
+    <AuthShell>
+      <div className="mb-6">
+        <h1
+          className="text-2xl font-semibold"
+          style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-heading-var)' }}
+        >
+          {existingUser ? 'Join a school' : 'Accept your invitation'}
+        </h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+          {existingUser ? 'Sign in to join the team.' : 'Set up your account to get started.'}
+        </p>
+      </div>
 
-          <div className="bg-slate-50 rounded-lg p-4 mb-6">
+      <div className="bg-slate-50 rounded-lg p-4 mb-6">
             {isTeamInvite ? (
               <>
                 <p className="text-sm text-slate-700 font-medium mb-1">
@@ -272,8 +276,6 @@ export default function InviteForm({
               </button>
             </form>
           )}
-        </div>
-      </div>
-    </div>
+    </AuthShell>
   )
 }

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { SELECTED_SCHOOL_KEY } from '@/lib/useSchoolData'
 import Link from 'next/link'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { AuthShell } from '@/components/auth/AuthShell'
 
 export default function SignupPage() {
   useDocumentTitle('Sign up')
@@ -80,15 +81,20 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-slate-800">SchoolLaunch</h1>
-            <p className="text-slate-500 mt-2">Create your account</p>
-          </div>
+    <AuthShell>
+      <div className="mb-6">
+        <h1
+          className="text-2xl font-semibold"
+          style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-heading-var)' }}
+        >
+          Create your account
+        </h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+          Start modeling your school&rsquo;s finances in minutes.
+        </p>
+      </div>
 
-          <form onSubmit={handleSignup} className="space-y-5">
+      <form onSubmit={handleSignup} className="space-y-5">
             <div>
               <label htmlFor="fullName" className="block text-sm font-medium text-slate-700 mb-1">
                 Full Name
@@ -165,16 +171,14 @@ export default function SignupPage() {
             </button>
           </form>
 
-          <div className="text-center mt-6">
-            <Link
-              href="/login"
-              className="text-sm text-slate-600 hover:text-teal-700 underline-offset-4 hover:underline transition-colors"
-            >
-              Already have an account? <span className="text-teal-600 font-medium">Sign in</span>
-            </Link>
-          </div>
-        </div>
+      <div className="text-center mt-6">
+        <Link
+          href="/login"
+          className="text-sm text-slate-600 hover:text-teal-700 underline-offset-4 hover:underline transition-colors"
+        >
+          Already have an account? <span className="text-teal-600 font-medium">Sign in</span>
+        </Link>
       </div>
-    </div>
+    </AuthShell>
   )
 }
