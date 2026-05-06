@@ -184,8 +184,20 @@ export default function SettingsPage() {
     return <SettingsSkeleton />
   }
 
+  const sections: Array<{ id: string; label: string; visible: boolean }> = [
+    { id: 'school-profile', label: 'School Profile', visible: true },
+    { id: 'team-members', label: 'Team Members', visible: !!(canManageTeam && schoolId && currentUserId) },
+    { id: 'enrollment-demographics', label: 'Enrollment & Demographics', visible: true },
+    { id: 'grade-expansion-plan', label: 'Grade Expansion Plan', visible: true },
+    { id: 'programs', label: 'Programs', visible: true },
+    { id: 'revenue-assumptions', label: 'Revenue Assumptions', visible: true },
+    { id: 'expense-assumptions', label: 'Expense Assumptions', visible: true },
+    { id: 'operations-benchmarks', label: 'Operations Benchmarks', visible: true },
+    { id: 'danger-zone', label: 'Danger Zone', visible: !!canResetSchool },
+  ].filter((s) => s.visible)
+
   return (
-    <div className="max-w-3xl animate-fade-in">
+    <div className="animate-fade-in">
       <div data-tour="settings-header">
         <PageHeader
           title="Settings"
@@ -199,8 +211,12 @@ export default function SettingsPage() {
         </div>
       )}
 
+      <div className="md:grid md:grid-cols-[200px_1fr] md:gap-8">
+        <SettingsSubRail sections={sections} />
+        <div className="max-w-3xl">
+
       {/* Section 1: School Profile */}
-      <div data-tour="school-profile" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+      <div id="school-profile" data-tour="school-profile" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6 scroll-mt-6">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">School Profile</h2>
         {schoolId && (
           <LogoUpload
@@ -267,11 +283,13 @@ export default function SettingsPage() {
 
       {/* Section: Team Members (CEO only) */}
       {canManageTeam && schoolId && currentUserId && (
-        <TeamSection schoolId={schoolId} currentUserId={currentUserId} />
+        <div id="team-members" className="scroll-mt-6">
+          <TeamSection schoolId={schoolId} currentUserId={currentUserId} />
+        </div>
       )}
 
       {/* Section 2: Enrollment & Demographics */}
-      <div data-tour="enrollment-demographics" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+      <div id="enrollment-demographics" data-tour="enrollment-demographics" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6 scroll-mt-6">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Enrollment & Demographics</h2>
 
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-2">
@@ -330,7 +348,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Section: Grade Expansion Plan */}
-      <div data-tour="grade-expansion" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+      <div id="grade-expansion-plan" data-tour="grade-expansion" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6 scroll-mt-6">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">Grade Expansion Plan</h2>
         <p className="text-xs text-slate-500 mb-4">
           Define which grade levels you open with and how you expand year over year. This produces cohort-based enrollment projections that authorizers find more credible than flat growth rates.
@@ -347,7 +365,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Section 3: Programs */}
-      <div data-tour="programs-section" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+      <div id="programs" data-tour="programs-section" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6 scroll-mt-6">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Programs</h2>
         <p className="text-xs text-slate-500 mb-4">
           Toggle programs your school plans to offer. Enabling a program adds its line item to the Operations budget.
@@ -396,7 +414,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Section 4: Revenue Assumptions */}
-      <div data-tour="revenue-assumptions" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+      <div id="revenue-assumptions" data-tour="revenue-assumptions" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6 scroll-mt-6">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Revenue Assumptions</h2>
         <p className="text-xs text-slate-500 mb-4">{isWaCharter ? 'Commission-aligned per-pupil rates. State apportionment uses AAFTE (Annual Average FTE).' : 'Revenue rates and escalation settings for your financial projections.'}</p>
 
@@ -520,7 +538,7 @@ export default function SettingsPage() {
       })()}
 
       {/* Section 4b: Expense Assumptions */}
-      <div data-tour="expense-assumptions" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+      <div id="expense-assumptions" data-tour="expense-assumptions" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6 scroll-mt-6">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Expense Assumptions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -570,7 +588,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Section 5: Operations Benchmarks */}
-      <div data-tour="operations-benchmarks" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+      <div id="operations-benchmarks" data-tour="operations-benchmarks" className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6 scroll-mt-6">
         <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-4">Operations Benchmarks</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -682,7 +700,7 @@ export default function SettingsPage() {
       {/* Danger Zone — CEO only */}
       {canResetSchool && (
         <>
-        <div className="mt-12 border border-red-200 rounded-xl p-6 bg-red-50/50">
+        <div id="danger-zone" className="mt-12 border border-red-200 rounded-xl p-6 bg-red-50/50 scroll-mt-6">
           <h2 className="text-xs font-medium text-red-500 uppercase tracking-wide mb-2">Danger Zone</h2>
           <p className="text-sm text-slate-600 mb-4">
             Reset all school planning data and restart the onboarding process from scratch. Your account and school record will be preserved.
@@ -749,6 +767,72 @@ export default function SettingsPage() {
         )}
         </>
       )}
+        </div>
+      </div>
     </div>
+  )
+}
+
+function SettingsSubRail({ sections }: { sections: Array<{ id: string; label: string }> }) {
+  const [activeId, setActiveId] = useState<string | null>(sections[0]?.id ?? null)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Pick the first section currently visible in the upper half of viewport.
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+        if (visible[0]) setActiveId(visible[0].target.id)
+      },
+      { rootMargin: '-20% 0px -60% 0px', threshold: 0 }
+    )
+    for (const s of sections) {
+      const el = document.getElementById(s.id)
+      if (el) observer.observe(el)
+    }
+    return () => observer.disconnect()
+  }, [sections])
+
+  return (
+    <nav
+      aria-label="Settings sections"
+      className="hidden md:block sticky top-6 self-start"
+      style={{ maxHeight: 'calc(100vh - 3rem)' }}
+    >
+      <ul className="space-y-0.5">
+        {sections.map((s) => {
+          const active = activeId === s.id
+          return (
+            <li key={s.id}>
+              <a
+                href={`#${s.id}`}
+                onClick={(e) => {
+                  e.preventDefault()
+                  document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  setActiveId(s.id)
+                  history.replaceState(null, '', `#${s.id}`)
+                }}
+                className={`block px-3 py-1.5 text-xs rounded-md transition-colors relative ${
+                  active
+                    ? 'font-semibold text-slate-900'
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                }`}
+                style={active ? { color: 'var(--navy-dark)', background: 'var(--bg-table-alt)' } : undefined}
+              >
+                {active && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full"
+                    style={{ background: 'var(--navy-dark)' }}
+                  />
+                )}
+                <span className={active ? 'pl-1.5' : ''}>{s.label}</span>
+              </a>
+            </li>
+          )
+        })}
+      </ul>
+    </nav>
   )
 }
