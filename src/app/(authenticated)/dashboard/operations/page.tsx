@@ -10,6 +10,7 @@ import type { FinancialAssumptions } from '@/lib/types'
 import { DataTable, type DataTableColumn, type DataTableRow } from '@/components/ui/DataTable'
 import { formatCurrency } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Callout, type CalloutVariant } from '@/components/ui/Callout'
 
 const fmt = (n: number) => formatCurrency(n, 'accounting')
 
@@ -83,6 +84,7 @@ export default function OperationsPage() {
   const [rows, setRows] = useState<OpsRow[]>([])
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [advisoriesOpen, setAdvisoriesOpen] = useState(false)
   // Local overrides for per-pupil rates (synced to settings on save)
   const [rateOverrides, setRateOverrides] = useState<Partial<Record<keyof FinancialAssumptions, number>>>({})
   const supabase = createClient()
@@ -307,35 +309,82 @@ export default function OperationsPage() {
         </div>
       )}
 
-      {/* Facility % of Revenue indicator */}
-      <div className={`mb-4 rounded-lg px-4 py-3 text-sm border ${
-        facilityPct > 15
-          ? 'bg-red-50 border-red-200 text-red-700'
+      {/* Operations advisories — collapsed disclosure */}
+      {(() => {
+        type Advisory = { id: string; variant: CalloutVariant; title: string; body: ReactNode }
+        const advisories: Advisory[] = []
+
+        const facilityVariant: CalloutVariant = facilityPct > 15 ? 'crit' : facilityPct > 12 ? 'warn' : 'info'
+        const facilityBody = facilityPct > 15
+          ? 'Exceeds 15% threshold. Consider renegotiating lease or finding alternative space.'
           : facilityPct > 12
-            ? 'bg-amber-50 border-amber-200 text-amber-700'
-            : 'bg-emerald-50 border-emerald-200 text-emerald-700'
-      }`}>
-        <span className="font-semibold">Facility Cost:</span> {facilityPct.toFixed(1)}% of revenue
-        {facilityPct > 15 && ' — Exceeds 15% threshold. Consider renegotiating lease or finding alternative space.'}
-        {facilityPct > 12 && facilityPct <= 15 && ' — Approaching 15% threshold. Monitor closely.'}
-        {facilityPct <= 12 && ' — Within healthy range (< 12%).'}
-      </div>
+            ? 'Approaching the 15% threshold. Monitor closely.'
+            : 'Within healthy range (< 12%).'
+        advisories.push({
+          id: 'facility',
+          variant: facilityVariant,
+          title: `Facility cost: ${facilityPct.toFixed(1)}% of revenue`,
+          body: facilityBody,
+        })
 
-      {/* Food Service note */}
-      {assumptions.food_service_offered && (
-        <div className="mb-4 bg-teal-50 border border-teal-200 rounded-lg px-4 py-3 text-sm text-teal-700">
-          <strong>Food Service:</strong> If 100% of students qualify for free meals, your school may be eligible for the Community Eligibility Provision (CEP),
-          which provides USDA NSLP reimbursement that can offset food service costs. Update demographics in Settings.
-        </div>
-      )}
+        if (assumptions.food_service_offered) {
+          advisories.push({
+            id: 'food',
+            variant: 'info',
+            title: 'Food Service',
+            body: 'If 100% of students qualify for free meals, your school may be eligible for the Community Eligibility Provision (CEP), which provides USDA NSLP reimbursement that can offset food service costs. Update demographics in Settings.',
+          })
+        }
 
-      {/* Transportation note */}
-      {assumptions.transportation_offered && (
-        <div className="mb-4 bg-teal-50 border border-teal-200 rounded-lg px-4 py-3 text-sm text-teal-700">
-          <strong>Transportation:</strong> WA charter schools must provide transportation services under RCW 28A.710.040.
-          Document your transportation plan in your charter application. Consider contracted vs. in-house options.
-        </div>
-      )}
+        if (assumptions.transportation_offered) {
+          advisories.push({
+            id: 'transport',
+            variant: 'info',
+            title: 'Transportation',
+            body: 'WA charter schools must provide transportation services under RCW 28A.710.040. Document your transportation plan in your charter application. Consider contracted vs. in-house options.',
+          })
+        }
+
+        if (advisories.length === 0) return null
+
+        const counts: Record<CalloutVariant, number> = { info: 0, warn: 0, crit: 0 }
+        for (const a of advisories) counts[a.variant]++
+        const summaryBits: string[] = []
+        if (counts.crit > 0) summaryBits.push(`${counts.crit} concern${counts.crit > 1 ? 's' : ''}`)
+        if (counts.warn > 0) summaryBits.push(`${counts.warn} watch`)
+        if (counts.info > 0) summaryBits.push(`${counts.info} info`)
+        const summary = `${advisories.length} ${advisories.length === 1 ? 'advisory' : 'advisories'}${summaryBits.length ? ` · ${summaryBits.join(', ')}` : ''}`
+
+        const dominant: CalloutVariant = counts.crit > 0 ? 'crit' : counts.warn > 0 ? 'warn' : 'info'
+        const dominantDot = dominant === 'crit' ? 'bg-rose-500' : dominant === 'warn' ? 'bg-amber-500' : 'bg-blue-500'
+
+        return (
+          <div className="mb-4 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <button
+              onClick={() => setAdvisoriesOpen(!advisoriesOpen)}
+              aria-expanded={advisoriesOpen}
+              className="w-full px-5 py-3 flex items-center justify-between text-left text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                <span className={`inline-block w-2 h-2 rounded-full ${dominantDot}`} aria-hidden="true" />
+                {summary}
+              </span>
+              <svg className={`w-4 h-4 text-slate-400 transition-transform ${advisoriesOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {advisoriesOpen && (
+              <div className="px-5 pb-4 pt-1 space-y-3 border-t border-slate-100">
+                {advisories.map((a) => (
+                  <Callout key={a.id} variant={a.variant} title={a.title}>
+                    {a.body}
+                  </Callout>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {(() => {
         type OpsDTRow = OpsRow & { globalIdx: number; isLocked: boolean }
