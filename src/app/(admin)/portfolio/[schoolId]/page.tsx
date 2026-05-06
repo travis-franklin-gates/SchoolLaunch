@@ -63,6 +63,7 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
   const [notes, setNotes] = useState<Array<{ id: string; content: string; created_at: string }>>([])
   const [noteInput, setNoteInput] = useState('')
   const [loading, setLoading] = useState(true)
+  const [portfolioSchools, setPortfolioSchools] = useState<Array<{ id: string; name: string }>>([])
 
   useEffect(() => {
     async function load() {
@@ -72,7 +73,7 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
 
       const { data: roleData } = await supabase
         .from('user_roles')
-        .select('role')
+        .select('role, organization_id')
         .eq('user_id', user.id)
         .single()
 
@@ -81,14 +82,18 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
         return
       }
 
-      const [schoolRes, profileRes, posRes, projRes, gepRes, notesRes] = await Promise.all([
+      const [schoolRes, profileRes, posRes, projRes, gepRes, notesRes, portfolioRes] = await Promise.all([
         supabase.from('schools').select('name').eq('id', schoolId).single(),
         supabase.from('school_profiles').select('*').eq('school_id', schoolId).single(),
         supabase.from('staffing_positions').select('*').eq('school_id', schoolId).order('year'),
         supabase.from('budget_projections').select('*').eq('school_id', schoolId).eq('year', 1),
         supabase.from('grade_expansion_plan').select('*').eq('school_id', schoolId).order('year').order('grade_level'),
         supabase.from('org_notes').select('id, content, created_at').eq('school_id', schoolId).order('created_at', { ascending: false }),
+        roleData.organization_id
+          ? supabase.from('schools').select('id, name').eq('organization_id', roleData.organization_id).order('name')
+          : Promise.resolve({ data: [] as Array<{ id: string; name: string }> }),
       ])
+      if (portfolioRes.data) setPortfolioSchools(portfolioRes.data)
 
       if (schoolRes.data) setSchoolName(schoolRes.data.name)
       if (profileRes.data) setProfile(profileRes.data as SchoolProfile)
@@ -204,10 +209,12 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
 
   return (
     <div data-tour="school-detail">
-      {/* Back link */}
-      <Link href="/portfolio" className="text-sm text-teal-600 hover:text-teal-800 font-medium mb-4 inline-block">
-        &larr; Back to Portfolio
-      </Link>
+      {/* Sticky read-only bar */}
+      <ReadOnlyBar
+        schoolId={schoolId}
+        schools={portfolioSchools}
+        onSwitch={(id) => router.push(`/portfolio/${id}`)}
+      />
 
       <h1 className="text-2xl font-bold text-slate-800 mb-1">{schoolName}</h1>
       <p className="text-sm text-slate-500 mb-6">
@@ -372,6 +379,58 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ schoolI
           </div>
         )}
       </Section>
+    </div>
+  )
+}
+
+function ReadOnlyBar({
+  schoolId,
+  schools,
+  onSwitch,
+}: {
+  schoolId: string
+  schools: Array<{ id: string; name: string }>
+  onSwitch: (id: string) => void
+}) {
+  return (
+    <div
+      data-testid="readonly-bar"
+      className="sticky top-0 z-30 -mx-4 md:-mx-8 px-4 md:px-8 py-2 mb-5 bg-white border-b border-slate-200 flex items-center justify-between gap-3"
+      style={{ boxShadow: 'var(--shadow-1)' }}
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="5" y="11" width="14" height="10" rx="2" />
+            <path d="M8 11V7a4 4 0 1 1 8 0v4" />
+          </svg>
+          <span className="hidden sm:inline">Viewing as portfolio admin · Read-only</span>
+          <span className="sm:hidden">Read-only</span>
+        </span>
+        <Link
+          href="/portfolio"
+          className="text-xs font-medium text-teal-600 hover:text-teal-700 inline-flex items-center gap-1"
+        >
+          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          Back to Portfolio
+        </Link>
+      </div>
+      {schools.length > 1 && (
+        <select
+          value={schoolId}
+          onChange={(e) => onSwitch(e.target.value)}
+          aria-label="Switch school"
+          className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 max-w-[160px] truncate"
+        >
+          {schools.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   )
 }
