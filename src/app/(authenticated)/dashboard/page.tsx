@@ -385,7 +385,7 @@ export default function DashboardPage() {
         <SchoolLogo name={schoolName} logoUrl={profile.logo_url} size={48} />
         <div className="flex-1 min-w-0">
           <PageHeader
-            title="Overview"
+            title={schoolName || 'Overview'}
             subtitle={overviewSubtitle}
             actions={
               <div data-tour="export-buttons" className="flex items-center gap-2 flex-wrap">
