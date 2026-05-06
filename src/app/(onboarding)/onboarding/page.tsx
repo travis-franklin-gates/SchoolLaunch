@@ -15,11 +15,36 @@ import type { Pathway } from '@/lib/stateConfig'
 import { getStateConfig } from '@/lib/stateConfig'
 
 const STEPS = [
-  { label: 'School Identity', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
-  { label: 'Enrollment', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z' },
-  { label: 'Demographics', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
-  { label: 'Staffing', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
-  { label: 'Operations', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+  {
+    label: 'School Identity',
+    icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
+    minutes: 2,
+    outcome: "After this step, you'll have your school's basic profile saved.",
+  },
+  {
+    label: 'Enrollment',
+    icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
+    minutes: 5,
+    outcome: "After this step, you'll have a 5-year enrollment plan with grade rollout.",
+  },
+  {
+    label: 'Demographics',
+    icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
+    minutes: 2,
+    outcome: "After this step, you'll see which categorical grants you're eligible for.",
+  },
+  {
+    label: 'Staffing',
+    icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
+    minutes: 8,
+    outcome: "After this step, you'll have a Year 1 staffing plan with personnel costs.",
+  },
+  {
+    label: 'Operations',
+    icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z',
+    minutes: 5,
+    outcome: "After this step, you'll have a complete Year 1 budget.",
+  },
 ]
 
 interface WizardData {
@@ -568,28 +593,59 @@ export default function OnboardingPage() {
         </div>
 
         {/* Welcome content */}
-        <div className="max-w-lg mx-auto text-center">
-          <h1 className="text-3xl font-bold text-slate-800 mb-2" style={{ fontFamily: 'var(--font-heading-var)' }}>
-            Welcome to SchoolLaunch
-          </h1>
-          <p className="text-lg text-slate-500 mb-6">
-            Let&apos;s build your school&apos;s financial model
-          </p>
-          <p className="text-sm text-slate-600 leading-relaxed mb-4">
-            In the next few minutes, you&apos;ll set up the foundation of your {data.pathway === 'wa_charter' ? 'charter school' : pathwayConfig.display_name.toLowerCase()}&apos;s financial plan.
-            We&apos;ll walk you through five steps: your school identity, enrollment plan, student demographics,
-            staffing, and operations. Every answer you provide generates a {data.pathway === 'wa_charter' ? 'Commission-aligned' : 'comprehensive'} financial model
-            that you can refine on your dashboard.
-          </p>
-          <p className="text-xs text-slate-400 mb-8">
-            You can change any of these answers later in Settings.
-          </p>
-          <button
-            onClick={() => setStep(0)}
-            className="bg-teal-600 text-white px-10 py-3 rounded-lg font-semibold hover:bg-teal-700 transition-colors text-lg"
-          >
-            Get Started
-          </button>
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-semibold text-slate-900 mb-2" style={{ fontFamily: 'var(--font-heading-var)' }}>
+              Welcome to SchoolLaunch
+            </h1>
+            <p className="text-base text-slate-500">
+              In about {STEPS.reduce((s, x) => s + x.minutes, 0)} minutes you&rsquo;ll have a {data.pathway === 'wa_charter' ? 'Commission-aligned' : 'comprehensive'} Year 1 budget you can refine on your dashboard.
+            </p>
+          </div>
+
+          <ol className="space-y-3 mb-8">
+            {STEPS.map((s, i) => (
+              <li
+                key={s.label}
+                className="flex items-start gap-4 px-4 py-3 rounded-lg border border-slate-200 bg-white"
+              >
+                <span
+                  className="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold"
+                  style={{
+                    background: 'var(--teal-50)',
+                    color: 'var(--teal-700)',
+                    fontFamily: 'var(--font-heading-var)',
+                  }}
+                  aria-hidden="true"
+                >
+                  {i + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <h3 className="text-sm font-semibold text-slate-800" style={{ fontFamily: 'var(--font-heading-var)' }}>
+                      {s.label}
+                    </h3>
+                    <span className="text-xs text-slate-500 whitespace-nowrap">
+                      ~{s.minutes} min
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{s.outcome}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <div className="text-center">
+            <button
+              onClick={() => setStep(0)}
+              className="bg-teal-600 text-white px-8 py-2.5 rounded-lg font-medium hover:bg-teal-700 transition-colors"
+            >
+              Get started
+            </button>
+            <p className="text-xs text-slate-400 mt-3">
+              You can change any of these answers later in Settings.
+            </p>
+          </div>
         </div>
       </div>
     )
