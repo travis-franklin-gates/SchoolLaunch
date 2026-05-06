@@ -26,6 +26,7 @@ export default function ScorecardPage() {
   useDocumentTitle('Commission Scorecard', schoolName)
 
   const [notesOpen, setNotesOpen] = useState(false)
+  const [showAllYearsOnMobile, setShowAllYearsOnMobile] = useState(false)
 
   const preOpenCash = useMemo(() => computeCarryForward(profile), [profile])
 
@@ -89,13 +90,23 @@ export default function ScorecardPage() {
             <span className="inline-flex items-center gap-1.5"><span className="px-1.5 py-0.5 rounded text-[9px] font-semibold text-white" style={{ background: 'var(--navy-light)' }}>Stage 2</span> Years 3-5</span>
           </div>
         </div>
-        <div className="overflow-x-auto sl-scroll">
+        <div className="md:hidden mb-3 flex items-center justify-between text-xs">
+          <span className="text-slate-500">{showAllYearsOnMobile ? 'Showing all years' : 'Key years (Y1, Y3, Y5)'}</span>
+          <button
+            type="button"
+            onClick={() => setShowAllYearsOnMobile(v => !v)}
+            className="text-teal-600 hover:text-teal-700 font-medium underline-offset-4 hover:underline"
+          >
+            {showAllYearsOnMobile ? 'Show key years' : 'Show all years'}
+          </button>
+        </div>
+        <div className="overflow-x-auto sl-scroll" data-mobile-key={showAllYearsOnMobile ? 'all' : 'key'}>
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-slate-200">
                 <th className="text-left py-2 pr-3 font-medium text-slate-400 uppercase tracking-wide text-[11px] min-w-[180px]">Measure</th>
                 {[1, 2, 3, 4, 5].map((y) => (
-                  <th key={y} className="text-center px-3 py-2 font-medium text-slate-400 uppercase tracking-wide text-[11px] min-w-[85px]">Year {y}</th>
+                  <th key={y} data-year={y} className="text-center px-3 py-2 font-medium text-slate-400 uppercase tracking-wide text-[11px] min-w-[85px]">Year {y}</th>
                 ))}
                 <th className="text-center px-3 py-2 font-medium text-slate-400 uppercase tracking-wide text-[11px] min-w-[140px]">Target</th>
               </tr>
@@ -128,7 +139,7 @@ export default function ScorecardPage() {
                         ? v.toFixed(2)
                         : String(v)
                     return (
-                      <td key={idx} className="px-3 py-2.5 text-center align-middle">
+                      <td key={idx} data-year={idx + 1} className="px-3 py-2.5 text-center align-middle">
                         <div className="flex flex-col items-center gap-1">
                           <span className="font-tabular text-xs text-slate-700">{display}</span>
                           <StatusBadge status={badgeStatus} />

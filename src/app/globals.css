@@ -291,6 +291,18 @@ input[type="range"] {
   opacity: 1;
 }
 
+/* ===== MOBILE KEY-COLUMN TABLES =====
+ * Wide multi-year tables (Multi-Year, Scorecard, Staffing) tag the parent
+ * element with data-mobile-key="key" or "all". Cells tagged data-year="2" or
+ * data-year="4" hide on viewports < 768px when the parent is in key mode.
+ */
+@media (max-width: 767px) {
+  [data-mobile-key="key"] [data-year="2"],
+  [data-mobile-key="key"] [data-year="4"] {
+    display: none;
+  }
+}
+
 @keyframes slideInRight {
   from { opacity: 0; transform: translateX(100%); }
   to { opacity: 1; transform: translateX(0); }

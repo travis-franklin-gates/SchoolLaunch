@@ -273,6 +273,7 @@ export default function StaffingPage() {
   const [positions, setPositions] = useState<MultiYearPosition[]>([])
   const [saving, setSaving] = useState(false)
   const [seeding, setSeeding] = useState(false)
+  const [showAllYearsOnMobile, setShowAllYearsOnMobile] = useState(false)
   const seedingRef = useRef(false)
   const supabase = createClient()
   const benefitsRate = assumptions.benefits_load_pct / 100
@@ -686,7 +687,17 @@ export default function StaffingPage() {
         )
       })()}
 
-      <div data-tour="staffing-table" className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-4">
+      <div className="md:hidden mb-3 flex items-center justify-between text-xs">
+        <span className="text-slate-500">{showAllYearsOnMobile ? 'Showing all years' : 'Key years (Y1, Y3, Y5)'}</span>
+        <button
+          type="button"
+          onClick={() => setShowAllYearsOnMobile(v => !v)}
+          className="text-teal-600 hover:text-teal-700 font-medium underline-offset-4 hover:underline"
+        >
+          {showAllYearsOnMobile ? 'Show key years' : 'Show all years'}
+        </button>
+      </div>
+      <div data-tour="staffing-table" data-mobile-key={showAllYearsOnMobile ? 'all' : 'key'} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-4">
         <div className="overflow-x-auto">
           <table className="sl-table w-full text-sm">
             <thead>
@@ -696,7 +707,7 @@ export default function StaffingPage() {
                 <th data-tour="driver-column" className="text-left px-2 py-3 w-[80px]">Driver</th>
                 <th data-tour="bm-column" className="text-right px-2 py-3 w-[100px]">Salary (Y1)</th>
                 {[1, 2, 3, 4, 5].map((y) => (
-                  <th key={y} {...(y === 1 ? { 'data-tour': 'year-columns' } : {})} className="text-right px-2 py-3 w-[70px]">Y{y} FTE</th>
+                  <th key={y} data-year={y} {...(y === 1 ? { 'data-tour': 'year-columns' } : {})} className="text-right px-2 py-3 w-[70px]">Y{y} FTE</th>
                 ))}
                 <th className="px-2 py-3 w-[50px]"></th>
               </tr>
@@ -982,7 +993,7 @@ function PositionRow({
         )}
       </td>
       {[0, 1, 2, 3, 4].map((yi) => (
-        <td key={yi} className="px-2 py-1.5">
+        <td key={yi} data-year={yi + 1} className="px-2 py-1.5">
           <input
             type="number"
             step={0.5}

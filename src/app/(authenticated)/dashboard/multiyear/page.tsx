@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { computeMultiYearDetailed, getGrantRevenueForYear, computeCarryForward, computeGenericProjections } from '@/lib/budgetEngine'
 import type { StartupFundingSource, PreOpeningTransaction } from '@/lib/types'
@@ -58,6 +58,7 @@ export default function MultiYearPage() {
   )
 
   const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
+  const [showAllYearsOnMobile, setShowAllYearsOnMobile] = useState(false)
 
   if (loading) {
     return <MultiYearSkeleton />
@@ -71,6 +72,7 @@ export default function MultiYearPage() {
         title="Multi-Year Projection"
         subtitle={`Five-year projection with ${assumptions.salary_escalator_pct}% annual salary escalator, ${assumptions.ops_escalator_pct}% operations escalator, and ${assumptions.revenue_cola_pct}% revenue COLA.`}
       />
+      <MobileYearToggle showAll={showAllYearsOnMobile} onToggle={() => setShowAllYearsOnMobile(v => !v)} />
 
       {/* Startup Funding Sources — read-only summary */}
       {fundingSources.length > 0 && (
@@ -174,13 +176,17 @@ export default function MultiYearPage() {
       )}
 
       {/* Main multi-year table */}
-      <div data-tour="multiyear-table" className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm overflow-x-auto sl-scroll">
+      <div
+        data-tour="multiyear-table"
+        data-mobile-key={showAllYearsOnMobile ? 'all' : 'key'}
+        className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm overflow-x-auto sl-scroll"
+      >
         <table className="w-full text-sm whitespace-nowrap sl-table">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
               <th className="text-left px-5 py-3 font-semibold text-slate-600 min-w-[200px]"></th>
               {yrs.map((y) => (
-                <th key={y} className="text-right px-5 py-3 font-semibold text-slate-600 min-w-[130px] num">
+                <th key={y} data-year={y} className="text-right px-5 py-3 font-semibold text-slate-600 min-w-[130px] num">
                   Year {y}
                   <div className="text-[10px] font-normal text-slate-400">
                     {yearsWithStartup[y - 1]?.enrollment || 0} students
@@ -353,6 +359,21 @@ export default function MultiYearPage() {
   )
 }
 
+function MobileYearToggle({ showAll, onToggle }: { showAll: boolean; onToggle: () => void }) {
+  return (
+    <div className="md:hidden mb-3 flex items-center justify-between text-xs">
+      <span className="text-slate-500">{showAll ? 'Showing all years' : 'Key years (Y1, Y3, Y5)'}</span>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="text-teal-600 hover:text-teal-700 font-medium underline-offset-4 hover:underline"
+      >
+        {showAll ? 'Show key years' : 'Show all years'}
+      </button>
+    </div>
+  )
+}
+
 function SectionHeader({ label, cols, dataTour }: { label: string; cols: number; dataTour?: string }) {
   return (
     <tr className="bg-slate-100 border-b border-slate-200 section-header" {...(dataTour ? { 'data-tour': dataTour } : {})}>
@@ -368,7 +389,7 @@ function Row({ label, values }: { label: string; values: number[] }) {
     <tr className="border-b border-slate-100 even:bg-slate-50/30">
       <td className="px-5 py-2.5 text-slate-600">{label}</td>
       {values.map((v, i) => (
-        <td key={i} className="px-5 py-2.5 text-right text-slate-600 tabular-nums num">{fmt(v)}</td>
+        <td key={i} data-year={i + 1} className="px-5 py-2.5 text-right text-slate-600 tabular-nums num">{fmt(v)}</td>
       ))}
     </tr>
   )
@@ -379,7 +400,7 @@ function TotalRow({ label, values, format = 'currency' }: { label: string; value
     <tr className="border-b border-slate-200 bg-slate-50 total">
       <td className="px-5 py-3 font-bold text-slate-800">{label}</td>
       {values.map((v, i) => (
-        <td key={i} className="px-5 py-3 text-right font-bold text-slate-800 tabular-nums num">
+        <td key={i} data-year={i + 1} className="px-5 py-3 text-right font-bold text-slate-800 tabular-nums num">
           {format === 'number' ? v.toLocaleString() : fmt(v)}
         </td>
       ))}
