@@ -10,6 +10,7 @@ import StepEnrollment from '@/components/onboarding/StepEnrollment'
 import StepDemographics from '@/components/onboarding/StepDemographics'
 import StepStaffing from '@/components/onboarding/StepStaffing'
 import StepOperations, { defaultOperationsData, getDefaultOperationsData } from '@/components/onboarding/StepOperations'
+import { OnboardingStepper } from '@/components/onboarding/Stepper'
 import type { GrowthPreset, StartupFundingSource, GradeExpansionEntry, EnrollmentMode } from '@/lib/types'
 import type { Pathway } from '@/lib/stateConfig'
 import { getStateConfig } from '@/lib/stateConfig'
@@ -571,26 +572,7 @@ export default function OnboardingPage() {
   if (step === -1) {
     return (
       <div>
-        {/* Progress stepper — all inactive */}
-        <div className="mb-8 max-w-xl mx-auto px-2 sm:px-0">
-          <div className="flex items-start">
-            {STEPS.map(({ label, icon }, i) => (
-              <div key={label} className="flex items-start flex-1 last:flex-initial min-w-0">
-                <div className="flex flex-col items-center w-14 sm:w-[72px] flex-shrink-0">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-slate-200 text-slate-400">
-                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
-                    </svg>
-                  </div>
-                  <span className="text-[10px] sm:text-[11px] mt-1 sm:mt-1.5 font-medium text-center leading-tight text-slate-400" style={{ fontFamily: 'var(--font-heading-var)' }}>{label}</span>
-                </div>
-                {i < STEPS.length - 1 && (
-                  <div className="h-0.5 flex-1 mt-4 sm:mt-[18px] bg-slate-200" />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+        <OnboardingStepper steps={STEPS} currentIndex={-1} />
 
         {/* Welcome content */}
         <div className="max-w-2xl mx-auto">
@@ -653,45 +635,10 @@ export default function OnboardingPage() {
 
   return (
     <div>
-      {/* Progress bar */}
-      <div className="mb-8 max-w-xl mx-auto px-2 sm:px-0">
-        <div className="flex items-start mb-6">
-          {STEPS.map(({ label, icon }, i) => (
-            <div key={label} className="flex items-start flex-1 last:flex-initial min-w-0">
-              <div className="flex flex-col items-center w-14 sm:w-[72px] flex-shrink-0">
-                <div
-                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
-                    i < step
-                      ? 'bg-teal-600 text-white'
-                      : i === step
-                      ? 'bg-white ring-[3px] ring-teal-600 animate-pulse'
-                      : 'bg-slate-200 text-slate-400'
-                  }`}
-                >
-                  {i < step ? (
-                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    <svg className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${i === step ? 'text-teal-600' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
-                    </svg>
-                  )}
-                </div>
-                <span className={`text-[10px] sm:text-[11px] mt-1 sm:mt-1.5 font-medium text-center leading-tight ${
-                  i <= step ? 'text-teal-600' : 'text-slate-400'
-                }`} style={{ fontFamily: 'var(--font-heading-var)' }}>{label}</span>
-              </div>
-              {i < STEPS.length - 1 && (
-                <div className={`h-0.5 flex-1 mt-4 sm:mt-[18px] ${i < step ? 'bg-teal-600' : 'bg-slate-200'}`} />
-              )}
-            </div>
-          ))}
-        </div>
-        <div className="text-center">
-          <h2 className="text-[24px] font-semibold text-slate-900" style={{ fontFamily: 'var(--font-heading-var)' }}>{STEPS[step].label}</h2>
-          <p className="text-[15px] text-slate-400 mt-1">Step {step + 1} of {STEPS.length}</p>
-        </div>
+      <OnboardingStepper steps={STEPS} currentIndex={step} />
+      <div className="text-center mb-6">
+        <h2 className="text-[24px] font-semibold text-slate-900" style={{ fontFamily: 'var(--font-heading-var)' }}>{STEPS[step].label}</h2>
+        <p className="text-[15px] text-slate-400 mt-1">Step {step + 1} of {STEPS.length}</p>
       </div>
 
       {error && (
