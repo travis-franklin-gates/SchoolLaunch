@@ -66,10 +66,10 @@ export function AuthShell({ children, formSubhead }: AuthShellProps) {
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-4 py-10 md:px-12">
+      <main className="flex-1 flex flex-col items-center md:justify-center px-4 pt-8 pb-10 md:py-10 md:px-12">
         <div className="w-full max-w-md">
           {/* Mobile-only wordmark */}
-          <div className="md:hidden flex items-center gap-2 mb-8 justify-center">
+          <div className="md:hidden flex items-center gap-2 mb-6 justify-center">
             <span
               className="inline-flex items-center justify-center w-7 h-7 rounded-md"
               style={{ background: 'var(--teal-600)' }}
