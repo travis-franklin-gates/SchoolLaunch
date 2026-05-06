@@ -241,7 +241,7 @@ export default function DashboardPage() {
 
   // Compose the school identity descriptor for the PageHeader subtitle.
   // schoolName lives in the PageHeader title, so the subtitle starts at grades.
-  const overviewSubtitle = (() => {
+  const overviewSubtitleParts: string[] = (() => {
     const parts: string[] = []
     if (openingGrades) {
       const opening = `${openingGrades} Opening ${profile.planned_open_year || ''}`.trim()
@@ -253,8 +253,18 @@ export default function DashboardPage() {
       const regionLabel = REGIONALIZATION_FACTORS[profile.region]?.label?.split('(')[0]?.trim() || profile.region
       parts.push(regionLabel)
     }
-    return parts.join(' · ')
+    return parts
   })()
+  const overviewSubtitle = (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+      {overviewSubtitleParts.map((part, i) => (
+        <span key={i} className="inline-flex items-center gap-2">
+          {i > 0 && <span aria-hidden="true" className="text-slate-300">&middot;</span>}
+          <span>{part}</span>
+        </span>
+      ))}
+    </div>
+  )
 
   // 5-year trajectory data from budget engine (same as Multi-Year tab and Scorecard)
   const daysOfCashAllYears = scorecard.measures.find(m => m.name === 'Days of Cash')?.values || []
