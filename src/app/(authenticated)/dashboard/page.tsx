@@ -239,9 +239,9 @@ export default function DashboardPage() {
     : profile.grade_config || ''
 
   // Compose the school identity descriptor for the PageHeader subtitle.
+  // schoolName lives in the PageHeader title, so the subtitle starts at grades.
   const overviewSubtitle = (() => {
     const parts: string[] = []
-    if (schoolName) parts.push(schoolName)
     if (openingGrades) {
       const opening = `${openingGrades} Opening ${profile.planned_open_year || ''}`.trim()
       const fullPart = buildoutGrades ? `${opening} → ${buildoutGrades} at Full Build-Out` : opening
