@@ -11,6 +11,7 @@ import type { Pathway, StateConfig } from '@/lib/stateConfig'
 import { getStateConfig } from '@/lib/stateConfig'
 import { FormField } from '@/components/ui/FormField'
 import { Tabs } from '@/components/ui/Tabs'
+import { CurrencyInput } from '@/components/ui/CurrencyInput'
 
 const GRADE_ENROLLMENT_DEFAULTS: Record<string, { classSize: number }> = {
   'K-5': { classSize: 24 },
@@ -259,16 +260,7 @@ export default function StepEnrollment({
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Annual Tuition Per Student">
               {(id) => (
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-slate-400">$</span>
-                  <input
-                    id={id}
-                    type="number"
-                    value={tuitionRate}
-                    onChange={(e) => setTuitionRate(Number(e.target.value))}
-                    className="w-full pl-7 pr-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
-                  />
-                </div>
+                <CurrencyInput id={id} value={tuitionRate} onChange={setTuitionRate} fullWidth />
               )}
             </FormField>
             <FormField label="Financial Aid Discount %">

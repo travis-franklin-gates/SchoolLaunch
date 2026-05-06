@@ -6,6 +6,7 @@ import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import type { Pathway } from '@/lib/stateConfig'
 import { getStateConfig } from '@/lib/stateConfig'
 import Tooltip from '@/components/ui/Tooltip'
+import { CurrencyInput } from '@/components/ui/CurrencyInput'
 
 interface LocalPosition {
   key: string
@@ -392,13 +393,12 @@ export default function StepStaffing({ enrollment, maxClassSize, sectionsY1, gra
                     />
                   </td>
                   <td className="py-2 pr-3">
-                    <input
-                      type="number"
+                    <CurrencyInput
                       value={p.salary}
-                      onChange={(e) => updatePosition(p.key, 'salary', Number(e.target.value))}
+                      onChange={(v) => updatePosition(p.key, 'salary', v)}
                       min={0}
                       step={1000}
-                      className="w-28 px-2 py-1.5 border border-slate-200 rounded text-right text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                      ariaLabel={`Annual salary for ${p.title}`}
                     />
                   </td>
                   <td className="py-2 pr-3 text-right text-slate-500">{fmt(benefits)}</td>

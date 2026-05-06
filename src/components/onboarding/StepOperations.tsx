@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { calcCommissionRevenue, calcAuthorizerFeeCommission, calcSmallSchoolEnhancementFromGrades } from '@/lib/calculations'
 import { FormField } from '@/components/ui/FormField'
+import { CurrencyInput } from '@/components/ui/CurrencyInput'
 import { stateApportionmentBase } from '@/lib/budgetEngine'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/types'
 import type { StartupFundingSource } from '@/lib/types'
@@ -443,14 +444,13 @@ export default function StepOperations({
             </FormField>
             <FormField label="$/sqft/yr">
               {(id) => (
-                <input
+                <CurrencyInput
                   id={id}
-                  type="number"
                   value={facilityCostPerSqft}
-                  onChange={(e) => setFacilityCostPerSqft(Number(e.target.value))}
+                  onChange={setFacilityCostPerSqft}
                   step={0.5}
                   disabled={facilityEstimate}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:bg-slate-100"
+                  fullWidth
                 />
               )}
             </FormField>
@@ -459,14 +459,13 @@ export default function StepOperations({
           <div className={facilityEstimate ? 'opacity-50 pointer-events-none' : ''}>
             <FormField label="Monthly Lease Amount">
               {(id) => (
-                <input
+                <CurrencyInput
                   id={id}
-                  type="number"
                   value={facilityMonthly}
-                  onChange={(e) => setFacilityMonthly(Number(e.target.value))}
+                  onChange={setFacilityMonthly}
                   step={500}
                   disabled={facilityEstimate}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:bg-slate-100"
+                  fullWidth
                 />
               )}
             </FormField>
@@ -523,30 +522,12 @@ export default function StepOperations({
                 helperText={`Primary per-pupil funding from your state. ${enrollment} students x ${fmt(perPupilRate)} = ${fmt(enrollment * perPupilRate)}`}
               >
                 {(id) => (
-                  <div className="relative">
-                    <span className="absolute left-3 top-2 text-slate-400">$</span>
-                    <input
-                      id={id}
-                      type="number"
-                      value={perPupilRate}
-                      onChange={(e) => setPerPupilRate(Number(e.target.value))}
-                      className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                    />
-                  </div>
+                  <CurrencyInput id={id} value={perPupilRate} onChange={setPerPupilRate} fullWidth />
                 )}
               </FormField>
               <FormField label="Fundraising / Donations (annual)">
                 {(id) => (
-                  <div className="relative">
-                    <span className="absolute left-3 top-2 text-slate-400">$</span>
-                    <input
-                      id={id}
-                      type="number"
-                      value={fundraisingAmount}
-                      onChange={(e) => setFundraisingAmount(Number(e.target.value))}
-                      className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                    />
-                  </div>
+                  <CurrencyInput id={id} value={fundraisingAmount} onChange={setFundraisingAmount} fullWidth />
                 )}
               </FormField>
               {config.authorizer_fee_editable && (
@@ -564,30 +545,12 @@ export default function StepOperations({
               </div>
               <FormField label="Registration / Enrollment Fees (per student)">
                 {(id) => (
-                  <div className="relative">
-                    <span className="absolute left-3 top-2 text-slate-400">$</span>
-                    <input
-                      id={id}
-                      type="number"
-                      value={registrationFees}
-                      onChange={(e) => setRegistrationFees(Number(e.target.value))}
-                      className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                    />
-                  </div>
+                  <CurrencyInput id={id} value={registrationFees} onChange={setRegistrationFees} fullWidth />
                 )}
               </FormField>
               <FormField label="Fundraising / Annual Fund">
                 {(id) => (
-                  <div className="relative">
-                    <span className="absolute left-3 top-2 text-slate-400">$</span>
-                    <input
-                      id={id}
-                      type="number"
-                      value={fundraisingAmount}
-                      onChange={(e) => setFundraisingAmount(Number(e.target.value))}
-                      className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                    />
-                  </div>
+                  <CurrencyInput id={id} value={fundraisingAmount} onChange={setFundraisingAmount} fullWidth />
                 )}
               </FormField>
             </div>
@@ -627,17 +590,13 @@ export default function StepOperations({
                     placeholder="Source name"
                     className="flex-1 px-2 py-1.5 border border-slate-200 rounded text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
                   />
-                  <div className="flex items-center gap-1">
-                    <span className="text-slate-400 text-sm">$</span>
-                    <input
-                      type="number"
-                      value={f.amount}
-                      onChange={(e) => updateFundingField(f.key, 'amount', Number(e.target.value))}
-                      step={5000}
-                      placeholder="Total award"
-                      className="w-28 px-2 py-1.5 border border-slate-200 rounded text-sm text-right text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                    />
-                  </div>
+                  <CurrencyInput
+                    value={f.amount}
+                    onChange={(v) => updateFundingField(f.key, 'amount', v)}
+                    step={5000}
+                    placeholder="Total award"
+                    ariaLabel="Total award"
+                  />
                   <select
                     value={f.type}
                     onChange={(e) => updateFundingField(f.key, 'type', e.target.value)}
@@ -705,17 +664,13 @@ export default function StepOperations({
                                 className="flex-1 min-w-[100px]"
                               >
                                 {(id) => (
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-slate-400 text-xs">$</span>
-                                    <input
-                                      id={id}
-                                      type="number"
-                                      value={f.yearAllocations[yr] || 0}
-                                      onChange={(e) => updateAllocation(f.key, yr, Number(e.target.value))}
-                                      step={1000}
-                                      className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm text-right text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                                    />
-                                  </div>
+                                  <CurrencyInput
+                                    id={id}
+                                    value={f.yearAllocations[yr] || 0}
+                                    onChange={(v) => updateAllocation(f.key, yr, v)}
+                                    step={1000}
+                                    fullWidth
+                                  />
                                 )}
                               </FormField>
                             ))}

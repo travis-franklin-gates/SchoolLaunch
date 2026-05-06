@@ -13,6 +13,8 @@ export interface CurrencyInputProps {
   placeholder?: string
   className?: string
   ariaLabel?: string
+  /** When true, the input expands to fill its container instead of using the default w-32. */
+  fullWidth?: boolean
 }
 
 /**
@@ -32,6 +34,7 @@ export function CurrencyInput({
   placeholder,
   className,
   ariaLabel,
+  fullWidth,
 }: CurrencyInputProps) {
   const [localText, setLocalText] = useState<string | null>(null)
 
@@ -52,8 +55,12 @@ export function CurrencyInput({
 
   const display = localText ?? String(Number.isFinite(value) ? value : 0)
 
+  const wrapperClass = fullWidth
+    ? ['flex items-center gap-1 w-full', className ?? ''].filter(Boolean).join(' ')
+    : ['inline-flex items-center gap-1', className ?? ''].filter(Boolean).join(' ')
+  const inputWidthClass = fullWidth ? 'flex-1 min-w-0' : 'w-32'
   return (
-    <div className={['inline-flex items-center gap-1', className ?? ''].filter(Boolean).join(' ')}>
+    <div className={wrapperClass}>
       <span aria-hidden="true" className="text-xs text-slate-400">$</span>
       <input
         id={id}
@@ -68,7 +75,7 @@ export function CurrencyInput({
         value={display}
         onChange={handleChange}
         onBlur={handleBlur}
-        className="font-tabular text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600 w-32"
+        className={`font-tabular text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-600 ${inputWidthClass}`}
       />
     </div>
   )
