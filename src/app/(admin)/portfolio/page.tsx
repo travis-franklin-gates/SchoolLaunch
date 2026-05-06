@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -176,6 +176,15 @@ export default function PortfolioPage() {
   const [sortDropdown, setSortDropdown] = useState('reserveDays-asc')
   const [notesModal, setNotesModal] = useState<string | null>(null) // school ID for open notes modal
   const [exporting, setExporting] = useState(false)
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+
+  function toggleRowExpanded(schoolId: string) {
+    setExpandedRows((prev) => {
+      const next = new Set(prev)
+      if (next.has(schoolId)) next.delete(schoolId); else next.add(schoolId)
+      return next
+    })
+  }
 
   const loadData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -751,15 +760,15 @@ export default function PortfolioPage() {
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
                 <th onClick={() => handleSort('name')} className="text-left px-4 py-3 font-semibold text-slate-600 cursor-pointer hover:text-teal-600 whitespace-nowrap">School<SortIcon col="name" /></th>
-                <th className="text-center px-2 py-3 font-semibold text-slate-600 whitespace-nowrap">Status</th>
-                <th className="text-center px-2 py-3 font-semibold text-slate-600 whitespace-nowrap">Y1 Enroll</th>
                 <th onClick={() => handleSort('reserveDays')} className="text-center px-2 py-3 font-semibold text-slate-600 cursor-pointer hover:text-teal-600 whitespace-nowrap">Reserve Days<SortIcon col="reserveDays" /></th>
                 <th onClick={() => handleSort('personnel')} className="text-center px-2 py-3 font-semibold text-slate-600 cursor-pointer hover:text-teal-600 whitespace-nowrap">Personnel %<SortIcon col="personnel" /></th>
-                <th onClick={() => handleSort('netPosition')} className="text-center px-2 py-3 font-semibold text-slate-600 cursor-pointer hover:text-teal-600 whitespace-nowrap">Net Position<SortIcon col="netPosition" /></th>
-                <th className="text-center px-2 py-3 font-semibold text-slate-600 whitespace-nowrap">FPF</th>
-                <th className="text-center px-2 py-3 font-semibold text-slate-600 whitespace-nowrap">Advisory</th>
-                <th onClick={() => handleSort('readiness')} className="text-center px-2 py-3 font-semibold text-slate-600 cursor-pointer hover:text-teal-600 whitespace-nowrap">Ready<SortIcon col="readiness" /></th>
-                <th className="text-center px-2 py-3 font-semibold text-slate-600 whitespace-nowrap">Updated</th>
+                <th className="text-center px-2 py-3 font-semibold text-slate-600 whitespace-nowrap">Last Activity</th>
+                <th onClick={() => handleSort('netPosition')} className="hidden xl:table-cell text-center px-2 py-3 font-semibold text-slate-600 cursor-pointer hover:text-teal-600 whitespace-nowrap">Net Position<SortIcon col="netPosition" /></th>
+                <th className="hidden xl:table-cell text-center px-2 py-3 font-semibold text-slate-600 whitespace-nowrap">FPF</th>
+                <th className="hidden xl:table-cell text-center px-2 py-3 font-semibold text-slate-600 whitespace-nowrap">Advisory</th>
+                <th onClick={() => handleSort('readiness')} className="hidden xl:table-cell text-center px-2 py-3 font-semibold text-slate-600 cursor-pointer hover:text-teal-600 whitespace-nowrap">Ready<SortIcon col="readiness" /></th>
+                <th className="hidden xl:table-cell text-center px-2 py-3 font-semibold text-slate-600 whitespace-nowrap">Y1 Enroll</th>
+                <th className="xl:hidden text-center px-2 py-3 font-semibold text-slate-600 whitespace-nowrap" aria-label="More columns" />
               </tr>
             </thead>
             <tbody>
@@ -769,66 +778,125 @@ export default function PortfolioPage() {
                 const pct = y1 && y1.revenue.operatingRevenue > 0 ? (y1.personnel.total / y1.revenue.operatingRevenue) * 100 : 0
                 const net = y1?.net ?? 0
                 const daysAgo = s.lastUpdated ? Math.floor((Date.now() - new Date(s.lastUpdated).getTime()) / (1000 * 60 * 60 * 24)) : 999
+                const isExpanded = expandedRows.has(s.id)
 
                 return (
-                  <tr key={s.id} className="border-b border-slate-50 hover:bg-slate-50/50">
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-2">
-                        <Link href={`/portfolio/${s.id}`} className="flex items-center gap-2 hover:text-teal-600 transition-colors">
-                          <SchoolLogo name={s.name} logoUrl={s.logoUrl} size={24} />
-                          <span className="font-medium text-slate-800">{s.name}</span>
-                        </Link>
-                        {s.notes.length > 0 && (
-                          <Tooltip content="View notes">
-                            <button onClick={() => setNotesModal(s.id)} className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 hover:bg-teal-100 hover:text-teal-600" aria-label="View notes">
-                              {s.notes.length}
-                            </button>
-                          </Tooltip>
-                        )}
-                      </div>
-                    </td>
-                    <td className="text-center px-2 py-2.5">
-                      {s.onboardingComplete ? <StatusBadge status={s.status} /> : <span className="text-[10px] text-slate-400">Setup incomplete</span>}
-                    </td>
-                    <td className="text-center px-2 py-2.5 text-slate-700">{s.enrollmentY1 || '—'}</td>
-                    <td className={`text-center px-2 py-2.5 font-medium ${s.onboardingComplete ? reserveColor(days) : 'text-slate-400'}`}>
-                      {s.onboardingComplete ? `${days}d` : '—'}
-                    </td>
-                    <td className={`text-center px-2 py-2.5 font-medium ${s.onboardingComplete ? personnelColor(pct) : 'text-slate-400'}`}>
-                      {s.onboardingComplete ? `${pct.toFixed(1)}%` : '—'}
-                    </td>
-                    <td className={`text-center px-2 py-2.5 font-medium ${net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {s.onboardingComplete ? fmt(net) : '—'}
-                    </td>
-                    <td className="text-center px-2 py-2.5">
-                      {s.onboardingComplete ? <ReadinessBadge issues={s.stage1Issues} /> : <span className="text-[10px] text-slate-400">—</span>}
-                    </td>
-                    <td className="text-center px-2 py-2.5">
-                      {s.advisoryStatus ? (
-                        <span className="text-[10px]">
-                          {s.advisoryStatus.strong > 0 && <span className="text-emerald-600 font-medium">{s.advisoryStatus.strong}S</span>}
-                          {s.advisoryStatus.attention > 0 && <span className="text-amber-600 font-medium ml-1">{s.advisoryStatus.attention}A</span>}
-                          {s.advisoryStatus.risk > 0 && <span className="text-red-600 font-medium ml-1">{s.advisoryStatus.risk}R</span>}
+                  <Fragment key={s.id}>
+                    <tr className="border-b border-slate-50 hover:bg-slate-50/50">
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Link href={`/portfolio/${s.id}`} className="flex items-center gap-2 hover:text-teal-600 transition-colors">
+                            <SchoolLogo name={s.name} logoUrl={s.logoUrl} size={24} />
+                            <span className="font-medium text-slate-800">{s.name}</span>
+                          </Link>
+                          {s.onboardingComplete ? (
+                            <StatusBadge status={s.status} />
+                          ) : (
+                            <span className="text-[10px] text-slate-400">Setup incomplete</span>
+                          )}
+                          {s.notes.length > 0 && (
+                            <Tooltip content="View notes">
+                              <button onClick={() => setNotesModal(s.id)} className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 hover:bg-teal-100 hover:text-teal-600" aria-label="View notes">
+                                {s.notes.length}
+                              </button>
+                            </Tooltip>
+                          )}
+                        </div>
+                      </td>
+                      <td className={`text-center px-2 py-2.5 font-medium ${s.onboardingComplete ? reserveColor(days) : 'text-slate-400'}`}>
+                        {s.onboardingComplete ? `${days}d` : '—'}
+                      </td>
+                      <td className={`text-center px-2 py-2.5 font-medium ${s.onboardingComplete ? personnelColor(pct) : 'text-slate-400'}`}>
+                        {s.onboardingComplete ? `${pct.toFixed(1)}%` : '—'}
+                      </td>
+                      <td className={`text-center px-2 py-2.5 text-xs ${daysAgo > 14 ? 'text-red-500' : daysAgo > 7 ? 'text-amber-600' : 'text-slate-500'}`}>
+                        {daysAgo < 999 ? `${daysAgo}d ago` : '—'}
+                      </td>
+                      <td className={`hidden xl:table-cell text-center px-2 py-2.5 font-medium ${net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {s.onboardingComplete ? fmt(net) : '—'}
+                      </td>
+                      <td className="hidden xl:table-cell text-center px-2 py-2.5">
+                        {s.onboardingComplete ? <ReadinessBadge issues={s.stage1Issues} /> : <span className="text-[10px] text-slate-400">—</span>}
+                      </td>
+                      <td className="hidden xl:table-cell text-center px-2 py-2.5">
+                        {s.advisoryStatus ? (
+                          <span className="text-[10px]">
+                            {s.advisoryStatus.strong > 0 && <span className="text-emerald-600 font-medium">{s.advisoryStatus.strong}S</span>}
+                            {s.advisoryStatus.attention > 0 && <span className="text-amber-600 font-medium ml-1">{s.advisoryStatus.attention}A</span>}
+                            {s.advisoryStatus.risk > 0 && <span className="text-red-600 font-medium ml-1">{s.advisoryStatus.risk}R</span>}
+                          </span>
+                        ) : <span className="text-[10px] text-slate-400">—</span>}
+                      </td>
+                      <td className="hidden xl:table-cell text-center px-2 py-2.5">
+                        <span className={`text-xs font-medium ${s.readinessScore >= 4 ? 'text-emerald-600' : s.readinessScore >= 2 ? 'text-amber-600' : 'text-slate-400'}`}>
+                          {s.readinessScore}/5
                         </span>
-                      ) : <span className="text-[10px] text-slate-400">—</span>}
-                    </td>
-                    <td className="text-center px-2 py-2.5">
-                      <span className={`text-xs font-medium ${s.readinessScore >= 4 ? 'text-emerald-600' : s.readinessScore >= 2 ? 'text-amber-600' : 'text-slate-400'}`}>
-                        {s.readinessScore}/5
-                      </span>
-                    </td>
-                    <td className={`text-center px-2 py-2.5 text-xs ${daysAgo > 14 ? 'text-red-500' : daysAgo > 7 ? 'text-amber-600' : 'text-slate-500'}`}>
-                      {daysAgo < 999 ? `${daysAgo}d ago` : '—'}
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="hidden xl:table-cell text-center px-2 py-2.5 text-slate-700">{s.enrollmentY1 || '—'}</td>
+                      <td className="xl:hidden text-center px-2 py-2.5">
+                        <button
+                          type="button"
+                          onClick={() => toggleRowExpanded(s.id)}
+                          className="text-xs font-medium text-teal-600 hover:text-teal-700 inline-flex items-center gap-0.5"
+                          aria-expanded={isExpanded}
+                          aria-label={isExpanded ? 'Hide additional columns' : 'Show additional columns'}
+                        >
+                          More
+                          <svg className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr className="xl:hidden border-b border-slate-100 bg-slate-50/40">
+                        <td colSpan={5} className="px-4 py-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                            <div>
+                              <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Y1 Enrollment</div>
+                              <div className="text-slate-700">{s.enrollmentY1 || '—'}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Net Position</div>
+                              <div className={`font-medium ${net >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                                {s.onboardingComplete ? fmt(net) : '—'}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">FPF Readiness</div>
+                              <div>
+                                {s.onboardingComplete ? <ReadinessBadge issues={s.stage1Issues} /> : <span className="text-slate-400">—</span>}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Advisory</div>
+                              <div className="text-[11px]">
+                                {s.advisoryStatus ? (
+                                  <>
+                                    {s.advisoryStatus.strong > 0 && <span className="text-emerald-600 font-medium">{s.advisoryStatus.strong}S </span>}
+                                    {s.advisoryStatus.attention > 0 && <span className="text-amber-600 font-medium">{s.advisoryStatus.attention}A </span>}
+                                    {s.advisoryStatus.risk > 0 && <span className="text-red-600 font-medium">{s.advisoryStatus.risk}R</span>}
+                                  </>
+                                ) : <span className="text-slate-400">—</span>}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Ready Score</div>
+                              <div className={`font-medium ${s.readinessScore >= 4 ? 'text-emerald-600' : s.readinessScore >= 2 ? 'text-amber-600' : 'text-slate-400'}`}>
+                                {s.readinessScore}/5
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 )
               })}
             </tbody>
             <tfoot>
               <tr className="bg-slate-50 border-t border-slate-200">
                 <td className="px-4 py-2 font-semibold text-slate-600 text-xs">Portfolio Average</td>
-                <td />
-                <td className="text-center text-xs text-slate-600">{schoolsWithData.length > 0 ? Math.round(schoolsWithData.reduce((s, sc) => s + sc.enrollmentY1, 0) / schoolsWithData.length) : '—'}</td>
                 <td className={`text-center text-xs font-medium ${reserveColor(avgReserveDays)}`}>{avgReserveDays}d</td>
                 <td className="text-center text-xs text-slate-600">
                   {schoolsWithData.length > 0 ? `${(schoolsWithData.reduce((s, sc) => {
@@ -836,7 +904,15 @@ export default function PortfolioPage() {
                     return s + (y && y.revenue.operatingRevenue > 0 ? (y.personnel.total / y.revenue.operatingRevenue) * 100 : 0)
                   }, 0) / schoolsWithData.length).toFixed(1)}%` : '—'}
                 </td>
-                <td colSpan={5} />
+                <td />
+                <td className="hidden xl:table-cell" />
+                <td className="hidden xl:table-cell" />
+                <td className="hidden xl:table-cell" />
+                <td className="hidden xl:table-cell" />
+                <td className="hidden xl:table-cell text-center text-xs text-slate-600">
+                  {schoolsWithData.length > 0 ? Math.round(schoolsWithData.reduce((s, sc) => s + sc.enrollmentY1, 0) / schoolsWithData.length) : '—'}
+                </td>
+                <td className="xl:hidden" />
               </tr>
             </tfoot>
           </table>
