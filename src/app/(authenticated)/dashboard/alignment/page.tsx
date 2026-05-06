@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 interface Misalignment {
   severity: 'critical' | 'important' | 'minor'
@@ -251,10 +252,12 @@ export default function AlignmentPage() {
 
   return (
     <div className="max-w-4xl animate-fade-in">
-      <h1 data-tour="alignment-header" className="text-[28px] font-semibold text-slate-900 mb-1">Application Alignment Review</h1>
-      <p className="text-sm text-slate-500 mb-6">
-        Upload your draft application narrative and we&apos;ll check it against your financial model for misalignments the Commission would flag.
-      </p>
+      <div data-tour="alignment-header">
+        <PageHeader
+          title="Application Alignment Review"
+          subtitle="Upload your draft application narrative and we'll check it against your financial model for misalignments the Commission would flag."
+        />
+      </div>
 
       {error && (
         <div className="mb-6 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{error}</div>

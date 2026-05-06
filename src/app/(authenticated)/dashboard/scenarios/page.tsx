@@ -8,6 +8,7 @@ import type { ScenarioAssumptions, ScenarioResults, ScenarioYearResult } from '@
 import Tooltip from '@/components/ui/Tooltip'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { formatCurrency } from '@/lib/format'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 interface ScenarioRecord {
   id: string
@@ -259,23 +260,21 @@ export default function ScenariosPage() {
 
   return (
     <div className="animate-fade-in">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-[28px] font-semibold text-slate-900" style={{ fontFamily: 'var(--font-heading-var)' }}>Scenario Engine</h1>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-              Sandbox · changes don&apos;t affect your real model
-            </span>
-          </div>
-          <p className="text-sm text-slate-500 mt-1">Model conservative, base, and optimistic scenarios side-by-side.</p>
-        </div>
-        {calculating && (
+      <PageHeader
+        title="Scenario Engine"
+        subtitle="Model conservative, base, and optimistic scenarios side-by-side."
+        badges={
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+            Sandbox · changes don&apos;t affect your real model
+          </span>
+        }
+        actions={calculating ? (
           <div className="flex items-center gap-2 text-sm text-teal-600">
             <div className="w-4 h-4 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
             Recalculating...
           </div>
-        )}
-      </div>
+        ) : null}
+      />
 
       {stale && (
         <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-700 flex items-center justify-between">

@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { useStateConfig } from '@/contexts/StateConfigContext'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { formatCurrency } from '@/lib/format'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 const fmt = (n: number) => formatCurrency(n, 'accounting')
 
@@ -65,10 +66,10 @@ export default function MultiYearPage() {
 
   return (
     <div className="animate-fade-in">
-      <h1 className="text-[28px] font-semibold text-slate-900 mb-2">Multi-Year Projection</h1>
-      <p className="text-sm text-slate-500 mb-6">
-        Five-year projection with {assumptions.salary_escalator_pct}% annual salary escalator, {assumptions.ops_escalator_pct}% operations escalator, and {assumptions.revenue_cola_pct}% revenue COLA.
-      </p>
+      <PageHeader
+        title="Multi-Year Projection"
+        subtitle={`Five-year projection with ${assumptions.salary_escalator_pct}% annual salary escalator, ${assumptions.ops_escalator_pct}% operations escalator, and ${assumptions.revenue_cola_pct}% revenue COLA.`}
+      />
 
       {/* Startup Funding Sources — read-only summary */}
       {fundingSources.length > 0 && (

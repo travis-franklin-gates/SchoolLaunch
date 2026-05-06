@@ -9,6 +9,7 @@ import { useStateConfig } from '@/contexts/StateConfigContext'
 import type { FinancialAssumptions } from '@/lib/types'
 import { DataTable, type DataTableColumn, type DataTableRow } from '@/components/ui/DataTable'
 import { formatCurrency } from '@/lib/format'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 const fmt = (n: number) => formatCurrency(n, 'accounting')
 
@@ -287,12 +288,10 @@ export default function OperationsPage() {
           You have view-only access. Contact the school owner to request edit permissions.
         </div>
       )}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[28px] font-semibold text-slate-900">Operations</h1>
-          <p className="text-sm text-slate-500 mt-1">Non-personnel expenses for Year 1. Edit per-unit rates or totals — changes sync to Settings on save.</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Operations"
+        subtitle="Non-personnel expenses for Year 1. Edit per-unit rates or totals — changes sync to Settings on save."
+      />
 
       {toast && (
         <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium animate-slide-in-right ${

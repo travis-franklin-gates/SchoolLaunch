@@ -9,6 +9,7 @@ import { COMMISSION_POSITIONS, getCommissionPosition } from '@/lib/types'
 import { expansionToEnrollmentArray } from '@/lib/gradeExpansion'
 import { usePermissions } from '@/hooks/usePermissions'
 import Tooltip from '@/components/ui/Tooltip'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -649,12 +650,10 @@ export default function StaffingPage() {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[28px] font-semibold text-slate-900">Staffing Plan</h1>
-          <p className="text-sm text-slate-500 mt-1">Multi-year staffing projection — Commission V8 template format.</p>
-        </div>
-        <div className="flex items-center gap-3">
+      <PageHeader
+        title="Staffing Plan"
+        subtitle="Multi-year staffing projection — Commission V8 template format."
+        badges={
           <div data-tour="personnel-pct" className={`text-sm font-semibold px-3 py-1.5 rounded-full ${
             Number(personnelPctY1) < 72 ? 'bg-red-50 text-red-700' :
             Number(personnelPctY1) <= 78 ? 'bg-emerald-50 text-emerald-700' :
@@ -664,17 +663,17 @@ export default function StaffingPage() {
             Personnel: {personnelPctY1}% of Revenue
             <span className="text-[10px] opacity-70 ml-1">(Y1)</span>
           </div>
-          {canEdit && (
-            <button
-              data-tour="add-position"
-              onClick={() => addPosition()}
-              className="px-3 py-1.5 text-sm font-medium text-teal-600 border border-teal-300 rounded-lg hover:bg-teal-50 transition-colors"
-            >
-              + Add Position
-            </button>
-          )}
-        </div>
-      </div>
+        }
+        actions={canEdit ? (
+          <button
+            data-tour="add-position"
+            onClick={() => addPosition()}
+            className="px-3 py-1.5 text-sm font-medium text-teal-600 border border-teal-300 rounded-lg hover:bg-teal-50 transition-colors"
+          >
+            + Add Position
+          </button>
+        ) : null}
+      />
 
       {/* Enrollment context row */}
       <div className="mb-4 flex items-center gap-6 text-xs text-slate-500">

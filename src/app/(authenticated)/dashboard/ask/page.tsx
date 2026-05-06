@@ -6,6 +6,7 @@ import { buildSchoolContextString } from '@/lib/buildSchoolContext'
 import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward, computeGenericProjections } from '@/lib/budgetEngine'
 import { useStateConfig } from '@/contexts/StateConfigContext'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 interface Message {
   role: 'user' | 'assistant' | 'system'
@@ -152,11 +153,15 @@ export default function AskPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] animate-fade-in">
+      <PageHeader
+        title="Ask SchoolLaunch"
+        subtitle="Ask questions about your financial model in plain English"
+      />
       {/* Messages */}
       <div data-tour="chat-area" className="flex-1 overflow-y-auto bg-white border border-slate-200 rounded-xl p-4 mb-4 space-y-4 sl-scroll">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-12">
-            <div className="w-14 h-14 bg-teal-50 rounded-2xl flex items-center justify-center mb-4">
+            <div className="w-14 h-14 bg-teal-50 rounded-2xl flex items-center justify-center mb-6">
               <svg
                 className="w-7 h-7 text-teal-500"
                 fill="none"
@@ -171,10 +176,6 @@ export default function AskPage() {
                 />
               </svg>
             </div>
-            <h2 className="text-[24px] font-semibold text-slate-900 mb-1" style={{ fontFamily: 'var(--font-heading-var)' }}>Ask SchoolLaunch</h2>
-            <p className="text-[15px] text-slate-400 mb-8">
-              Ask questions about your financial model in plain English
-            </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-3xl w-full px-4">
               {(isWaCharter ? WA_SUGGESTED_QUESTIONS : GENERIC_SUGGESTED_QUESTIONS).map((q) => (
                 <button

@@ -14,6 +14,7 @@ import LogoUpload from '@/components/settings/LogoUpload'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useStateConfig } from '@/contexts/StateConfigContext'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -186,7 +187,12 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-3xl animate-fade-in">
-      <h1 data-tour="settings-header" className="text-[28px] font-semibold text-slate-900 mb-6">Settings</h1>
+      <div data-tour="settings-header">
+        <PageHeader
+          title="Settings"
+          subtitle="School profile, demographics, financial assumptions, and team management."
+        />
+      </div>
 
       {toast && (
         <div className={`mb-6 px-4 py-3 rounded-lg text-sm font-medium animate-slide-in-right ${

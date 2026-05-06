@@ -7,6 +7,7 @@ import { useStateConfig } from '@/contexts/StateConfigContext'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import GenericScorecard from '@/components/dashboard/GenericScorecard'
 import { StatusBadge, type Status } from '@/components/ui/StatusBadge'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 function fpfStatusToBadge(s: string): Status {
   if (s === 'meets') return 'meets'
@@ -64,10 +65,10 @@ export default function ScorecardPage() {
 
   return (
     <div className="animate-fade-in">
-      <h1 className="text-[28px] font-semibold text-slate-900 mb-1">Commission Scorecard</h1>
-      <p className="text-sm text-slate-500 mb-6">
-        Financial Performance Framework assessment against WA Charter School Commission standards
-      </p>
+      <PageHeader
+        title="Commission Scorecard"
+        subtitle="Financial Performance Framework assessment against WA Charter School Commission standards"
+      />
 
       {/* Overall status banner */}
       <div data-tour="scorecard-banner" className={`mb-6 px-5 py-3 rounded-xl text-sm font-medium ${

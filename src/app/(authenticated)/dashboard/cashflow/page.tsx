@@ -10,6 +10,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import Tooltip from '@/components/ui/Tooltip'
 import { DataTable, type DataTableColumn, type DataTableRow } from '@/components/ui/DataTable'
 import { formatCurrency } from '@/lib/format'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 const fmt = (n: number) => formatCurrency(n, 'accounting')
 
@@ -277,10 +278,12 @@ export default function CashFlowPage() {
         </div>
       )}
 
-      <h1 className="text-[28px] font-semibold text-slate-900 mb-2">Cash Flow</h1>
-      <p className="text-sm text-slate-500 mb-4">
-        {pathwayConfig.pathway === 'wa_charter' ? 'Month-by-month projections using the OSPI apportionment payment schedule.' : 'Month-by-month projections using your payment schedule.'}
-      </p>
+      <PageHeader
+        title="Cash Flow"
+        subtitle={pathwayConfig.pathway === 'wa_charter'
+          ? 'Month-by-month projections using the OSPI apportionment payment schedule.'
+          : 'Month-by-month projections using your payment schedule.'}
+      />
 
       {/* Year toggle — segmented control */}
       <div role="tablist" aria-label="Cash flow year" data-tour="cashflow-tabs" className="inline-flex bg-slate-100 rounded-lg p-1 mb-6">

@@ -16,6 +16,7 @@ import { HealthTile } from '@/components/ui/HealthTile'
 import type { Status } from '@/components/ui/StatusBadge'
 import { DataTable, type DataTableColumn, type DataTableRow } from '@/components/ui/DataTable'
 import { formatCurrency } from '@/lib/format'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 type AdvisoryData = AdvisoryCache
 
@@ -236,6 +237,23 @@ export default function DashboardPage() {
     ? `${profile.buildout_grades[0]}-${profile.buildout_grades[profile.buildout_grades.length - 1]}`
     : profile.grade_config || ''
 
+  // Compose the school identity descriptor for the PageHeader subtitle.
+  const overviewSubtitle = (() => {
+    const parts: string[] = []
+    if (schoolName) parts.push(schoolName)
+    if (openingGrades) {
+      const opening = `${openingGrades} Opening ${profile.planned_open_year || ''}`.trim()
+      const fullPart = buildoutGrades ? `${opening} → ${buildoutGrades} at Full Build-Out` : opening
+      parts.push(fullPart)
+    }
+    if (profile.target_enrollment_y1 > 0) parts.push(`${profile.target_enrollment_y1} Students Year 1`)
+    if (profile.region) {
+      const regionLabel = REGIONALIZATION_FACTORS[profile.region]?.label?.split('(')[0]?.trim() || profile.region
+      parts.push(regionLabel)
+    }
+    return parts.join(' · ')
+  })()
+
   // 5-year trajectory data from budget engine (same as Multi-Year tab and Scorecard)
   const daysOfCashAllYears = scorecard.measures.find(m => m.name === 'Days of Cash')?.values || []
 
@@ -362,16 +380,10 @@ export default function DashboardPage() {
   return (
     <div className="animate-fade-in">
       {/* 1. School Identity Header */}
-      <div className="mb-6 flex items-start gap-4">
+      <div className="flex items-start gap-4">
         <SchoolLogo name={schoolName} logoUrl={profile.logo_url} size={48} />
-        <div>
-        <h1 className="text-[28px] font-semibold text-slate-900 leading-tight">{schoolName || 'Overview'}</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          {openingGrades && `${openingGrades} Opening ${profile.planned_open_year || ''}`}
-          {buildoutGrades && ` \u2192 ${buildoutGrades} at Full Build-Out`}
-          {profile.target_enrollment_y1 > 0 && ` | ${profile.target_enrollment_y1} Students Year 1`}
-          {profile.region && ` | ${REGIONALIZATION_FACTORS[profile.region]?.label?.split('(')[0]?.trim() || profile.region}`}
-        </p>
+        <div className="flex-1 min-w-0">
+          <PageHeader title="Overview" subtitle={overviewSubtitle} />
         </div>
       </div>
 

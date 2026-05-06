@@ -13,6 +13,7 @@ import GenericRevenueView from '@/components/dashboard/GenericRevenueView'
 import Tooltip from '@/components/ui/Tooltip'
 import { DataTable, type DataTableColumn, type DataTableRow } from '@/components/ui/DataTable'
 import { formatCurrency } from '@/lib/format'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 const fmt = (n: number) => formatCurrency(n, 'accounting')
 
@@ -344,9 +345,11 @@ export default function RevenuePage() {
           You have view-only access. Contact the school owner to request edit permissions.
         </div>
       )}
-      <h1 className="text-[28px] font-semibold text-slate-900 mb-2">Revenue</h1>
-      <p className="text-sm text-slate-500 mb-2">Commission-aligned revenue breakdown for Year 1. Override any line by entering a custom amount.</p>
-      <div className="text-xs text-slate-400 mb-6">
+      <PageHeader
+        title="Revenue"
+        subtitle="Commission-aligned revenue breakdown for Year 1. Override any line by entering a custom amount."
+      />
+      <div className="text-xs text-slate-400 -mt-4 mb-6">
         Headcount: <strong className="text-slate-600">{baseEnrollment} students</strong> | AAFTE: <strong className="text-slate-600">{baseAAFTE} students ({aaftePct}%)</strong>
         {regionFactor !== 1.0 && <> | Regionalization: <strong className="text-slate-600">{regionFactor}×</strong></>}
         <span className="ml-2 italic">State apportionment uses AAFTE. Federal programs use headcount.</span>
