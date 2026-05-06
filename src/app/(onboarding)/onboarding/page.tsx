@@ -12,6 +12,7 @@ import StepDemographics from '@/components/onboarding/StepDemographics'
 import StepStaffing from '@/components/onboarding/StepStaffing'
 import StepOperations, { defaultOperationsData, getDefaultOperationsData } from '@/components/onboarding/StepOperations'
 import { OnboardingStepper } from '@/components/onboarding/Stepper'
+import { Callout } from '@/components/ui/Callout'
 import type { GrowthPreset, StartupFundingSource, GradeExpansionEntry, EnrollmentMode } from '@/lib/types'
 import type { Pathway } from '@/lib/stateConfig'
 import { getStateConfig } from '@/lib/stateConfig'
@@ -549,15 +550,25 @@ export default function OnboardingPage() {
 
   // Completion screen
   if (completed) {
+    const pdfLabel = data.pathway === 'wa_charter' ? 'Budget Narrative PDF' : 'Financial Plan PDF'
+    const advisorCount = data.pathway === 'wa_charter' ? 7 : 5
+
+    function navigateAfterOnboarding(target: string) {
+      sessionStorage.setItem('onboarding_just_completed', 'true')
+      router.push(target)
+    }
+
     return (
-      <div className="max-w-2xl mx-auto text-center">
-        <div className="mb-8">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-center mb-8">
           <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-[bounce_1s_ease-in-out]">
             <svg className="w-10 h-10 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">Your Budget is Ready!</h1>
+          <h1 className="text-3xl font-semibold text-slate-900 mb-2" style={{ fontFamily: 'var(--font-heading-var)' }}>
+            Your Budget is Ready
+          </h1>
           <p className="text-slate-500">
             {data.schoolName}&apos;s financial model has been built. Here&apos;s a quick snapshot.
           </p>
@@ -566,56 +577,68 @@ export default function OnboardingPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white border border-slate-200 rounded-xl p-4">
             <p className="text-xs text-slate-500">Year 1 Revenue</p>
-            <p className="text-lg font-bold text-slate-800">{fmt(completionMetrics.totalRevenue)}</p>
+            <p className="text-lg font-bold text-slate-800 font-tabular">{fmt(completionMetrics.totalRevenue)}</p>
           </div>
           <div className="bg-white border border-slate-200 rounded-xl p-4">
             <p className="text-xs text-slate-500">Personnel Cost</p>
-            <p className="text-lg font-bold text-slate-800">{fmt(completionMetrics.totalPersonnelCost)}</p>
+            <p className="text-lg font-bold text-slate-800 font-tabular">{fmt(completionMetrics.totalPersonnelCost)}</p>
           </div>
           <div className="bg-white border border-slate-200 rounded-xl p-4">
             <p className="text-xs text-slate-500">Total FTE</p>
-            <p className="text-lg font-bold text-slate-800">{completionMetrics.totalFte.toFixed(1)}</p>
+            <p className="text-lg font-bold text-slate-800 font-tabular">{completionMetrics.totalFte.toFixed(1)}</p>
           </div>
           <div className="bg-white border border-slate-200 rounded-xl p-4">
             <p className="text-xs text-slate-500">Personnel %</p>
-            <p className={`text-lg font-bold ${
+            <p className={`text-lg font-bold font-tabular ${
               Number(completionMetrics.personnelPct) > 85 ? 'text-red-600' : Number(completionMetrics.personnelPct) > 70 ? 'text-amber-600' : 'text-emerald-600'
             }`}>{completionMetrics.personnelPct}%</p>
           </div>
         </div>
 
-        <div className="bg-teal-50 border border-teal-100 rounded-xl p-6 mb-8">
-          <h3 className="text-sm font-semibold text-teal-800 mb-2">What happens next?</h3>
-          <ul className="text-sm text-teal-700 space-y-2 text-left">
-            <li className="flex items-start gap-2">
-              <span className="text-teal-500 mt-0.5">1.</span>
-              <span>Explore your <strong>Dashboard</strong> to see revenue, staffing, operations, and cash flow projections</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-teal-500 mt-0.5">2.</span>
-              <span>Run the <strong>Advisory Panel</strong> for expert analysis from {data.pathway === 'wa_charter' ? '7' : '5'} specialized financial agents</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-teal-500 mt-0.5">3.</span>
-              <span>Export a professional <strong>{data.pathway === 'wa_charter' ? 'Budget Narrative PDF' : 'Financial Plan PDF'}</strong> for your {data.pathway === 'wa_charter' ? 'authorizer application' : 'planning and presentations'}</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-teal-500 mt-0.5">4.</span>
-              <span>Use <strong>Ask SchoolLaunch</strong> to get instant answers about {data.pathway === 'wa_charter' ? 'WA charter finances' : 'your school finances'}</span>
-            </li>
-          </ul>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+          <CompletionCta
+            primary
+            icon={(
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                <rect x="3" y="3" width="7" height="9" rx="1" />
+                <rect x="14" y="3" width="7" height="5" rx="1" />
+                <rect x="14" y="12" width="7" height="9" rx="1" />
+                <rect x="3" y="16" width="7" height="5" rx="1" />
+              </svg>
+            )}
+            title="Go to Dashboard"
+            description="Explore your financial model"
+            onClick={() => navigateAfterOnboarding('/dashboard?onboarding=complete')}
+          />
+          <CompletionCta
+            icon={(
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                <rect x="4" y="6" width="16" height="12" rx="2" />
+                <path d="M9 11h.01M15 11h.01M9 15h6" />
+                <path d="M12 2v4" />
+              </svg>
+            )}
+            title="Run Advisory Panel"
+            description={`Get AI feedback from ${advisorCount} advisors`}
+            onClick={() => navigateAfterOnboarding('/dashboard/advisory?onboarding=complete')}
+          />
+          <CompletionCta
+            icon={(
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                <path d="M14 2v6h6" />
+                <path d="M12 12v5M9 15l3 3 3-3" />
+              </svg>
+            )}
+            title="Export PDF"
+            description={`Download your ${pdfLabel}`}
+            onClick={() => navigateAfterOnboarding('/dashboard?onboarding=complete')}
+          />
         </div>
 
-        <button
-          onClick={() => {
-            // Set sessionStorage flag as backup (in case query param gets stripped)
-            sessionStorage.setItem('onboarding_just_completed', 'true')
-            router.push('/dashboard?onboarding=complete')
-          }}
-          className="bg-teal-600 text-white px-10 py-3 rounded-lg font-semibold hover:bg-teal-700 transition-colors text-lg"
-        >
-          Go to Dashboard
-        </button>
+        <Callout variant="info">
+          <strong>Tip:</strong> The guided tutorial walks you through each tab. Look for the <strong>?</strong> icon on any page to restart it.
+        </Callout>
       </div>
     )
   }
@@ -806,6 +829,46 @@ export default function OnboardingPage() {
         />
       )}
     </div>
+  )
+}
+
+function CompletionCta({
+  primary,
+  icon,
+  title,
+  description,
+  onClick,
+}: {
+  primary?: boolean
+  icon: React.ReactNode
+  title: string
+  description: string
+  onClick: () => void
+}) {
+  if (primary) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex flex-col items-start text-left rounded-xl px-5 py-4 transition-colors text-white"
+        style={{ background: 'var(--navy-dark)' }}
+      >
+        <div className="text-white opacity-90">{icon}</div>
+        <div className="mt-3 font-semibold" style={{ fontFamily: 'var(--font-heading-var)' }}>{title}</div>
+        <div className="text-xs mt-0.5 text-white/70">{description}</div>
+      </button>
+    )
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex flex-col items-start text-left rounded-xl border border-slate-200 bg-white hover:border-slate-300 px-5 py-4 transition-colors"
+    >
+      <div style={{ color: 'var(--navy-dark)' }}>{icon}</div>
+      <div className="mt-3 font-semibold text-slate-800" style={{ fontFamily: 'var(--font-heading-var)' }}>{title}</div>
+      <div className="text-xs mt-0.5 text-slate-500">{description}</div>
+    </button>
   )
 }
 
