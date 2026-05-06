@@ -62,6 +62,11 @@ interface Props {
 
 export default function StepIdentity({ initialData, onNext }: Props) {
   const [schoolName, setSchoolName] = useState(initialData.schoolName)
+  const initialPathwayChoice: 'wa_charter' | 'other' =
+    derivePathway(initialData.state || 'WA', initialData.schoolType || 'charter') === 'wa_charter'
+      ? 'wa_charter'
+      : 'other'
+  const [pathwayChoice, setPathwayChoice] = useState<'wa_charter' | 'other'>(initialPathwayChoice)
   const [selectedState, setSelectedState] = useState(initialData.state || 'WA')
   const [schoolType, setSchoolType] = useState<'charter' | 'private' | 'micro'>(initialData.schoolType || 'charter')
   // Map old region labels to county keys for backward compat
@@ -166,65 +171,96 @@ export default function StepIdentity({ initialData, onNext }: Props) {
         Tell us about your school. This information shapes the financial model.
       </p>
 
-      {/* State Selection */}
-      <FormField label="State">
-        {(id) => (
-          <select
-            id={id}
-            value={selectedState}
-            onChange={(e) => {
-              const newState = e.target.value
-              setSelectedState(newState)
-              // Update fiscal year default when pathway changes
-              const newPathway = derivePathway(newState, schoolType)
-              if (newPathway !== 'wa_charter') {
-                setFiscalYearStartMonth(getStateConfig(newPathway).fiscal_year_start_month)
-              }
-            }}
-            className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 bg-white"
-          >
-            {US_STATES.map((s) => (
-              <option key={s.code} value={s.code}>{s.name}</option>
-            ))}
-          </select>
-        )}
-      </FormField>
+      {/* Pathway tile selector */}
+      <div role="radiogroup" aria-label="School pathway" className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <PathwayTile
+          selected={pathwayChoice === 'wa_charter'}
+          title="Washington State Charter School"
+          description="Commission-aligned financial planning for WA charter applicants"
+          onSelect={() => {
+            setPathwayChoice('wa_charter')
+            setSelectedState('WA')
+            setSchoolType('charter')
+            setFiscalYearStartMonth(9)
+          }}
+        />
+        <PathwayTile
+          selected={pathwayChoice === 'other'}
+          title="Another state or school type"
+          description="Charter, private, or micro school outside Washington"
+          onSelect={() => {
+            setPathwayChoice('other')
+            // If user is leaving WA charter, default state to non-WA so derivePathway returns generic_charter
+            if (selectedState === 'WA' && schoolType === 'charter') {
+              setSelectedState('OR')
+              setFiscalYearStartMonth(getStateConfig(derivePathway('OR', schoolType)).fiscal_year_start_month)
+            }
+          }}
+        />
+      </div>
 
-      {/* School Type Selection */}
-      <FormField label="School Type">
-        {() => (
-          <div role="radiogroup" aria-label="School Type" className="grid grid-cols-3 gap-3">
-            {SCHOOL_TYPES.map((t) => (
-              <button
-                key={t.value}
-                type="button"
-                role="radio"
-                aria-checked={schoolType === t.value}
-                onClick={() => {
-                  setSchoolType(t.value)
-                  // Update fiscal year default from config when switching types
-                  const newPathway = derivePathway(selectedState, t.value)
+      {/* State + School Type — only when "Another state or school type" tile is selected */}
+      {pathwayChoice === 'other' && (
+        <>
+          <FormField label="State">
+            {(id) => (
+              <select
+                id={id}
+                value={selectedState}
+                onChange={(e) => {
+                  const newState = e.target.value
+                  setSelectedState(newState)
+                  // Update fiscal year default when pathway changes
+                  const newPathway = derivePathway(newState, schoolType)
                   if (newPathway !== 'wa_charter') {
                     setFiscalYearStartMonth(getStateConfig(newPathway).fiscal_year_start_month)
                   }
                 }}
-                className={`px-3 py-3 rounded-lg border-2 text-left transition-all ${
-                  schoolType === t.value
-                    ? 'border-teal-600 bg-teal-50'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 bg-white"
               >
-                <div className={`text-sm font-medium ${schoolType === t.value ? 'text-teal-700' : 'text-slate-700'}`}>
-                  {t.label}
-                </div>
-                <div className={`text-xs mt-0.5 ${schoolType === t.value ? 'text-teal-600' : 'text-slate-400'}`}>
-                  {t.description}
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </FormField>
+                {US_STATES.map((s) => (
+                  <option key={s.code} value={s.code}>{s.name}</option>
+                ))}
+              </select>
+            )}
+          </FormField>
+
+          <FormField label="School Type">
+            {() => (
+              <div role="radiogroup" aria-label="School Type" className="grid grid-cols-3 gap-3">
+                {SCHOOL_TYPES.map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={schoolType === t.value}
+                    onClick={() => {
+                      setSchoolType(t.value)
+                      // Update fiscal year default from config when switching types
+                      const newPathway = derivePathway(selectedState, t.value)
+                      if (newPathway !== 'wa_charter') {
+                        setFiscalYearStartMonth(getStateConfig(newPathway).fiscal_year_start_month)
+                      }
+                    }}
+                    className={`px-3 py-3 rounded-lg border-2 text-left transition-all ${
+                      schoolType === t.value
+                        ? 'border-teal-600 bg-teal-50'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className={`text-sm font-medium ${schoolType === t.value ? 'text-teal-700' : 'text-slate-700'}`}>
+                      {t.label}
+                    </div>
+                    <div className={`text-xs mt-0.5 ${schoolType === t.value ? 'text-teal-600' : 'text-slate-400'}`}>
+                      {t.description}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </FormField>
+        </>
+      )}
 
       <FormField label="School Name" required errorText={nameError ?? undefined}>
         {(id) => (
@@ -396,5 +432,53 @@ export default function StepIdentity({ initialData, onNext }: Props) {
         </button>
       </div>
     </form>
+  )
+}
+
+function PathwayTile({
+  selected,
+  title,
+  description,
+  onSelect,
+}: {
+  selected: boolean
+  title: string
+  description: string
+  onSelect: () => void
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      onClick={onSelect}
+      className={`relative text-left rounded-xl border-2 px-5 py-4 transition-all ${
+        selected
+          ? 'border-[var(--navy-dark)] bg-slate-50'
+          : 'border-slate-200 bg-white hover:border-slate-300'
+      }`}
+      style={selected ? { background: 'rgba(17, 29, 53, 0.04)' } : undefined}
+    >
+      {selected && (
+        <span
+          aria-hidden="true"
+          className="absolute top-3 right-3 inline-flex items-center justify-center w-6 h-6 rounded-full text-white"
+          style={{ background: 'var(--navy-dark)' }}
+        >
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 13l4 4L19 7" />
+          </svg>
+        </span>
+      )}
+      <div
+        className={`text-sm font-semibold pr-8 ${selected ? 'text-slate-900' : 'text-slate-800'}`}
+        style={{ fontFamily: 'var(--font-heading-var)' }}
+      >
+        {title}
+      </div>
+      <p className={`text-xs mt-1 ${selected ? 'text-slate-600' : 'text-slate-500'}`}>
+        {description}
+      </p>
+    </button>
   )
 }
