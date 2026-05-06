@@ -7,6 +7,7 @@ import { SELECTED_SCHOOL_KEY } from '@/lib/useSchoolData'
 import Link from 'next/link'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { AuthShell } from '@/components/auth/AuthShell'
+import { FormField } from '@/components/ui/FormField'
 
 export default function SignupPage() {
   useDocumentTitle('Sign up')
@@ -88,80 +89,75 @@ export default function SignupPage() {
       </div>
 
       <form onSubmit={handleSignup} className="space-y-5">
-            <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-slate-700 mb-1">
-                Full Name
-              </label>
-              <input
-                id="fullName"
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
-                placeholder="Jane Smith"
-              />
-            </div>
+        <FormField label="Full Name">
+          {(id) => (
+            <input
+              id={id}
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
+              placeholder="Jane Smith"
+            />
+          )}
+        </FormField>
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
-                placeholder="you@example.com"
-              />
-            </div>
+        <FormField label="Email">
+          {(id) => (
+            <input
+              id={id}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
+              placeholder="you@example.com"
+            />
+          )}
+        </FormField>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
-                Password
-              </label>
+        <FormField label="Password">
+          {(id) => (
+            <>
               <input
-                id="password"
+                id={id}
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={8}
-                aria-describedby="password-rules"
+                aria-describedby={`${id}-rules`}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
                 placeholder="At least 8 characters"
               />
-              <ul id="password-rules" className="mt-2 space-y-1 text-xs">
+              <ul id={`${id}-rules`} className="mt-2 space-y-1 text-xs">
                 <PasswordRule satisfied={passwordHasLength}>At least 8 characters</PasswordRule>
                 <PasswordRule satisfied={passwordHasNumberOrSymbol}>Contains a number or symbol</PasswordRule>
               </ul>
-            </div>
+            </>
+          )}
+        </FormField>
 
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700 mb-1">
-                Confirm Password
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                aria-invalid={confirmMismatch}
-                aria-describedby={confirmMismatch ? 'confirm-error' : undefined}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900 ${
-                  confirmMismatch ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
-                }`}
-                placeholder="Re-enter your password"
-              />
-              {confirmMismatch && (
-                <p id="confirm-error" role="alert" className="text-xs text-rose-600 mt-1">
-                  Passwords do not match.
-                </p>
-              )}
-            </div>
+        <FormField
+          label="Confirm Password"
+          errorText={confirmMismatch ? 'Passwords do not match.' : undefined}
+        >
+          {(id) => (
+            <input
+              id={id}
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              aria-invalid={confirmMismatch}
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900 ${
+                confirmMismatch ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
+              }`}
+              placeholder="Re-enter your password"
+            />
+          )}
+        </FormField>
 
             {error && (
               <div role="alert" className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg">

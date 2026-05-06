@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { AuthShell } from '@/components/auth/AuthShell'
+import { FormField } from '@/components/ui/FormField'
 
 type View = 'login' | 'forgot' | 'verify' | 'reset'
 
@@ -293,43 +294,43 @@ export default function LoginPage() {
       {/* ---- LOGIN FORM ---- */}
           {view === 'login' && (
             <form onSubmit={handleLogin} className="space-y-5">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
-                  placeholder="you@example.com"
-                />
-              </div>
+              <FormField label="Email">
+                {(id) => (
+                  <input
+                    id={id}
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
+                    placeholder="you@example.com"
+                  />
+                )}
+              </FormField>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-                    Password
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => { setView('forgot'); setResetEmail(email); setForgotMessage('') }}
-                    className="text-xs text-teal-600 hover:text-teal-800 transition-colors"
-                  >
-                    Forgot password?
-                  </button>
+                <div className="flex items-center justify-between">
+                  <FormField label="Password" className="flex-1">
+                    {(id) => (
+                      <input
+                        id={id}
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
+                        placeholder="Enter your password"
+                      />
+                    )}
+                  </FormField>
                 </div>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
-                  placeholder="Enter your password"
-                />
+                <button
+                  type="button"
+                  onClick={() => { setView('forgot'); setResetEmail(email); setForgotMessage('') }}
+                  className="text-xs text-teal-600 hover:text-teal-800 transition-colors mt-1"
+                >
+                  Forgot password?
+                </button>
               </div>
 
               {error && (
@@ -363,21 +364,20 @@ export default function LoginPage() {
               <p className="text-sm text-slate-600">
                 Enter your email address and we&apos;ll send you a verification code.
               </p>
-              <div>
-                <label htmlFor="reset-email" className="block text-sm font-medium text-slate-700 mb-1">
-                  Email
-                </label>
-                <input
-                  id="reset-email"
-                  type="email"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  required
-                  autoFocus
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
-                  placeholder="you@example.com"
-                />
-              </div>
+              <FormField label="Email">
+                {(id) => (
+                  <input
+                    id={id}
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    required
+                    autoFocus
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
+                    placeholder="you@example.com"
+                  />
+                )}
+              </FormField>
 
               {forgotMessage && (
                 <div className="bg-emerald-50 text-emerald-700 text-sm px-4 py-3 rounded-lg">
@@ -466,38 +466,36 @@ export default function LoginPage() {
           {/* ---- RESET PASSWORD ---- */}
           {view === 'reset' && !resetSuccess && (
             <form onSubmit={handleUpdatePassword} className="space-y-5">
-              <div>
-                <label htmlFor="new-password" className="block text-sm font-medium text-slate-700 mb-1">
-                  New Password
-                </label>
-                <input
-                  id="new-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  autoFocus
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
-                  placeholder="Minimum 8 characters"
-                />
-              </div>
+              <FormField label="New Password">
+                {(id) => (
+                  <input
+                    id={id}
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    autoFocus
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
+                    placeholder="Minimum 8 characters"
+                  />
+                )}
+              </FormField>
 
-              <div>
-                <label htmlFor="confirm-password" className="block text-sm font-medium text-slate-700 mb-1">
-                  Confirm Password
-                </label>
-                <input
-                  id="confirm-password"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
-                  placeholder="Re-enter your password"
-                />
-              </div>
+              <FormField label="Confirm Password">
+                {(id) => (
+                  <input
+                    id={id}
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
+                    placeholder="Re-enter your password"
+                  />
+                )}
+              </FormField>
 
               {resetError && (
                 <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg">

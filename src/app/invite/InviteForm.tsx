@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { SELECTED_SCHOOL_KEY } from '@/lib/useSchoolData'
 import { AuthShell } from '@/components/auth/AuthShell'
+import { FormField } from '@/components/ui/FormField'
 
 interface Invitation {
   id: string
@@ -190,32 +191,30 @@ export default function InviteForm({
           {existingUser ? (
             /* STATE B: Existing user — sign in to join */
             <form onSubmit={handleSignInAndJoin} className="space-y-5">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={invitation.email}
-                  disabled
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-600 text-sm"
-                />
-              </div>
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
-                  placeholder="Enter your password"
-                />
-              </div>
+              <FormField label="Email">
+                {(id) => (
+                  <input
+                    id={id}
+                    type="email"
+                    value={invitation.email}
+                    disabled
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-600 text-sm"
+                  />
+                )}
+              </FormField>
+              <FormField label="Password">
+                {(id) => (
+                  <input
+                    id={id}
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
+                    placeholder="Enter your password"
+                  />
+                )}
+              </FormField>
 
               {error && (
                 <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg">{error}</div>
@@ -232,36 +231,34 @@ export default function InviteForm({
           ) : (
             /* STATE A: New user — create account */
             <form onSubmit={handleCreateAccount} className="space-y-5">
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
-                  placeholder="At least 8 characters"
-                />
-              </div>
+              <FormField label="Password">
+                {(id) => (
+                  <input
+                    id={id}
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
+                    placeholder="At least 8 characters"
+                  />
+                )}
+              </FormField>
 
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700 mb-1">
-                  Confirm Password
-                </label>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
-                  placeholder="Re-enter your password"
-                />
-              </div>
+              <FormField label="Confirm Password">
+                {(id) => (
+                  <input
+                    id={id}
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
+                    placeholder="Re-enter your password"
+                  />
+                )}
+              </FormField>
 
               {error && (
                 <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg">{error}</div>
