@@ -19,24 +19,17 @@ export default function SignupPage() {
   const router = useRouter()
   const supabase = createClient()
 
+  const passwordHasLength = password.length >= 8
+  const passwordHasNumberOrSymbol = /[\d\W_]/.test(password)
+  const passwordsMatch = password.length > 0 && password === confirmPassword
+  const canSubmit = fullName.trim().length > 0 && passwordHasLength && passwordHasNumberOrSymbol && passwordsMatch
+  const confirmMismatch = confirmPassword.length > 0 && !passwordsMatch
+
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
     setError('')
 
-    if (fullName.trim().length < 1) {
-      setError('Please enter your full name.')
-      return
-    }
-
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.')
-      return
-    }
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.')
-      return
-    }
+    if (!canSubmit) return
 
     setLoading(true)
 
@@ -136,9 +129,14 @@ export default function SignupPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={8}
+                aria-describedby="password-rules"
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
                 placeholder="At least 8 characters"
               />
+              <ul id="password-rules" className="mt-2 space-y-1 text-xs">
+                <PasswordRule satisfied={passwordHasLength}>At least 8 characters</PasswordRule>
+                <PasswordRule satisfied={passwordHasNumberOrSymbol}>Contains a number or symbol</PasswordRule>
+              </ul>
             </div>
 
             <div>
@@ -151,20 +149,29 @@ export default function SignupPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900"
+                aria-invalid={confirmMismatch}
+                aria-describedby={confirmMismatch ? 'confirm-error' : undefined}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-900 ${
+                  confirmMismatch ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
+                }`}
                 placeholder="Re-enter your password"
               />
+              {confirmMismatch && (
+                <p id="confirm-error" role="alert" className="text-xs text-rose-600 mt-1">
+                  Passwords do not match.
+                </p>
+              )}
             </div>
 
             {error && (
-              <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg">
+              <div role="alert" className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg">
                 {error}
               </div>
             )}
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !canSubmit}
               className="w-full bg-teal-600 text-white py-2.5 rounded-lg font-medium hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Create Account'}
@@ -180,5 +187,32 @@ export default function SignupPage() {
         </Link>
       </div>
     </AuthShell>
+  )
+}
+
+function PasswordRule({ satisfied, children }: { satisfied: boolean; children: React.ReactNode }) {
+  return (
+    <li
+      className="flex items-center gap-1.5 transition-colors"
+      style={{ color: satisfied ? 'var(--teal-700)' : 'var(--text-tertiary)' }}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="w-3.5 h-3.5 shrink-0"
+        aria-hidden="true"
+      >
+        {satisfied ? (
+          <path d="M5 13l4 4L19 7" />
+        ) : (
+          <circle cx="12" cy="12" r="9" strokeWidth={1.5} />
+        )}
+      </svg>
+      <span>{children}</span>
+    </li>
   )
 }
