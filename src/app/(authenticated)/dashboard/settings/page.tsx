@@ -54,6 +54,7 @@ export default function SettingsPage() {
   const [showResetModal, setShowResetModal] = useState(false)
   const [resetConfirmText, setResetConfirmText] = useState('')
   const [resetting, setResetting] = useState(false)
+  const [dangerExpanded, setDangerExpanded] = useState(false)
 
   // Grade expansion state
   const [expansionData, setExpansionData] = useState<{
@@ -687,17 +688,58 @@ export default function SettingsPage() {
       {/* Danger Zone — CEO only */}
       {canResetSchool && (
         <>
-        <div id="danger-zone" className="mt-12 border border-red-200 rounded-xl p-6 bg-red-50/50 scroll-mt-6">
-          <h2 className="text-xs font-medium text-red-500 uppercase tracking-wide mb-2">Danger Zone</h2>
-          <p className="text-sm text-slate-600 mb-4">
-            Reset all school planning data and restart the onboarding process from scratch. Your account and school record will be preserved.
-          </p>
-          <button
-            onClick={() => setShowResetModal(true)}
-            className="px-5 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
-          >
-            Reset School &amp; Start Over
-          </button>
+        <div id="danger-zone" className="mt-12 scroll-mt-6">
+          {dangerExpanded ? (
+            <div
+              className="rounded-xl border p-6"
+              style={{
+                background: 'var(--status-fails-bg)',
+                borderColor: 'var(--status-fails-border)',
+              }}
+            >
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--rose-700)' }}>Danger Zone</h2>
+                <button
+                  type="button"
+                  onClick={() => setDangerExpanded(false)}
+                  className="text-xs font-medium hover:underline underline-offset-4"
+                  style={{ color: 'var(--rose-700)' }}
+                >
+                  Hide
+                </button>
+              </div>
+              <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+                Reset all school planning data and restart the onboarding process from scratch. Your account and school record will be preserved.
+              </p>
+              <button
+                onClick={() => setShowResetModal(true)}
+                className="px-5 py-2 text-sm font-medium text-white rounded-lg transition-colors"
+                style={{ background: 'var(--rose-600)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rose-700)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--rose-600)' }}
+              >
+                Reset School &amp; Start Over
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between rounded-xl border border-slate-200 px-5 py-3 bg-white">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--rose-600)' }}>
+                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <path d="M12 9v4M12 17h.01" />
+                </svg>
+                <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Danger Zone</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDangerExpanded(true)}
+                className="text-xs font-medium hover:underline underline-offset-4"
+                style={{ color: 'var(--rose-700)' }}
+              >
+                Show Danger Zone
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Reset confirmation modal */}
