@@ -7,8 +7,12 @@ import type { MultiYearDetailedRow, FPFScorecard } from './budgetEngine'
 /**
  * Bumped whenever the advisory/briefing/agent prompt contracts change in a way
  * that should invalidate previously-cached outputs even if inputs are identical.
+ *
+ * v3-2026-05: rewrote all 7 WA charter advisory agents with sharper instruction
+ * blocks, FPF stage-aware analysis priorities, and concrete WA-specific knowledge
+ * (apportionment troughs, regionalization scope, SEBB benefits, SAO audit risks).
  */
-export const PROMPT_VERSION = 'v2-2026-04'
+export const PROMPT_VERSION = 'v3-2026-05'
 
 export interface ProjectionHashInputs {
   profile: SchoolProfile
