@@ -49,19 +49,58 @@ export function isHighSchoolGrade(grade: string): boolean {
 }
 
 /**
- * Compute the default mapping of which new grades are added each year (1 per year).
+ * Compute the default mapping of which new grades are added each year.
+ *
+ * Founding grades are grouped into contiguous bands (consecutive grade indices).
+ * Each year, every band attempts to add the next buildout grade above its current
+ * top, capped at either the next band's bottom grade minus 1, or the maximum
+ * buildout grade for the topmost band. This means non-contiguous founding bands
+ * (e.g., {6,9} for a combined middle/high model) expand in parallel.
  */
 export function defaultYearNewGrades(
   openingGrades: string[],
   buildoutGrades: string[],
 ): Map<number, string[]> {
-  const openSet = new Set(openingGrades)
-  const gradesToAdd = sortGrades(buildoutGrades.filter((g) => !openSet.has(g)))
+  const buildoutSet = new Set(buildoutGrades)
+  const sortedOpening = sortGrades(openingGrades.filter((g) => buildoutSet.has(g)))
   const map = new Map<number, string[]>()
+  if (sortedOpening.length === 0) return map
 
-  // 1 grade per year in years 2–5
-  for (let i = 0; i < gradesToAdd.length && (i + 2) <= 5; i++) {
-    map.set(i + 2, [gradesToAdd[i]])
+  // Group founding grades into contiguous bands
+  const bands: string[][] = []
+  let currentBand: string[] = [sortedOpening[0]]
+  for (let i = 1; i < sortedOpening.length; i++) {
+    if (gradeIndex(sortedOpening[i]) === gradeIndex(sortedOpening[i - 1]) + 1) {
+      currentBand.push(sortedOpening[i])
+    } else {
+      bands.push(currentBand)
+      currentBand = [sortedOpening[i]]
+    }
+  }
+  bands.push(currentBand)
+
+  const sortedBuildout = sortGrades(buildoutGrades)
+  const maxBuildoutIdx = gradeIndex(sortedBuildout[sortedBuildout.length - 1])
+  const bandTops: number[] = bands.map((b) => gradeIndex(b[b.length - 1]))
+  const bandCaps: number[] = bands.map((_, i) =>
+    i + 1 < bands.length ? gradeIndex(bands[i + 1][0]) - 1 : maxBuildoutIdx
+  )
+
+  for (let year = 2; year <= 5; year++) {
+    const newGrades: string[] = []
+    for (let bi = 0; bi < bands.length; bi++) {
+      if (bandTops[bi] >= bandCaps[bi]) continue
+      let next = bandTops[bi] + 1
+      while (next <= bandCaps[bi] && !buildoutSet.has(ALL_GRADES[next])) next++
+      if (next <= bandCaps[bi]) {
+        newGrades.push(ALL_GRADES[next])
+        bandTops[bi] = next
+      } else {
+        bandTops[bi] = bandCaps[bi]
+      }
+    }
+    if (newGrades.length === 0) break
+    map.set(year, sortGrades(newGrades))
   }
 
   return map
