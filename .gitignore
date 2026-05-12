@@ -69,3 +69,9 @@ tests/*-smoke-*.png
 
 # Claude Code runtime artifacts
 .claude/
+
+# Audit artifacts (May 2026 baseline audit) - do not commit
+.audit-tmp/
+audit-*.png
+audit-reports/
+test-results/

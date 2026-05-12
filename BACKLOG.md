@@ -144,19 +144,6 @@ school record are preserved.").
 
 ---
 
-### RF-4 · R-ENR-01 in-app banner: deferred (zero current targets)
-**Status:** `DEFERRED` · **Opened:** 2026-05-11 · **Source:** R-ENR-01 Phase 4.2
-
-The R-ENR-01 prompt called for an in-app banner targeting schools with status `authorized` or `exported`, prompting CEOs to review their retention assumption. Post-migration count of authorized + exported schools = 0, so the banner has no current audience.
-
-Per-user-per-school dismissal (required so multiple team members on one school can independently acknowledge) needs new schema: either a column on `user_roles` (`dismissed_notices jsonb` or `text[]`) or a new `dismissed_notices` table, plus an API endpoint and a `NoticeBanner` component. Non-trivial to build for zero users.
-
-**Pickup signal:** when `SELECT count(*) FROM schools WHERE status IN ('authorized', 'exported') > 0`, flip to in-progress.
-
-**Implementation plan when picked up:** see `.audit-tmp/r-enr-01-related-findings.md` RF-4 for full schema, API, component, and banner-text design notes.
-
----
-
 ### P-UX-06 · `StepIdentity`: opening-year dropdown is a rolling 4-year window
 **Status:** `DEFERRED` · **Opened:** 2026-04-21
 
@@ -240,73 +227,23 @@ this helper.
 
 ---
 
-## Enrollment engine — resolved
+## R-ENR-01 — Enrollment retention modeling paired fix (RESOLVED)
 
-### R-ENR-01 · Multi-year retention modeling: hardcoded UI + dead engine parameter + false AI prose
-**Status:** `RESOLVED` · **Opened:** 2026-05-11 · **Resolved:** 2026-05-11 · **Source:** Evergreen Heights baseline audit, Part 2 checkpoint
+**Resolved:** 2026-05-11
 
-Three compounding bugs discovered during the Evergreen Heights baseline audit, fixed together as a single paired-fix release. All multi-year projections produced before this fix assumed 100% year-over-year student retention regardless of what `school_profiles.retention_rate` stored.
+**Summary:** Two compounded bugs in the enrollment model. F1 (UI) was a hardcoded `const retentionRate = 100` in `GradeExpansionEditor.tsx:64` plus a useEffect that pushed 100 back to parent on every render, overwriting any DB value. F2 (engine) was `computeExpansionEnrollments` at `gradeExpansion.ts:180-205` accepting a `retentionRate` parameter but never referencing it in the function body — same pattern at `expansionToEnrollmentArray:227-245`. F3 surfaced during fix: AI context strings at `buildSchoolContext.ts:213, 377` narrated attrition handling that the engine wasn't doing, causing advisory agents to hallucinate against a model that didn't exist.
 
-**F1 (UI):** `src/components/GradeExpansionEditor.tsx:64` hardcoded `const retentionRate = 100`. The component's `initialRetentionRate` prop was destructured (line 38) but never consumed, and a `useEffect` (lines 196–204) pushed `retentionRate: 100` to the parent on every render — overwriting any DB value the moment the editor opened. No UI control existed for the user to set retention ≠ 100.
+**Fix:** Engine now applies retention to continuing-grade students using whole-year compounding (Formula A). New-grade students enroll at full planned capacity. UI converted from hardcoded const to useState. Settings → Grade Expansion slider added (range 70-100, step 1, default 92%). Onboarding Step 2 also exposes the slider. F3 prose rewritten to accurately describe Formula A behavior including buildout-decline disclaimer for Y5 < Y4 case.
 
-**F2 (engine, critical):** `src/lib/gradeExpansion.ts:180–205` `computeExpansionEnrollments` accepted a `retentionRate` parameter but never referenced it in the function body. The comment on the math line read "Total = full planned capacity." Five upstream readers (`budgetEngine.ts:494, 1076`; `buildSchoolContext.ts:206, 365`; `staffing/page.tsx:285`; `staffing/seed/route.ts:107`; `StepEnrollment.tsx:154`) plumbed `retention_rate` through to this dead receiver. The same pattern existed in `expansionToEnrollmentArray:227–245`. Pre-existing fill-forward bug in `expansionToEnrollmentArray` (conflated "year has no entries" with "year computed to 0") was also fixed in the same surface.
+**DB migration:** 16 planning-status schools at retention_rate=100 backfilled to 92. advisory_cache and dataHash cleared for all 12 schools that had cache. Migration recorded as `supabase/migrations/20260511220000_r_enr_01_backfill_retention_default.sql`.
 
-**F3 (AI advisory):** `buildSchoolContext.ts:213, 375` emitted prose to the AI advisory layer that described attrition modeling the engine didn't implement: `"Growth model: Grade expansion with X% cohort retention (Y% annual attrition backfilled through new student recruitment)"`. Agents were reasoning about a model that didn't exist in the math.
+**Tests:** 18 invariant tests in `tests/session4/grade-expansion.spec.ts` covering retention=90, 92, 100 trajectories plus boundary cases.
 
-**Fix (Formula A whole-year compounding):**
-- `computeExpansionEnrollments` now applies retention to the prior year's RESULT total (compounding), with new-grade-level students at full planned capacity.
-- Single `RETENTION_RATE_DEFAULT = 92` constant in `gradeExpansion.ts`, accessed via `getRetentionRate(profile)` helper. All callers updated to use the accessor.
-- `GradeExpansionEditor` now uses `useState(initialRetentionRate ?? RETENTION_RATE_DEFAULT)` and exposes a slider (range 70–100, step 1, D4-spec tooltip including buildout-decline note). Slider lives inside the editor so it appears on both Settings and onboarding Step 2.
-- Onboarding initial wizard state writes `RETENTION_RATE_DEFAULT` (92), not the prior hardcoded 100.
-- Multi-Year tab Y1 cell in "New Grade Students" row shows "—" (founding cohort isn't a "new grade" in the expansion-plan sense).
-- F3 prose rewritten at both context-builder sites to factually describe Formula A, including the Y5-may-decline-below-Y4 disclaimer once buildout completes.
-
-**Regression test:** `tests/session4/grade-expansion.spec.ts` — 13 new test cases: retention=100 legacy guard `[72, 96, 120, 144, 144]`, retention=92 default `[72, 90, 107, 122, 112]`, retention=90, retention=0 edge case, constituent-sum invariant (`total = returning + newGrade` for Y2+), new-grade-not-subject-to-retention invariant, compounding verification, accessor null-fallback. 18/18 tests passing.
-
-**DB backfill:** 16 planning-status schools at retention=100 migrated to 92; 12 schools' `advisory_cache` cleared (the JSONB blob includes the `dataHash` property, so cache + hash invalidation is atomic). Migration ran in a BEGIN/COMMIT transaction. Authorized/exported schools count = 0, so no preservation case currently active.
-
-**Related findings** (logged separately in `.audit-tmp/r-enr-01-related-findings.md`): RF-1 (orphan school), RF-2 (scenarios staleness verification), RF-3 (spec/schema mismatch on `advisory_data_hash`), RF-4 (banner deferred — zero current targets).
-
-**Phase artifacts:** `.audit-tmp/r-enr-01-phase1.md`, `phase2.md`, `phase3.md`, `r-enr-01-related-findings.md`, `r-enr-01-v40-spec-updates.md`, `eswa-r-enr-01-notice.md`.
-
----
-
-## Data integrity
-
-### RF-1 · Orphan `schools` row with no `school_profiles`
-**Status:** `OPEN` · **Opened:** 2026-05-11 · **Source:** R-ENR-01 Phase 4 migration preview
-
-`schools` has 24 rows; `school_profiles` has 23. One school is missing its profile, so most JOINs through profile return empty — the school is effectively invisible to the dashboard, multi-year engine, advisory, and exports. Likely incomplete cascade delete or onboarding that errored before profile insert.
-
-Diagnostic query: `SELECT id, name, status, organization_id, created_at FROM schools WHERE id NOT IN (SELECT school_id FROM school_profiles)`.
-
-Recommended action: identify the orphan, check `user_roles` for an active owner. If active founder → restore profile from defaults + notify. If abandoned → delete `schools` row.
-
-**Pre-May-19 severity:** Low unless the orphan is an active founder. Triage via the query first.
-
----
-
-### RF-3 · v4.0 spec/schema mismatch on `advisory_data_hash`
-**Status:** `OPEN` · **Opened:** 2026-05-11 · **Source:** R-ENR-01 Phase 4 schema check
-
-v4.0 spec Section 14.1 documents an advisory cache clear pattern referencing `advisory_data_hash`, which is not a column on `school_profiles`. The dataHash lives inside the JSONB at `advisory_cache.dataHash` (per `types.ts:152-165` `AdvisoryCache` interface). Setting `advisory_cache = NULL` clears both atomically.
-
-The related `scenarios.base_data_hash` column does exist (scenario staleness detector) — likely the source of the spec confusion.
-
-**Severity:** Low. Documentation-only; runtime code is correct. Fix in next spec revision.
-
----
-
-## Verification dependencies
-
-### RF-2 · Scenarios staleness verification post-R-ENR-01
-**Status:** `INVESTIGATING` · **Opened:** 2026-05-11 · **Source:** R-ENR-01 Phase 4
-
-Existing `scenarios` rows cache `results`, `ai_analysis`, and `base_data_hash`. The R-ENR-01 engine fix changes the inputs the hash is computed from, so `base_data_hash` will mismatch the recomputed hash on next visit. The Scenarios tab's existing staleness detector should fire and prompt recomputation.
-
-R-ENR-01 deliberately did NOT pre-emptively clear these rows — trusting the staleness mechanism is the system working as designed. Phase 5 verification must explicitly confirm: opening Scenarios for Evergreen Heights post-fix triggers the stale indicator and prompts recompute. If it doesn't, file as a separate finding.
-
-**Pickup signal:** Part 3 audit, Scenarios tab.
+**Related findings** logged during R-ENR-01 work:
+- **RF-1 (orphan school):** 24 schools in `schools` table, 23 with `school_profiles` rows. One school is missing its profile, joins through profile data fail for it. Diagnostic: `SELECT id, name, status, created_at FROM schools WHERE id NOT IN (SELECT school_id FROM school_profiles)`. Recommended action: identify and either fully delete (cascade) or restore profile row.
+- **RF-2 (scenarios staleness verification):** Engine output changed; cached scenarios `results` and `ai_analysis` may be stale. Existing staleness detector should fire on next user visit (base_data_hash mismatch). Verify on a school with stored scenarios.
+- **RF-3 (spec/schema mismatch):** v4.0 spec Section 14.1 references "Advisory cache clear: UPDATE school_profiles SET advisory_cache = NULL, advisory_data_hash = NULL" but `advisory_data_hash` is not a column. The hash lives inside `advisory_cache.dataHash` JSONB property. Setting `advisory_cache = NULL` atomically clears the hash. Doc fix for next spec revision.
+- **RF-4 (banner deferred):** In-app banner for authorized/exported schools deferred — zero current targets in production. Per-user-per-school dismissal requires a new column or table (e.g., `dismissed_notices` table with school_id + user_id + notice_id + dismissed_at) with RLS policy scoped to the user, plus a dismissal endpoint and component integration. Build when first school transitions to `authorized` status.
 
 ---
 
