@@ -23,6 +23,12 @@ function fmtFte(n: number) {
   return n % 1 === 0 ? n.toString() : n.toFixed(1)
 }
 
+// ─── Cascade cue key helper ──────────────────────────────────────────────────
+// Stable composite key for tracking cells whose FTE value was raised by the
+// cascade-forward UX in updateFte. Used by both StaffingPage state handlers
+// and PositionRow's render-time className.
+const cellKey = (id: string, yi: number) => `${id}:${yi}`
+
 // ─── Authoritative classification mapping by position type ────────────────────
 // These override whatever is stored in the DB or in COMMISSION_POSITIONS.
 
@@ -272,6 +278,10 @@ export default function StaffingPage() {
   const { canEdit } = usePermissions()
   useDocumentTitle('Staffing', schoolName)
   const [positions, setPositions] = useState<MultiYearPosition[]>([])
+  // Session-only set of cells whose FTE was raised by the cascade-forward UX.
+  // Keyed by `${positionId}:${yearIndex}`. Cleared on save, useEffect rebuild,
+  // and any handler that re-derives the whole row.
+  const [cascadedCells, setCascadedCells] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
   const [seeding, setSeeding] = useState(false)
   const [showAllYearsOnMobile, setShowAllYearsOnMobile] = useState(false)
@@ -339,6 +349,8 @@ export default function StaffingPage() {
   }, [schoolId, reload])
 
   useEffect(() => {
+    // Rebuild from DB wipes any in-progress cascade cue — values are now DB-truth.
+    setCascadedCells(new Set())
     // No positions loaded from the hook — ask the server to seed if needed
     if (dbPositions.length === 0 && dbAllPositions.length === 0) {
       if (schoolId && !seedingRef.current) ensureSeeded()
@@ -427,19 +439,52 @@ export default function StaffingPage() {
   const personnelPctY1 = y1Revenue > 0 ? (y1Totals.totalPersonnel / y1Revenue * 100).toFixed(1) : '0'
 
   function updateFte(id: string, yearIndex: number, value: number) {
+    const target = positions.find((p) => p.id === id)
+    if (!target) return
+
+    // Per-pupil Y1 edit re-derives all 5 years — clear cue for the whole row.
+    if (yearIndex === 0 && target.driver !== 'fixed') {
+      setPositions((prev) =>
+        prev.map((p) => (p.id === id
+          ? { ...p, fte: recomputePerPupilFte(value, p.driver, p.positionType, enrollments, sectionsPerYear) }
+          : p))
+      )
+      setCascadedCells((prev) => {
+        const next = new Set(prev)
+        for (let j = 0; j < 5; j++) next.delete(cellKey(id, j))
+        return next
+      })
+      return
+    }
+
+    // Otherwise: single-year edit (Y2-Y5 manual override OR fixed-driver any year).
+    // Cascade forward only on a true increase for fixed-driver positions.
+    const oldValue = target.fte[yearIndex]
+    const newlyCascaded: number[] = []
+    if (target.driver === 'fixed' && value > oldValue) {
+      for (let j = yearIndex + 1; j < 5; j++) {
+        if (target.fte[j] < value) newlyCascaded.push(j)
+      }
+    }
+
     setPositions((prev) =>
       prev.map((p) => {
         if (p.id !== id) return p
-        // If Y1 FTE changed and position is per-pupil, recalculate Y2-Y5
-        if (yearIndex === 0 && p.driver !== 'fixed') {
-          return { ...p, fte: recomputePerPupilFte(value, p.driver, p.positionType, enrollments, sectionsPerYear) }
-        }
-        // Otherwise just update the single year (manual override)
         const fte = [...p.fte] as [number, number, number, number, number]
         fte[yearIndex] = value
+        for (const j of newlyCascaded) fte[j] = value
         return { ...p, fte }
       })
     )
+
+    setCascadedCells((prev) => {
+      const next = new Set(prev)
+      // The user touched this cell — it's now user-owned, not cascade-derived.
+      next.delete(cellKey(id, yearIndex))
+      // Mark each newly-raised forward cell.
+      for (const j of newlyCascaded) next.add(cellKey(id, j))
+      return next
+    })
   }
 
   function toggleDriver(id: string) {
@@ -458,6 +503,13 @@ export default function StaffingPage() {
         return { ...p, driver: 'fixed' }
       })
     )
+    // Driver change either re-derives the row or unlocks cells for fresh editing —
+    // either way, clear any cascade cue for this position.
+    setCascadedCells((prev) => {
+      const next = new Set(prev)
+      for (let j = 0; j < 5; j++) next.delete(cellKey(id, j))
+      return next
+    })
   }
 
   function selectPositionType(id: string, type: string) {
@@ -487,6 +539,12 @@ export default function StaffingPage() {
         }
       })
     )
+    // Type change re-derives all 5 years — clear cascade cue for this position.
+    setCascadedCells((prev) => {
+      const next = new Set(prev)
+      for (let j = 0; j < 5; j++) next.delete(cellKey(id, j))
+      return next
+    })
   }
 
   function updateSalary(id: string, value: number) {
@@ -527,6 +585,11 @@ export default function StaffingPage() {
 
   function removePosition(id: string) {
     setPositions((prev) => prev.filter((p) => p.id !== id))
+    setCascadedCells((prev) => {
+      const next = new Set(prev)
+      for (let j = 0; j < 5; j++) next.delete(cellKey(id, j))
+      return next
+    })
   }
 
   // Drag-and-drop reordering within a classification group
@@ -631,6 +694,9 @@ export default function StaffingPage() {
     setSaving(false)
     toast.success('Saved')
     await reload()
+    // Explicit cue reset — also fired implicitly by the useEffect rebuild that
+    // reload() triggers, but explicit is clearer than relying on the side effect.
+    setCascadedCells(new Set())
   }
 
   if (loading || seeding) {
@@ -752,6 +818,7 @@ export default function StaffingPage() {
                   onDragStart={handleDragStart}
                   onDrop={handleDrop}
                   canEdit={canEdit}
+                  cascadedCells={cascadedCells}
                 />
               ))}
             </tbody>
@@ -855,6 +922,7 @@ function GroupSection({
   onDragStart,
   onDrop,
   canEdit,
+  cascadedCells,
 }: {
   label: string
   classification: 'Administrative' | 'Certificated' | 'Classified'
@@ -871,6 +939,7 @@ function GroupSection({
   onDragStart: (id: string, classification: string) => void
   onDrop: (targetId: string) => void
   canEdit: boolean
+  cascadedCells: Set<string>
 }) {
   return (
     <>
@@ -896,6 +965,7 @@ function GroupSection({
           onDragStart={onDragStart}
           onDrop={onDrop}
           canEdit={canEdit}
+          cascadedCells={cascadedCells}
         />
       ))}
       {canEdit && (
@@ -936,6 +1006,7 @@ function PositionRow({
   onDragStart,
   onDrop,
   canEdit,
+  cascadedCells,
 }: {
   pos: MultiYearPosition
   classification: 'Administrative' | 'Certificated' | 'Classified'
@@ -949,6 +1020,7 @@ function PositionRow({
   onDragStart: (id: string, classification: string) => void
   onDrop: (targetId: string) => void
   canEdit: boolean
+  cascadedCells: Set<string>
 }) {
   const driverLabel = DRIVER_LABELS[pos.driver] || pos.driver.replace(/_/g, ' ')
   const driverCatalogDefault = getDriver(pos.positionType)
@@ -1042,6 +1114,7 @@ function PositionRow({
       </td>
       {[0, 1, 2, 3, 4].map((yi) => {
         const isDerivedYear = pos.driver !== 'fixed' && yi !== 0
+        const isCascaded = cascadedCells.has(cellKey(pos.id, yi))
         return (
           <td key={yi} data-year={yi + 1} className="px-2 py-1.5">
             <input
@@ -1052,7 +1125,8 @@ function PositionRow({
               onChange={(e) => onUpdateFte(pos.id, yi, Number(e.target.value))}
               disabled={!canEdit || isDerivedYear}
               title={isDerivedYear ? "Click 'Per Pupil' above to switch to Fixed if you want to override this year directly." : undefined}
-              className="w-14 text-right border border-slate-200 rounded px-1.5 py-1 text-sm disabled:bg-slate-50 disabled:text-slate-600 disabled:cursor-not-allowed"
+              aria-label={isCascaded ? `Year ${yi + 1} FTE cascaded forward; type to override` : undefined}
+              className={`w-14 text-right border border-slate-200 rounded px-1.5 py-1 text-sm disabled:bg-slate-50 disabled:text-slate-600 disabled:cursor-not-allowed ${isCascaded ? 'bg-teal-50' : ''}`}
             />
           </td>
         )
