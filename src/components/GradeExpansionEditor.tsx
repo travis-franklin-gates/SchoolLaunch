@@ -11,6 +11,7 @@ import {
   generateExpansionPlan,
   defaultYearNewGrades,
   computeExpansionEnrollments,
+  RETENTION_RATE_DEFAULT,
 } from '@/lib/gradeExpansion'
 import Tooltip from '@/components/ui/Tooltip'
 
@@ -61,7 +62,10 @@ export default function GradeExpansionEditor({
       ? initialBuildoutGrades
       : configGrades
   )
-  const retentionRate = 100
+  // R-ENR-01: retention is user-editable. Slider lives below the Expansion Timeline.
+  // `initialRetentionRate ?? RETENTION_RATE_DEFAULT` handles null and missing-key cases —
+  // a school with `retention_rate=null` or missing JSONB key shows 92% in the slider.
+  const [retentionRate, setRetentionRate] = useState<number>(initialRetentionRate ?? RETENTION_RATE_DEFAULT)
 
   // Default students per section (used for new grades that have no override)
   const [defaultStudentsPerSection, setDefaultStudentsPerSection] = useState(
@@ -568,6 +572,37 @@ export default function GradeExpansionEditor({
             after your first Commission re-authorization cycle. The 5-year financial model covers your buildout through Grade {lastAssignedGrade}.
           </div>
         )}
+      </div>
+
+      {/* R-ENR-01: Annual Retention Rate slider */}
+      <div>
+        <div className="flex items-baseline justify-between mb-2">
+          <div className="flex items-center gap-1.5">
+            <label className="block text-sm font-medium text-slate-700">Annual Retention Rate</label>
+            <Tooltip content="Estimated percentage of students who return each year. Affects Year 2 and beyond. WA charter elementary schools typically see 90–95% annual retention. Adjust based on your school's context — neighborhood mobility, programmatic differentiation, family commitment patterns. Once your school reaches full grade buildout, total enrollment may decline slightly year-over-year as retention continues to apply with no new grades being added — this reflects realistic stable-state enrollment. You can change this later in Settings → Grade Expansion.">
+              <span className="text-slate-400 text-xs cursor-help" aria-label="More information about annual retention rate">ⓘ</span>
+            </Tooltip>
+          </div>
+          <span className="text-sm font-semibold text-slate-700 tabular-nums">{retentionRate}%</span>
+        </div>
+        <p className="text-xs text-slate-400 mb-2">
+          Percentage of students who return each year. Affects multi-year projections from Year 2 onward.
+        </p>
+        <input
+          type="range"
+          min={70}
+          max={100}
+          step={1}
+          value={retentionRate}
+          onChange={(e) => setRetentionRate(Number(e.target.value))}
+          className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-600"
+          aria-label="Annual retention rate"
+        />
+        <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+          <span>70%</span>
+          <span className="italic">Default 92% — WA charter elementary range 90–95%</span>
+          <span>100%</span>
+        </div>
       </div>
     </div>
   )

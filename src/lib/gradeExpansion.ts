@@ -2,6 +2,18 @@ import type { GradeExpansionEntry } from './types'
 
 export const ALL_GRADES = ['K', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
+/**
+ * Engine fallback for `retention_rate` when a school has no value set.
+ * Single source of truth for the default; do not hardcode the integer elsewhere.
+ * Range: 70–100 (integer percentage). Calibrated for WA charter elementary (R-ENR-01).
+ */
+export const RETENTION_RATE_DEFAULT = 92
+
+/** Resolve a school's retention rate with the engine fallback. */
+export function getRetentionRate(profile: { retention_rate?: number | null }): number {
+  return profile.retention_rate ?? RETENTION_RATE_DEFAULT
+}
+
 export function gradeIndex(g: string): number {
   return ALL_GRADES.indexOf(g)
 }
@@ -176,10 +188,50 @@ export function generateExpansionPlan(
 
 /**
  * Compute cohort-based enrollment for each year given an expansion plan and retention rate.
+ *
+ * RETENTION MATH (R-ENR-01 — Formula A, whole-year compounding):
+ *
+ *   Year 1 (founding):
+ *     returning[1]        = 0  (no prior year)
+ *     newGradeStudents[1] = 0  (Y1 grades have is_new_grade=false; they're the founding cohort,
+ *                               not "added" — they're the school's first enrollment)
+ *     total[1]            = sum of (sections × students_per_section) across all Y1 entries
+ *
+ *   Year n ≥ 2:
+ *     newGradeStudents[n] = sum of (sections × students_per_section) for entries where
+ *                           is_new_grade=true (grade levels added this year)
+ *     priorContinuingTotal = total[n-1] minus the planned capacity of any grade that existed
+ *                            in year n-1 but is NOT in year n (grade dropped). For pure
+ *                            expansion plans (every prior grade continues), this subtraction
+ *                            is zero.
+ *     returning[n]        = round(priorContinuingTotal × retentionRate / 100)
+ *     total[n]            = returning[n] + newGradeStudents[n]
+ *
+ *   Key invariants:
+ *     - Continuing-grade students are subject to retention; new-grade-level students
+ *       enroll at full planned capacity (never reduced).
+ *     - Retention compounds: year n's returning is calculated from year n-1's RESULT
+ *       total (already retention-adjusted), not from year n-1's plan capacity.
+ *     - retention=100 reproduces the legacy "no attrition" trajectory exactly.
+ *     - retention=0 produces a trajectory of [Y1_total, new_grades_Y2, new_grades_Y3, ...].
+ *
+ *   Model limitations (v4.1 candidates):
+ *     - This is a school-wide aggregate, not per-grade promotion. We do not explicitly
+ *       model "Y1 K class becomes Y2 1st grade"; instead retention is applied as a
+ *       whole-school continuing-students factor.
+ *     - Section expansion (e.g., Y3 K goes 1→2 sections) is not modeled. The added
+ *       capacity does not enter the retention math.
+ *     - Grade-drop edge case uses prior plan capacity (not prior actual) for the
+ *       subtraction, which slightly over-corrects.
+ *
+ *   IMPORTANT: retentionRate is an INTEGER percentage (e.g., 92 means 92%), NOT a
+ *   decimal fraction (0.92). The test fixture at tests/session4/advisory-hash.spec.ts:39
+ *   uses decimal form for hash-input testing only — do not propagate that pattern into
+ *   new tests or production code.
  */
 export function computeExpansionEnrollments(
   plan: GradeExpansionEntry[],
-  retentionRate: number = 90,
+  retentionRate: number = RETENTION_RATE_DEFAULT,
 ): { year: number; total: number; returning: number; newGrade: number; grades: string[]; newGrades: string[] }[] {
   const years = Array.from(new Set(plan.map((e) => e.year))).sort((a, b) => a - b)
   const results: { year: number; total: number; returning: number; newGrade: number; grades: string[]; newGrades: string[] }[] = []
@@ -190,13 +242,35 @@ export function computeExpansionEnrollments(
     const newGradeStudents = newGradeEntries.reduce(
       (s, e) => s + e.sections * e.students_per_section, 0
     )
-
-    // Total = full planned capacity (all grades × sections × students)
-    const total = yearEntries.reduce((s, e) => s + e.sections * e.students_per_section, 0)
-    const returning = total - newGradeStudents
-
     const grades = sortGrades(yearEntries.map((e) => e.grade_level))
     const newGrades = sortGrades(newGradeEntries.map((e) => e.grade_level))
+
+    let total: number
+    let returning: number
+
+    if (year === years[0]) {
+      // Founding year — no prior to retain from. All Y1 students enroll at planned capacity.
+      total = yearEntries.reduce((s, e) => s + e.sections * e.students_per_section, 0)
+      returning = 0
+    } else {
+      // Year n ≥ 2: retention applies to continuing students from prior year's result.
+      const priorResult = results[results.length - 1]
+      let priorContinuingTotal = priorResult.total
+
+      // Subtract any grade that existed in prior year but isn't in current year (grade dropped).
+      // For normal expansion plans, this loop is a no-op.
+      const currentGradeSet = new Set(yearEntries.map((e) => e.grade_level))
+      const priorEntries = plan.filter((e) => e.year === priorResult.year)
+      for (const pe of priorEntries) {
+        if (!currentGradeSet.has(pe.grade_level)) {
+          priorContinuingTotal -= pe.sections * pe.students_per_section
+        }
+      }
+      if (priorContinuingTotal < 0) priorContinuingTotal = 0
+
+      returning = Math.round((priorContinuingTotal * retentionRate) / 100)
+      total = returning + newGradeStudents
+    }
 
     results.push({ year, total, returning, newGrade: newGradeStudents, grades, newGrades })
   }
@@ -222,22 +296,28 @@ export function teachersPerNewGrade(grade: string, sections: number): number {
 
 /**
  * Convert expansion enrollments to the Y1-Y5 array used by the budget engine.
- * Returns [y1, y2, y3, y4, y5].
+ * Returns [y1, y2, y3, y4, y5]. Delegates retention math to computeExpansionEnrollments.
+ *
+ * Fill-forward: if a year has NO entries in the plan (e.g., a 3-year plan), copy the
+ * prior year's total. This is distinct from a year whose computed total happens to be
+ * 0 students (legitimate at retention=0 with no new grade), which we preserve as 0.
  */
 export function expansionToEnrollmentArray(
   plan: GradeExpansionEntry[],
-  retentionRate: number = 90,
+  retentionRate: number = RETENTION_RATE_DEFAULT,
 ): number[] {
   const enrollments = computeExpansionEnrollments(plan, retentionRate)
   const result: number[] = [0, 0, 0, 0, 0]
+  const yearHasEntries = [false, false, false, false, false]
   for (const e of enrollments) {
     if (e.year >= 1 && e.year <= 5) {
       result[e.year - 1] = e.total
+      yearHasEntries[e.year - 1] = true
     }
   }
-  // Fill forward if plan doesn't cover all 5 years
+  // Fill forward ONLY for years absent from the plan (not for years that computed to 0).
   for (let i = 1; i < 5; i++) {
-    if (result[i] === 0 && result[i - 1] > 0) {
+    if (!yearHasEntries[i] && result[i - 1] > 0) {
       result[i] = result[i - 1]
     }
   }

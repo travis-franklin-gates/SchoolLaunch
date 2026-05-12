@@ -9,6 +9,7 @@ import { useStateConfig } from '@/contexts/StateConfigContext'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { formatCurrency } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
+import Tooltip from '@/components/ui/Tooltip'
 import { MultiYearSkeleton } from '../_skeletons'
 
 const fmt = (n: number) => formatCurrency(n, 'accounting')
@@ -228,7 +229,7 @@ export default function MultiYearPage() {
                   <td className="px-5 py-2.5 text-slate-600">New Grade Students</td>
                   {yearsWithStartup.map((y) => (
                     <td key={y.year} className="px-5 py-2.5 text-right text-teal-600">
-                      {y.expansionDetail ? (y.year === 1 ? y.enrollment : (y.expansionDetail.newGrade > 0 ? `+${y.expansionDetail.newGrade}` : '—')) : '—'}
+                      {y.expansionDetail ? (y.year === 1 ? '—' : (y.expansionDetail.newGrade > 0 ? `+${y.expansionDetail.newGrade}` : '—')) : '—'}
                     </td>
                   ))}
                 </tr>
@@ -258,14 +259,17 @@ export default function MultiYearPage() {
             {yearsWithStartup.some((y) => y.revenue.transportationRev > 0) && (
               <Row label="Transportation (State)" values={yearsWithStartup.map((y) => y.revenue.transportationRev)} />
             )}
+            {/* F-006: Operating Revenue row sits ABOVE Interest line — earned from operations only. */}
+            <TotalRow
+              label="Operating Revenue"
+              values={yearsWithStartup.map((y) => y.revenue.operatingRevenue)}
+              tooltip="Earned from school operations. Interest income and grants reported separately below."
+            />
             <Row label="Interest & Other Income" values={yearsWithStartup.map((y) => y.revenue.interestIncome)} />
-            <TotalRow label="Operating Revenue" values={yearsWithStartup.map((y) => y.revenue.operatingRevenue)} />
             {yearsWithStartup.some((y) => y.revenue.grantRevenue > 0) && (
-              <>
-                <Row label="Startup & Other Grants" values={yearsWithStartup.map((y) => y.revenue.grantRevenue)} />
-                <TotalRow label="Total Revenue (incl. Grants)" values={yearsWithStartup.map((y) => y.revenue.total)} />
-              </>
+              <Row label="Startup & Other Grants" values={yearsWithStartup.map((y) => y.revenue.grantRevenue)} />
             )}
+            <TotalRow label="Total Revenue" values={yearsWithStartup.map((y) => y.revenue.total)} />
 
             {/* Personnel Section */}
             <SectionHeader label="Personnel" cols={5} />
@@ -395,10 +399,18 @@ function Row({ label, values }: { label: string; values: number[] }) {
   )
 }
 
-function TotalRow({ label, values, format = 'currency' }: { label: string; values: number[]; format?: 'currency' | 'number' }) {
+function TotalRow({ label, values, format = 'currency', tooltip }: { label: string; values: number[]; format?: 'currency' | 'number'; tooltip?: string }) {
   return (
     <tr className="border-b border-slate-200 bg-slate-50 total">
-      <td className="px-5 py-3 font-bold text-slate-800">{label}</td>
+      <td className="px-5 py-3 font-bold text-slate-800">
+        {tooltip ? (
+          <Tooltip content={tooltip}>
+            <span className="border-b border-dotted border-slate-400 cursor-help">{label}</span>
+          </Tooltip>
+        ) : (
+          label
+        )}
+      </td>
       {values.map((v, i) => (
         <td key={i} data-year={i + 1} className="px-5 py-3 text-right font-bold text-slate-800 tabular-nums num">
           {format === 'number' ? v.toLocaleString() : fmt(v)}

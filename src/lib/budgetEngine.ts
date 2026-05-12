@@ -91,7 +91,7 @@ export function getGrantAllocationsForYear(
     return { source: src.source, amount, type: src.type }
   }).filter((a) => a.amount > 0)
 }
-import { expansionToEnrollmentArray, computeExpansionEnrollments, teachersPerNewGrade } from './gradeExpansion'
+import { expansionToEnrollmentArray, computeExpansionEnrollments, teachersPerNewGrade, getRetentionRate } from './gradeExpansion'
 
 // --- Year 0 Carry-Forward ---
 
@@ -491,7 +491,7 @@ export function computeMultiYearDetailed(
 ): MultiYearDetailedRow[] {
   // Use grade expansion enrollments if available, else fall back to flat profile targets
   const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
-  const retentionRate = profile.retention_rate ?? 90
+  const retentionRate = getRetentionRate(profile)
   const expansionEnrollments = hasExpansion
     ? expansionToEnrollmentArray(gradeExpansionPlan!, retentionRate)
     : null
@@ -550,8 +550,14 @@ export function computeMultiYearDetailed(
       : Math.round(Math.max(0, priorCash) * interestRate)
     // Grant revenue for this year from startup funding allocations
     const yearGrantRevenue = getGrantRevenueForYear(startupFunding, y)
-    const operatingRevenue = rev.total + interestIncome // rev.total now includes SSE + foodServiceRev + transportationRev
-    const totalRevenue = operatingRevenue + yearGrantRevenue
+    // F-006 fix: operatingRevenue means "earned from school operations" — rev.total only.
+    // rev.total already includes SSE + foodServiceRev + transportationRev + all 13 revenue lines.
+    // Interest income and grant revenue are NON-operating sources reported separately.
+    // totalRevenue is the sum of everything; downstream ratios that need the operating-only
+    // denominator (Personnel %, Facility %, FPF Total Margin) read operatingRevenue.
+    // Downstream ratios that need everything-in (e.g., Year 1 trajectory headline) read total.
+    const operatingRevenue = rev.total
+    const totalRevenue = operatingRevenue + interestIncome + yearGrantRevenue
     // State apportionment (canonical — see stateApportionmentBase). Used for authorizer fee + OSPI cash flow.
     const stateApport = stateApportionmentBase(rev, smallSchoolEnhancement)
 
@@ -1073,7 +1079,7 @@ export function computeGenericProjections(
   startupFunding?: StartupFundingSource[] | null,
 ): MultiYearDetailedRow[] {
   const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
-  const retentionRate = profile.retention_rate ?? 90
+  const retentionRate = getRetentionRate(profile)
   const expansionEnrollments = hasExpansion
     ? expansionToEnrollmentArray(gradeExpansionPlan!, retentionRate)
     : null

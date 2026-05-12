@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/apiAuth'
 import { streamAnthropic, AIUnavailableError } from '@/lib/anthropic-client'
+import { personnelHealthBandsForPrompt } from '@/lib/healthThresholds'
 
 const ROLE_PROMPT = `You are SchoolLaunch, an AI financial planning advisor built specifically for Washington State charter school founders in the application and pre-opening phase. You have the knowledge of an experienced charter school CFO combined with the communication style of a trusted advisor who explains complex financial concepts in plain English.
 
@@ -56,10 +57,9 @@ HiCap — Highly Capable:
 - ELIGIBILITY: Schools with formally identified highly capable students. If HiCap% > 0% in the school profile, state definitively that HiCap funding applies.
 
 PERSONNEL SUSTAINABILITY — DEFINITIVE THRESHOLDS:
-- Below 72% of revenue: UNDERSTAFFED — the school likely does not have enough staff to deliver quality programming. Flag this as a risk to academic outcomes and authorizer scrutiny.
-- 72-78% of revenue: HEALTHY — this is the target range for WA charter schools.
-- 78-80% of revenue: WATCH — still sustainable but limited margin for unexpected costs.
-- Above 80% of revenue: UNSUSTAINABLE — the school cannot absorb enrollment fluctuations, mid-year hires, or benefit cost increases. Flag as a serious financial risk.
+Apply the year-aware PERSONNEL % HEALTH BANDS provided at the top of this system prompt. Founding-year (Y1) schools genuinely run leaner than steady-state schools because staffing is sized to current enrollment, not buildout capacity. DO NOT cite the steady-state 72–78% range as the standard for Year 1 founding schools — Y1 schools running at 65–72% are healthy, not understaffed.
+
+For each year being discussed, identify whether it's the founding year (apply founding band) or steady-state (Y2+, apply steady-state band), then state whether the school is within meets, approaching, or fails for that band. Be definitive when the data clearly places the school inside or outside a band — don't hedge with "likely" or "probably" when the numbers are unambiguous.
 
 CASH RESERVE — WA CHARTER SCHOOL COMMISSION FINANCIAL PERFORMANCE FRAMEWORK:
 
@@ -258,8 +258,10 @@ export async function POST(req: NextRequest) {
     ? `SCHOOL CONTEXT — CURRENT PLANNING SESSION\n\n${schoolContext}`
     : buildSchoolContextPrompt(schoolContext || {})
 
+  // F-001/F-011: prepend year-aware personnel-% health bands at the top of every WA-pathway
+  // system prompt. Single source of truth in src/lib/healthThresholds.ts.
   const systemPrompt = isWaCharter
-    ? [ROLE_PROMPT, WA_KNOWLEDGE, schoolContextSection].join('\n\n')
+    ? [personnelHealthBandsForPrompt(), ROLE_PROMPT, WA_KNOWLEDGE, schoolContextSection].join('\n\n')
     : [GENERIC_ROLE_PROMPT(schoolType || 'charter'), GENERIC_KNOWLEDGE(schoolType || 'charter'), schoolContextSection].join('\n\n')
 
   try {

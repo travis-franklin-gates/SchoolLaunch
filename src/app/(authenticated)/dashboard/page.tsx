@@ -8,6 +8,7 @@ import { buildSchoolContextString, buildAgentContextString, computeAdvisoryHash 
 import { createClient } from '@/lib/supabase/client'
 import type { AdvisoryCache } from '@/lib/types'
 import { REGIONALIZATION_FACTORS } from '@/lib/regionalization'
+import { evaluatePersonnelPctHealth } from '@/lib/healthThresholds'
 import Link from 'next/link'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
@@ -202,15 +203,12 @@ export default function DashboardPage() {
   const y1Operations = multiYear.length > 0 ? multiYear[0].operations.total : baseSummary.totalOperations
   const y1Expenses = multiYear.length > 0 ? multiYear[0].totalExpenses : baseSummary.totalExpenses
   // Personnel % uses baseSummary.operatingRevenue (excludes interest & grants) — single source of truth
-  // shared with Staffing tab badge and AI briefing context
+  // shared with Staffing tab badge and AI briefing context.
+  // Threshold verdict comes from src/lib/healthThresholds.ts (F-001/F-011 fix);
+  // Y1 = founding-year band (65–72% healthy), Y2+ = steady-state (72–78% healthy).
   const personnelPctRevenue = baseSummary.operatingRevenue > 0 ? (y1Personnel / baseSummary.operatingRevenue) * 100 : 0
-  const personnelStatus: Status = personnelPctRevenue < 72
-    ? 'fails'
-    : personnelPctRevenue <= 78
-    ? 'meets'
-    : personnelPctRevenue <= 80
-    ? 'approaching'
-    : 'fails'
+  const personnelHealth = evaluatePersonnelPctHealth(personnelPctRevenue, 1)
+  const personnelStatus: Status = personnelHealth.verdict
 
   const facilityCost = projections.find((p) => p.subcategory === 'Facilities' && !p.is_revenue)?.amount || 0
   const facilityTileStatus = facilityStatus(baseSummary.facilityPct)
@@ -455,6 +453,7 @@ export default function DashboardPage() {
           value={personnelPctRevenue}
           status={personnelStatus}
           valueFormat="percent"
+          sublabel={personnelHealth.short}
         />
         <HealthTile
           label="Facility % Revenue"

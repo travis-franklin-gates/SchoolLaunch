@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { expansionToEnrollmentArray } from '@/lib/gradeExpansion'
+import { expansionToEnrollmentArray, getRetentionRate } from '@/lib/gradeExpansion'
 import type { GradeExpansionEntry } from '@/lib/types'
 
 // Default seed positions: 6 position types × 5 years = 30 rows
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
   const y1 = profile?.target_enrollment_y1 || 96
   let enrollments: number[]
   if (expansionPlan && expansionPlan.length > 0) {
-    const retentionRate = profile?.retention_rate ?? 90
+    const retentionRate = getRetentionRate(profile ?? {})
     enrollments = expansionToEnrollmentArray(expansionPlan as GradeExpansionEntry[], retentionRate)
   } else {
     enrollments = [

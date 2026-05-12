@@ -6,7 +6,8 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { calcBenefits } from '@/lib/calculations'
 import { createClient } from '@/lib/supabase/client'
 import { COMMISSION_POSITIONS, getCommissionPosition } from '@/lib/types'
-import { expansionToEnrollmentArray } from '@/lib/gradeExpansion'
+import { expansionToEnrollmentArray, getRetentionRate } from '@/lib/gradeExpansion'
+import { evaluatePersonnelPctHealth } from '@/lib/healthThresholds'
 import { usePermissions } from '@/hooks/usePermissions'
 import Tooltip from '@/components/ui/Tooltip'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -282,7 +283,7 @@ export default function StaffingPage() {
   // Compute per-year enrollment from grade expansion plan
   const enrollments = useMemo(() => {
     if (gradeExpansionPlan.length > 0) {
-      return expansionToEnrollmentArray(gradeExpansionPlan, profile.retention_rate ?? 90)
+      return expansionToEnrollmentArray(gradeExpansionPlan, getRetentionRate(profile))
     }
     return [
       profile.target_enrollment_y1,
@@ -670,18 +671,20 @@ export default function StaffingPage() {
         )}
       </div>
 
-      {/* Personnel-% advisory — fires above 80% of revenue, escalates above 85% */}
+      {/* Personnel-% advisory — fires when outside the year-aware healthy band */}
+      {/* Threshold and copy come from src/lib/healthThresholds.ts (F-001/F-011) */}
       {(() => {
         const pct = Number(personnelPctY1)
-        if (pct <= 80) return null
-        const variant = pct > 85 ? 'crit' : 'warn'
+        const health = evaluatePersonnelPctHealth(pct, 1)
+        if (health.verdict === 'meets') return null
+        // Escalate to crit when significantly outside any band (above 85% or below 60%)
+        const isCrit = pct > 85 || pct < 60
+        const variant = isCrit ? 'crit' : 'warn'
         const title = `Personnel at ${pct.toFixed(1)}% of Year 1 revenue`
         return (
           <div className="mb-4">
             <Callout variant={variant} title={title}>
-              {pct > 85
-                ? 'Personnel costs are well above the healthy 72–78% range — most charters cannot sustain this load without enrollment growth or revenue offsets.'
-                : 'Personnel costs exceed the healthy 72–78% range. Plan reviewers will look closely at staffing decisions at this level.'}
+              {health.long}
             </Callout>
           </div>
         )

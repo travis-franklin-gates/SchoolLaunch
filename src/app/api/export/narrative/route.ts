@@ -3,6 +3,7 @@ import { callAnthropic } from '@/lib/anthropic-client'
 import { getStateConfig } from '@/lib/stateConfig'
 import type { Pathway } from '@/lib/stateConfig'
 import { authenticateRequest } from '@/lib/apiAuth'
+import { evaluatePersonnelPctHealth } from '@/lib/healthThresholds'
 
 // --- Types matching the POST body ---
 interface Position {
@@ -427,13 +428,18 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
     return html
   }
 
-  // Personnel health assessment
+  // Personnel health assessment — uses year-aware bands from src/lib/healthThresholds.ts (F-001/F-011)
+  // PDF reports Y1 figures, so we evaluate against the founding-year band.
   function personnelAssessment(): string {
     const p = baseSummary.personnelPctRevenue
-    if (p < 72) return `<span style="color:#D85A30;font-weight:600;">Below recommended range</span> — may indicate understaffing or under-enrollment for the staffing plan.`
-    if (p <= 78) return `<span style="color:#0F6E56;font-weight:600;">Healthy range</span> — aligns with ${isWaCharter ? 'WA charter school' : 'school financial'} best practices (72-78%).`
-    if (p <= 80) return `<span style="color:#B45309;font-weight:600;">Caution</span> — approaching the upper limit. Monitor closely as enrollment fluctuates.`
-    return `<span style="color:#D85A30;font-weight:600;">Exceeds 80%</span> — leaves insufficient margin for operations and reserves. Consider staffing adjustments.`
+    const health = evaluatePersonnelPctHealth(p, 1)
+    const color = health.verdict === 'meets' ? '#0F6E56' : health.verdict === 'approaching' ? '#B45309' : '#D85A30'
+    const labelMap: Record<string, string> = {
+      meets: 'Healthy range',
+      approaching: health.short,
+      fails: health.short,
+    }
+    return `<span style="color:${color};font-weight:600;">${labelMap[health.verdict]}</span> — ${health.long}`
   }
 
   // Sensitivity narrative
@@ -593,11 +599,17 @@ Startup funding: ${fmtDollars(totalFunding)} total, ${fmtDollars(securedFunding)
     <div class="value" style="color:${reserveColor(y1ReserveDays)};">${y1ReserveDays}</div>
     <div class="sub">${y1ReserveDays >= 30 ? (isWaCharter ? 'Meets Stage 1' : 'Meets Benchmark') : y1ReserveDays >= 21 ? (isWaCharter ? 'Approaches Stage 1' : 'Approaches Benchmark') : (isWaCharter ? 'Below Stage 1' : 'Below Benchmark')} &bull; ${isWaCharter ? 'Stage 2' : 'Target'}: 60 days</div>
   </div>
-  <div class="metric-card" style="background:${baseSummary.personnelPctRevenue >= 72 && baseSummary.personnelPctRevenue <= 78 ? '#ECFDF5' : baseSummary.personnelPctRevenue <= 80 ? '#FFFBEB' : '#FEF2F2'};">
+  ${(() => {
+    // Year-aware personnel-% metric card (F-001/F-011). PDF reports Y1, so use founding-year band.
+    const personnelHealth = evaluatePersonnelPctHealth(baseSummary.personnelPctRevenue, 1)
+    const bg = personnelHealth.verdict === 'meets' ? '#ECFDF5' : personnelHealth.verdict === 'approaching' ? '#FFFBEB' : '#FEF2F2'
+    const fg = personnelHealth.verdict === 'meets' ? '#0F6E56' : personnelHealth.verdict === 'approaching' ? '#B45309' : '#D85A30'
+    return `<div class="metric-card" style="background:${bg};">
     <div class="label">Personnel % of Revenue</div>
-    <div class="value" style="color:${baseSummary.personnelPctRevenue >= 72 && baseSummary.personnelPctRevenue <= 78 ? '#0F6E56' : baseSummary.personnelPctRevenue <= 80 ? '#B45309' : '#D85A30'};">${baseSummary.personnelPctRevenue.toFixed(1)}%</div>
-    <div class="sub">Target: 72-78%</div>
-  </div>
+    <div class="value" style="color:${fg};">${baseSummary.personnelPctRevenue.toFixed(1)}%</div>
+    <div class="sub">Target: ${personnelHealth.band.label}</div>
+  </div>`
+  })()}
   <div class="metric-card">
     <div class="label">Break-Even Enrollment</div>
     <div class="value" style="color:#1B2A4A;">${y1BreakEven}</div>

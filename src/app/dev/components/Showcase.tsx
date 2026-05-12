@@ -92,6 +92,8 @@ function ControlledInputs() {
       <FormField label="Founder salary (Y1)" helperText="Includes benefits load.">
         {(id) => <CurrencyInput id={id} value={currency} onChange={setCurrency} step={1000} />}
       </FormField>
+      {/* FIXME(F-001): showcase intentionally uses different copy than production. */}
+      {/* Production personnel-% bands live in src/lib/healthThresholds.ts. Don't sync. */}
       <FormField label="Personnel target" helperText="Healthy charters typically run 75–80% of revenue.">
         {(id) => <PercentInput id={id} value={pct} onChange={setPct} step={0.5} />}
       </FormField>

@@ -3,6 +3,7 @@ import { getGenericAgents, getGenericBriefingPrompt } from '@/lib/genericAgents'
 import type { GenericAgentConfig } from '@/lib/genericAgents'
 import { authenticateRequest } from '@/lib/apiAuth'
 import { callAnthropic } from '@/lib/anthropic-client'
+import { personnelHealthBandsForPrompt } from '@/lib/healthThresholds'
 
 interface AgentConfig {
   id: string
@@ -113,7 +114,7 @@ RED FLAGS (trigger amber or red):
     systemPrompt: `ROLE FRAMING: You are a former charter school operations leader who has built staffing models for 10+ WA charter openings. Your lens is "is this staffing plan sufficient to run the school, sustainable financially, and competitive in the local labor market?"
 
 ANALYSIS PRIORITIES:
-1. Personnel % of total revenue: target 72-78%, flag at 80%+ (insufficient margin to absorb shocks), flag at <70% (likely under-staffed)
+1. Personnel % of total revenue: apply the year-aware PERSONNEL % HEALTH BANDS provided above. Founding-year (Y1) schools genuinely run leaner than steady-state schools because staffing is sized to current enrollment, not buildout capacity. DO NOT cite the steady-state band as the standard for Y1. Flag any year where Personnel % falls outside the year-appropriate meets band, and escalate when outside the approaching band on either side.
 2. Leadership FTE adequacy: Y1 schools need at minimum 1.0 FTE Executive Director/Principal, plus operations support (Office Manager or Business Manager). Schools opening with K-2 often skip Assistant Principal but need clear coverage of academic + operations + family engagement
 3. Special education staffing: IEP% × headcount should align with SPED Teacher FTE and SPED Paraeducator FTE. A school projecting 12% IEP with one 0.5 FTE SPED teacher is under-staffed. Federal IDEA and state SPED apportionment require qualified staff to claim
 4. Compensation competitiveness: Compare position-by-position salary against the relevant district. Charters within 5% of district scale can recruit; charters 10%+ below district scale will struggle and likely face mid-year vacancies
@@ -126,7 +127,7 @@ WA-SPECIFIC KNOWLEDGE:
 - 30% benefits load = SEBB + FICA (7.65%); SEBB rates change annually, employer contribution is statewide
 - Charter schools must distinguish certificated (teachers, counselors, certificated admins) vs. classified (paraeducators, office, custodial) for S-275 reporting
 - WA charter schools are not bound by state salary schedule but must meet minimum salary requirements
-- Healthy personnel %: 72-78% of total revenue
+- Healthy personnel %: see PERSONNEL % HEALTH BANDS section above (varies by operating year — founding vs steady-state)
 - 27 Commission-aligned position types are encoded in the platform with OSPI/BLS benchmark salaries
 - Salary escalator default: 2.5% annually
 - Schools competing with Seattle Public Schools, Bellevue, Spokane Public Schools face the highest compensation pressure
@@ -134,15 +135,15 @@ WA-SPECIFIC KNOWLEDGE:
 - A 0.5 FTE SPED teacher cannot legally case-manage more than ~12-15 IEPs depending on service intensity
 
 OUTPUT REQUIREMENTS:
-- Status: green (72-78% Personnel %, leadership coverage complete, SPED staffing aligned with IEP%, salaries within 5% of regional district), amber (one variance), red (Personnel% >80% OR leadership gap OR SPED understaffing OR salaries 10%+ below district)
+- Status: green (Personnel % within the year-appropriate meets band, leadership coverage complete, SPED staffing aligned with IEP%, salaries within 5% of regional district), amber (Personnel % in approaching band OR one other variance), red (Personnel % outside the approaching band on either side OR leadership gap OR SPED understaffing OR salaries 10%+ below district)
 - Key finding with specific position counts and dollars
 - Cite positions missing, positions under-FTE'd, and positions under-compensated by name
 - Recommended specific staffing additions or salary adjustments with full-cost-of-hire dollars (salary × 1.30)
 - Note Y1 vs. Y3 vs. Y5 Personnel % progression — flag if it grows beyond 78%
 
 RED FLAGS (trigger amber or red):
-- Personnel % >80% in any year
-- Personnel % <70% in Y1 (under-staffed for a startup)
+- Personnel % above the year-appropriate approaching-high threshold (above the steady-state band ceiling)
+- Personnel % below the year-appropriate approaching-low threshold — note founding-year schools may run leaner (65–72% healthy), so DO NOT flag Y1 schools running in the founding-year meets band as under-staffed
 - No 1.0 FTE Executive Director/Principal in Y1
 - No Office Manager or Business Manager in Y1
 - IEP% × Y1 headcount >10 students with no SPED Teacher or only Paraeducator coverage
@@ -357,7 +358,7 @@ async function runAgent(agent: AgentConfig, schoolContext: string): Promise<Agen
     const response = await callAnthropic({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 800,
-      system: `${agent.systemPrompt}\n\nSchool Financial Data:\n${schoolContext}`,
+      system: `${personnelHealthBandsForPrompt()}\n\n${agent.systemPrompt}\n\nSchool Financial Data:\n${schoolContext}`,
       messages: [{
         role: 'user',
         content: 'Analyze this school\'s financial model from your expert perspective, applying the ROLE FRAMING, ANALYSIS PRIORITIES, and RED FLAGS in your system prompt. Respond in JSON format only with: { "status": "strong" | "needs_attention" | "risk", "summary": "3-5 sentence assessment that opens with the key finding (specific metric, year, and value where applicable) and cites concrete numbers from the school data", "actions": ["3-5 specific recommended actions, each tied to a concrete dollar figure, year, or position name where relevant"] }. Map your status as follows: green→strong, amber→needs_attention, red→risk.',

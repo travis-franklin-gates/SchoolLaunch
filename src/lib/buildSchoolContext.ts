@@ -1,7 +1,7 @@
 import type { FinancialAssumptions, SchoolProfile, StaffingPosition, BudgetProjection, GradeExpansionEntry } from './types'
 import { getAssumptions, DEFAULT_ASSUMPTIONS } from './types'
 import { calcCommissionRevenue, calcAAFTE, calcBenefits, calcSmallSchoolEnhancement, calcSmallSchoolEnhancementFromGrades } from './calculations'
-import { computeExpansionEnrollments, expansionToEnrollmentArray } from './gradeExpansion'
+import { computeExpansionEnrollments, expansionToEnrollmentArray, getRetentionRate } from './gradeExpansion'
 import type { MultiYearDetailedRow, FPFScorecard } from './budgetEngine'
 
 /**
@@ -203,14 +203,14 @@ export function buildAgentContextString(
 
   // Enrollment summary
   const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
-  const retRate = profile.retention_rate ?? 90
+  const retRate = getRetentionRate(profile)
   let enrollSummary: string
   if (hasExpansion) {
     const expansionEnrollments = computeExpansionEnrollments(gradeExpansionPlan!, retRate)
     enrollSummary = expansionEnrollments.map(e =>
       `Year ${e.year}: ${e.total} students [${e.grades.join(', ')}]${e.newGrades.length > 0 ? ` (adding: ${e.newGrades.join(', ')})` : ''}`
     ).join('; ')
-    enrollSummary += ` | Growth model: Grade expansion with ${retRate}% cohort retention (${100 - retRate}% annual attrition backfilled through new student recruitment)`
+    enrollSummary += ` | Growth model: Multi-year enrollment projection applies ${retRate}% annual retention to continuing-grade students; new-grade-level students enroll at full planned capacity each year. Year 2+ totals reflect retained students plus new-grade-level additions. Once full buildout is reached, total enrollment may decline year-over-year because new-grade additions stop while retention continues to apply.`
   } else {
     enrollSummary = `Y1: ${enroll}, Y2: ${profile.target_enrollment_y2}, Y3: ${profile.target_enrollment_y3}, Y4: ${profile.target_enrollment_y4}, Y5: ${profile.target_enrollment_y5 || profile.target_enrollment_y4}`
   }
@@ -362,7 +362,7 @@ export function buildSchoolContextString(
     : 'No operations expenses entered'
 
   const hasExpansion = gradeExpansionPlan && gradeExpansionPlan.length > 0
-  const retRate = profile.retention_rate ?? 90
+  const retRate = getRetentionRate(profile)
 
   let enrollmentSection: string
   if (hasExpansion) {
@@ -374,7 +374,7 @@ export function buildSchoolContextString(
     }).join('\n')
     enrollmentSection = `ENROLLMENT (Grade Expansion Model, ${retRate}% retention):
 ${expansionLines}
-- Growth model: Cohort-based grade expansion (adding new grade levels each year)
+- Growth model: ${retRate}% annual retention applied to continuing-grade students; new-grade-level students enroll at full planned capacity each year. Year 2+ totals reflect retained students plus new-grade-level additions. Once full buildout is reached, total enrollment may decline year-over-year because new-grade additions stop while retention continues to apply.
 - Opening grades: ${profile.opening_grades?.join(', ') || 'not set'}
 - Buildout grades: ${profile.buildout_grades?.join(', ') || 'not set'}
 - Retention rate: ${retRate}%`

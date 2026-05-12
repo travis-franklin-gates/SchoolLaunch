@@ -16,6 +16,7 @@ import { Callout } from '@/components/ui/Callout'
 import type { GrowthPreset, StartupFundingSource, GradeExpansionEntry, EnrollmentMode } from '@/lib/types'
 import type { Pathway } from '@/lib/stateConfig'
 import { getStateConfig } from '@/lib/stateConfig'
+import { RETENTION_RATE_DEFAULT } from '@/lib/gradeExpansion'
 
 const STEPS = [
   {
@@ -116,7 +117,7 @@ const initialWizardData: WizardData = {
   enrollmentMode: 'simple' as EnrollmentMode,
   openingGrades: [],
   buildoutGrades: [],
-  retentionRate: 100,
+  retentionRate: RETENTION_RATE_DEFAULT,
   expansionPlan: [],
   // Generic pathway fields — default to WA charter
   state: 'WA',
