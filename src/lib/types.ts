@@ -201,6 +201,11 @@ export interface StaffingPosition {
   classification?: string
   benchmark_salary?: number
   sort_order?: number
+  /** Per-cell user-overridden flag — set when a founder manually overrides
+   *  a Y2-Y5 FTE on a per-pupil-driver position. Recompute paths (Y1 edit,
+   *  type change, fixed→per-pupil toggle) skip flagged indices. UI-only:
+   *  engines (budgetEngine, scenarioEngine) ignore this field. */
+  manual_override?: boolean
 }
 
 export interface BudgetProjection {

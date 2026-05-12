@@ -159,6 +159,11 @@ interface MultiYearPosition {
   driver: string
   studentsPerPosition: number
   fte: [number, number, number, number, number]
+  // Per-year manual-override flags. Set true when a user manually edits a
+  // Y2-Y5 cell on a per-pupil-driver position; recompute paths skip flagged
+  // indices so user values survive Y1 edits, type changes, and driver toggles.
+  // Y1 (index 0) is never flagged — Y1 is the seed for per-pupil scaling.
+  manualOverride: [boolean, boolean, boolean, boolean, boolean]
   sortOrder: number
 }
 
@@ -370,6 +375,8 @@ export default function StaffingPage() {
 
       const fte: [number, number, number, number, number] = [0, 0, 0, 0, 0]
       fte[0] = p.fte
+      const manualOverride: [boolean, boolean, boolean, boolean, boolean] = [false, false, false, false, false]
+      manualOverride[0] = p.manual_override ?? false
 
       const hasMultiYear = dbAllPositions.some((ap) => ap.year > 1)
 
@@ -379,6 +386,7 @@ export default function StaffingPage() {
             (ap) => ap.year === y && ap.sort_order === p.sort_order && (ap.position_type === posType || ap.title === p.title)
           )
           fte[y - 1] = match?.fte ?? fte[0]
+          manualOverride[y - 1] = match?.manual_override ?? false
         }
       } else {
         const smartFte = computeSmartFte(p.fte, driver, posType, enrollments, sectionsPerYear)
@@ -396,6 +404,7 @@ export default function StaffingPage() {
         driver,
         studentsPerPosition: studentsPerPos,
         fte,
+        manualOverride,
         sortOrder: p.sort_order ?? idx,
       }
     })
@@ -442,12 +451,16 @@ export default function StaffingPage() {
     const target = positions.find((p) => p.id === id)
     if (!target) return
 
-    // Per-pupil Y1 edit re-derives all 5 years — clear cue for the whole row.
+    // Per-pupil Y1 edit re-derives Y2-Y5 from the new Y1, but preserves any
+    // cells the user has manually overridden (manualOverride flag honored).
     if (yearIndex === 0 && target.driver !== 'fixed') {
       setPositions((prev) =>
-        prev.map((p) => (p.id === id
-          ? { ...p, fte: recomputePerPupilFte(value, p.driver, p.positionType, enrollments, sectionsPerYear) }
-          : p))
+        prev.map((p) => {
+          if (p.id !== id) return p
+          const recomputed = recomputePerPupilFte(value, p.driver, p.positionType, enrollments, sectionsPerYear)
+          const fte = recomputed.map((v, i) => p.manualOverride[i] ? p.fte[i] : v) as [number, number, number, number, number]
+          return { ...p, fte }
+        })
       )
       setCascadedCells((prev) => {
         const next = new Set(prev)
@@ -459,6 +472,8 @@ export default function StaffingPage() {
 
     // Otherwise: single-year edit (Y2-Y5 manual override OR fixed-driver any year).
     // Cascade forward only on a true increase for fixed-driver positions.
+    // For per-pupil Y2-Y5 edits, mark manualOverride[yearIndex] so subsequent
+    // recomputes (Y1 edit, type change, fixed→per-pupil toggle) preserve it.
     const oldValue = target.fte[yearIndex]
     const newlyCascaded: number[] = []
     if (target.driver === 'fixed' && value > oldValue) {
@@ -466,6 +481,7 @@ export default function StaffingPage() {
         if (target.fte[j] < value) newlyCascaded.push(j)
       }
     }
+    const markManualOverride = target.driver !== 'fixed' && yearIndex !== 0
 
     setPositions((prev) =>
       prev.map((p) => {
@@ -473,6 +489,11 @@ export default function StaffingPage() {
         const fte = [...p.fte] as [number, number, number, number, number]
         fte[yearIndex] = value
         for (const j of newlyCascaded) fte[j] = value
+        if (markManualOverride) {
+          const manualOverride = [...p.manualOverride] as [boolean, boolean, boolean, boolean, boolean]
+          manualOverride[yearIndex] = true
+          return { ...p, fte, manualOverride }
+        }
         return { ...p, fte }
       })
     )
@@ -495,11 +516,15 @@ export default function StaffingPage() {
         // Positions whose catalog default is already 'fixed' have nothing to toggle to.
         if (catalogDefault === 'fixed') return p
         if (p.driver === 'fixed') {
-          // Switching back to per-pupil scaling — re-derive Y2-Y5 from Y1.
-          const newFte = computeSmartFte(p.fte[0], catalogDefault, p.positionType, enrollments, sectionsPerYear)
+          // Switching back to per-pupil scaling — re-derive Y2-Y5 from Y1,
+          // but preserve cells the user has manually overridden.
+          const recomputed = computeSmartFte(p.fte[0], catalogDefault, p.positionType, enrollments, sectionsPerYear)
+          const newFte = recomputed.map((v, i) => p.manualOverride[i] ? p.fte[i] : v) as [number, number, number, number, number]
           return { ...p, driver: catalogDefault, fte: newFte }
         }
         // Switching to fixed — preserve existing FTE values intact.
+        // manualOverride flags are intentionally preserved across the toggle so
+        // they continue to protect values if the user toggles back to per-pupil.
         return { ...p, driver: 'fixed' }
       })
     )
@@ -524,7 +549,9 @@ export default function StaffingPage() {
         if (p.id !== id) return p
         // For custom positions, keep the current section's classification
         const classification = type === 'custom' ? p.classification : getClassification(type)
-        const newFte = computeSmartFte(p.fte[0] || 1, driver, type, enrollments, sectionsPerYear)
+        const recomputed = computeSmartFte(p.fte[0] || 1, driver, type, enrollments, sectionsPerYear)
+        // Preserve manually-overridden cells across the type change.
+        const newFte = recomputed.map((v, i) => p.manualOverride[i] ? p.fte[i] : v) as [number, number, number, number, number]
         return {
           ...p,
           positionType: type,
@@ -577,6 +604,7 @@ export default function StaffingPage() {
           driver: 'fixed',
           studentsPerPosition: 0,
           fte,
+          manualOverride: [false, false, false, false, false],
           sortOrder: maxSort + 1,
         },
       ]
@@ -657,6 +685,7 @@ export default function StaffingPage() {
       benchmark_salary: number
       students_per_position: number
       sort_order: number
+      manual_override: boolean
     }> = []
 
     for (const pos of positions) {
@@ -674,6 +703,7 @@ export default function StaffingPage() {
           benchmark_salary: pos.benchmarkSalary,
           students_per_position: pos.studentsPerPosition,
           sort_order: pos.sortOrder,
+          manual_override: pos.manualOverride[y - 1],
         })
       }
     }
@@ -1113,8 +1143,8 @@ function PositionRow({
         )}
       </td>
       {[0, 1, 2, 3, 4].map((yi) => {
-        const isDerivedYear = pos.driver !== 'fixed' && yi !== 0
         const isCascaded = cascadedCells.has(cellKey(pos.id, yi))
+        const isManualOverride = pos.driver !== 'fixed' && yi !== 0 && pos.manualOverride[yi]
         return (
           <td key={yi} data-year={yi + 1} className="px-2 py-1.5">
             <input
@@ -1123,10 +1153,18 @@ function PositionRow({
               min={0}
               value={pos.fte[yi]}
               onChange={(e) => onUpdateFte(pos.id, yi, Number(e.target.value))}
-              disabled={!canEdit || isDerivedYear}
-              title={isDerivedYear ? "Click 'Per Pupil' above to switch to Fixed if you want to override this year directly." : undefined}
-              aria-label={isCascaded ? `Year ${yi + 1} FTE cascaded forward; type to override` : undefined}
-              className={`w-14 text-right border border-slate-200 rounded px-1.5 py-1 text-sm disabled:bg-slate-50 disabled:text-slate-600 disabled:cursor-not-allowed ${isCascaded ? 'bg-teal-50' : ''}`}
+              disabled={!canEdit}
+              title={isManualOverride ? "Manual override — won't recalculate from enrollment." : undefined}
+              aria-label={
+                isManualOverride
+                  ? `Year ${yi + 1} FTE manually overridden; won't recalculate from enrollment`
+                  : isCascaded
+                    ? `Year ${yi + 1} FTE cascaded forward; type to override`
+                    : undefined
+              }
+              className={`w-14 text-right border border-slate-200 rounded px-1.5 py-1 text-sm disabled:bg-slate-50 disabled:text-slate-600 disabled:cursor-not-allowed ${
+                isManualOverride ? 'bg-amber-50' : isCascaded ? 'bg-teal-50' : ''
+              }`}
             />
           </td>
         )
