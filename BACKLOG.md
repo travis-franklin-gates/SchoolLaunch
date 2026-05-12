@@ -76,20 +76,45 @@ risk from overlay races. Unskipping gated on this being resolved.
 ---
 
 ### P-UX-03 · Staffing: position "driver" field not editable from UI
-**Status:** `OPEN` · **Opened:** 2026-04-21
+**Status:** `RESOLVED` · **Opened:** 2026-04-21
+**Resolved:** 2026-05-12 — Driver badge on the Staffing tab
+(`src/app/(authenticated)/dashboard/staffing/page.tsx`) is now a clickable
+button toggling between the position's catalog-default per-pupil variant
+and `fixed`. When `driver !== 'fixed'`, Y2-Y5 FTE inputs render disabled
+with a tooltip pointing the user back at the badge. Toggling fixed →
+per-pupil re-runs `computeSmartFte` to re-derive Y2-Y5; toggling per-pupil
+→ fixed preserves existing FTE values intact. Engines unaffected —
+`driver` is UI-scoped (zero references in `budgetEngine.ts` or
+`scenarioEngine.ts`). Tour copy at `data-tour="driver-column"` updated to
+mention the click-to-switch affordance.
+
+**Related latent fix bundled:** the multi-year fill `.find` in the
+Staffing page's useEffect rebuild (`staffing/page.tsx:366-368`) previously
+matched DB rows on `position_type || title` only, so schools with multiple
+positions of the same type (e.g., Cascade Charter Elementary's 4
+paraeducators all at year=1) collapsed all Y2-Y5 values to the FIRST
+matching row. Fixed by adding `ap.sort_order === p.sort_order` to the
+match key. Self-heals on next save; no data migration needed.
+
+**Follow-ups logged:** P-UX-07 (status enum display), P-UX-09
+(driver-variant catalog drift), P-UX-10 (paraeducator Y1 minimum drift),
+T-INFRA-05 (E2E driver toggle coverage).
 
 Each of the 27 Commission-aligned positions has a `driver` column
 (enrollment-based, section-based, fixed, etc.) that determines how the
-position scales across years in the multi-year projection. The driver is
-currently seeded from `COMMISSION_POSITIONS` in `src/lib/types.ts` and is
-not exposed in the Staffing tab UI — founders can't override it even when
-their school's staffing model intentionally differs (e.g., a dean position
-that should scale with sections, not enrollment).
+position scales across years in the multi-year projection. The driver was
+seeded from `COMMISSION_POSITIONS` in `src/lib/types.ts` and was not
+exposed in the Staffing tab UI — founders couldn't override it even when
+their school's staffing model intentionally differed (e.g., a dean
+position that should scale with sections, not enrollment). Surfaced as a
+real user bug when a founder reported Y2/Y3 paraeducator FTE values
+reverting to formula output after entry.
 
-**Proposed fix:** surface `driver` as an inline dropdown on the staffing
-row, with the default value pre-selected and a warning tooltip when the
-founder deviates from the Commission default ("Commission models this role
-on enrollment — override only if your staffing plan justifies").
+**Original proposed fix (superseded by the shipped click-to-override
+badge):** surface `driver` as an inline dropdown on the staffing row,
+with the default value pre-selected and a warning tooltip when the
+founder deviates from the Commission default ("Commission models this
+role on enrollment — override only if your staffing plan justifies").
 
 ---
 
@@ -169,6 +194,102 @@ representable. Optionally widen the default window to 6 years forward.
 
 ---
 
+### P-UX-07 · Startup funding status dropdown shows raw lowercase enum
+**Status:** `OPEN` · **Opened:** 2026-05-12
+
+The status `<select>` on both the Revenue tab editor
+(`src/app/(authenticated)/dashboard/revenue/page.tsx:586-593`) and the
+onboarding Step 5 startup-funding row
+(`src/components/onboarding/StepOperations.tsx:610-617`) renders the raw
+lowercase enum values (`received | pledged | applied | projected | n/a`)
+as option labels. The two editors were aligned to lowercase as part of the
+2026-05-12 startup-funding discoverability fix so they matched, but the
+founder-facing display should be Title Case
+(`Received | Pledged | Applied | Projected | N/A`) for readability.
+
+**Proposed fix:** add a `FUNDING_STATUS_LABELS` map (raw → Title Case) and
+render `<option value={raw}>{LABEL[raw]}</option>` on both surfaces.
+Display only — no data migration. Low priority, polish.
+
+---
+
+### P-UX-08 · Settings-as-canonical home for startup funding sources
+**Status:** `OPEN` · **Opened:** 2026-05-12
+
+The Revenue tab is the canonical post-onboarding editor for startup
+funding sources today
+(`src/app/(authenticated)/dashboard/revenue/page.tsx:510-682`). On
+2026-05-12 a discoverability fix shipped on top of it: `id="startup-grants"`
+anchor added, Cash Flow empty-state replaced with a primary-button `<Link>`,
+footer note linkified, helper text added for the Y0 requirement. This
+resolved the reported founder bug (couldn't assign funding to pre-opening
+expenses because no sources existed). Phase 2 — extract a shared editor
+and make Settings the canonical home — was deferred.
+
+**Phase 2 work:**
+1. Extract `<StartupFundingEditor>` from the inline Revenue-tab block into
+   a reusable component
+   (`src/components/dashboard/StartupFundingEditor.tsx`).
+2. Add a Settings section "Startup Funding" between Programs and Revenue
+   Assumptions, rendering the extracted editor.
+3. Add a Cash Flow inline "Manage funding sources" modal wrapping the same
+   editor; parent `reload()` refreshes the dependent dropdowns on close.
+4. Retire the inline editor on the Revenue tab; leave a deep-link pointer
+   ("Manage in Settings → Startup Funding").
+
+**Deferred because:** the discoverability fix already resolves the reported
+founder bug. Settings-as-canonical is structural cleanup, not a
+user-blocking issue. Medium priority, post-RFP.
+
+---
+
+### P-UX-09 · Dead driver-variant catalog drift in `COMMISSION_POSITIONS`
+**Status:** `OPEN` · **Opened:** 2026-05-12 · **Source:** P-UX-03 follow-up
+
+`COMMISSION_POSITIONS` (`src/lib/types.ts:241-273`) encodes four per-pupil
+driver variants — `per_pupil_elem`, `per_pupil_ms`, `per_pupil_hs`,
+`per_pupil_sped` — that are dead. The Staffing page's `POSITION_DRIVER`
+map (`src/app/(authenticated)/dashboard/staffing/page.tsx:66-100`)
+collapses all three teacher types to plain `per_pupil`, and the SPED
+teacher to `fixed`. `computeSmartFte` does not branch on the variants.
+`DRIVER_LABELS` (staffing/page.tsx:199-204) exposes only `fixed`,
+`per_pupil`, `per_pupil_sped`, and `per_pupil_el`.
+
+**Decision needed:** either
+(a) Prune the dead variants from `COMMISSION_POSITIONS` to match the
+    UI-canonical mapping (cleanup, lower-risk), or
+(b) Wire the variants through `computeSmartFte` so elem/ms/hs/sped
+    scale differently (new feature; requires defining the scaling math
+    and updating the seed route).
+
+**Why it matters:** the drift becomes user-visible the moment driver
+becomes a `<select>` with all variants exposed (the "full" P-UX-03
+follow-up Option C). Until then it's a maintenance-only smell. Medium
+priority — decision required before any expanded driver-editor work.
+
+---
+
+### P-UX-10 · Y1 paraeducator FTE minimum drift between seed and dashboard
+**Status:** `OPEN` · **Opened:** 2026-05-12 · **Source:** P-UX-03 follow-up
+
+The staffing seed route (`src/app/api/staffing/seed/route.ts:42-51`)
+enforces a Y1 paraeducator FTE minimum:
+`Math.max(2, round(enrollment / 48 * 2) / 2)`. The staffing-page formula
+`computeSmartFte`
+(`src/app/(authenticated)/dashboard/staffing/page.tsx:213-250`) does not.
+
+**Effect:** a paraeducator seeded at Y1=2 stays there as long as the user
+never touches the cell. But any user interaction that re-runs
+`computeSmartFte` — type-dropdown change, toggle to fixed and back
+(P-UX-03 fix path), or a useEffect rebuild — can derive a Y1 value below
+2 if Y1 enrollment is small.
+
+**Proposed fix:** align `computeSmartFte`'s paraeducator branch to apply
+the same `Math.max(2, …)` floor that the seed uses. One-line change at
+line ~244. Low priority, consistency cleanup.
+
+---
+
 ## Test Infrastructure
 
 ### T-INFRA-01 · No isolated Supabase test environment
@@ -224,6 +345,25 @@ being invoked.
 
 **Proposed fix:** resolve **P-UX-02** at the product level, then delete
 this helper.
+
+---
+
+### T-INFRA-05 · Update `full-founder-journey` E2E to exercise the new driver toggle
+**Status:** `OPEN` · **Opened:** 2026-05-12 · **Source:** P-UX-03 follow-up
+
+The driver-flip step at
+`tests/session4/e2e/full-founder-journey.spec.ts:547-567` looks for a
+`<select>` element to change driver. It never found one (driver was
+read-only) and gracefully `infoFlag`s, providing false reassurance. As of
+2026-05-12 (P-UX-03 resolution) driver is now a `<button>` on the Staffing
+tab — the test still finds no `<select>` and still `infoFlag`s, but the
+underlying gap (no driver-flip coverage) is now real test debt.
+
+**Proposed fix:** update the test to locate the new button (approximately
+`button[title^="Click to switch"]`), click it, verify the badge label
+flips and a Y2-Y5 FTE input's `disabled` attribute toggles accordingly.
+Remove the comment block at lines 563-566 that referenced the old
+read-only `<span>`. Low priority, test debt.
 
 ---
 
