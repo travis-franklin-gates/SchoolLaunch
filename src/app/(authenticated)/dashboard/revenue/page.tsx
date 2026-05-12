@@ -507,7 +507,7 @@ export default function RevenuePage() {
 
       {/* Funding Sources management — lifted out of the revenue table for Phase 2's
           DataTable consistency. Logically separate from the breakdown above. */}
-      <div data-tour="startup-grants" className="bg-white border border-slate-200 rounded-xl shadow-sm mt-4 px-6 py-4">
+      <div id="startup-grants" data-tour="startup-grants" className="bg-white border border-slate-200 rounded-xl shadow-sm mt-4 px-6 py-4 scroll-mt-6">
         <div className="flex items-center justify-between mb-3">
           <div>
             <h2 className="text-sm font-semibold text-slate-700">Startup &amp; Other Grants — Funding Sources</h2>
@@ -531,6 +531,10 @@ export default function RevenuePage() {
             </div>
           )}
         </div>
+
+        <p className="text-xs text-slate-500 mb-3">
+          Allocate to Year 0 to make this source available for pre-opening expense assignment on the Cash Flow tab.
+        </p>
 
         <div className="overflow-x-auto sl-scroll">
           <table className="w-full text-sm">

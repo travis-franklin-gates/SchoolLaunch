@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback, type ReactNode } from 'react'
+import Link from 'next/link'
 import { useScenario } from '@/lib/ScenarioContext'
 import { computeCashFlow } from '@/lib/budgetEngine'
 import { createClient } from '@/lib/supabase/client'
@@ -379,13 +380,19 @@ export default function CashFlowPage() {
                 </div>
               </>
             ) : (
-              <div className="text-sm text-slate-500 py-4">
-                No funding sources configured. Add funding sources on the Revenue tab.
+              <div className="py-4">
+                <p className="text-sm text-slate-500 mb-3">No funding sources configured.</p>
+                <Link
+                  href="/dashboard/revenue#startup-grants"
+                  className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors"
+                >
+                  Add funding sources on the Revenue tab
+                </Link>
               </div>
             )}
 
             <p className="text-xs text-slate-500 mt-3">
-              Manage funding sources on the Revenue tab. Only &quot;received&quot; and &quot;pledged&quot; funds count as secured.
+              <Link href="/dashboard/revenue#startup-grants" className="text-teal-600 hover:text-teal-800 hover:underline">Manage funding sources on the Revenue tab</Link>. Only &quot;received&quot; and &quot;pledged&quot; funds count as secured.
             </p>
           </div>
 

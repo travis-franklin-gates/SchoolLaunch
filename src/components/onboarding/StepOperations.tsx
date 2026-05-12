@@ -612,8 +612,11 @@ export default function StepOperations({
                     onChange={(e) => updateFundingField(f.key, 'status', e.target.value)}
                     className="px-2 py-1.5 border border-slate-200 rounded text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
                   >
-                    <option value="received">Confirmed</option>
-                    <option value="projected">Projected</option>
+                    <option value="received">received</option>
+                    <option value="pledged">pledged</option>
+                    <option value="applied">applied</option>
+                    <option value="projected">projected</option>
+                    <option value="n/a">n/a</option>
                   </select>
                   <button
                     type="button"
