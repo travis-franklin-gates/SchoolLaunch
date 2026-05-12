@@ -75,3 +75,6 @@ tests/*-smoke-*.png
 audit-*.png
 audit-reports/
 test-results/
+
+# Local-only diagnostic reports — never commit
+DIAGNOSTIC_*.md
