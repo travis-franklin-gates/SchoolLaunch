@@ -127,7 +127,7 @@ const staffingTour: Step[] = [
   },
   {
     target: '[data-tour="driver-column"]',
-    content: 'The Driver column controls how positions scale as you grow. \u2018Per Pupil\u2019 positions automatically add FTE in Years 2\u20135 based on your enrollment growth plan.',
+    content: 'The Driver shows how each position\u2019s FTE scales \u2014 \u2018Per Pupil\u2019 scales with enrollment growth, while \u2018Fixed\u2019 stays constant. Click any badge to switch a position to Fixed and override Y2\u20135 manually.',
     title: 'Driver Column',
   },
   {

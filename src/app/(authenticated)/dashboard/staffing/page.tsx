@@ -364,7 +364,7 @@ export default function StaffingPage() {
       if (hasMultiYear) {
         for (let y = 2; y <= 5; y++) {
           const match = dbAllPositions.find(
-            (ap) => ap.year === y && (ap.position_type === posType || ap.title === p.title)
+            (ap) => ap.year === y && ap.sort_order === p.sort_order && (ap.position_type === posType || ap.title === p.title)
           )
           fte[y - 1] = match?.fte ?? fte[0]
         }
@@ -438,6 +438,24 @@ export default function StaffingPage() {
         const fte = [...p.fte] as [number, number, number, number, number]
         fte[yearIndex] = value
         return { ...p, fte }
+      })
+    )
+  }
+
+  function toggleDriver(id: string) {
+    setPositions((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p
+        const catalogDefault = getDriver(p.positionType)
+        // Positions whose catalog default is already 'fixed' have nothing to toggle to.
+        if (catalogDefault === 'fixed') return p
+        if (p.driver === 'fixed') {
+          // Switching back to per-pupil scaling — re-derive Y2-Y5 from Y1.
+          const newFte = computeSmartFte(p.fte[0], catalogDefault, p.positionType, enrollments, sectionsPerYear)
+          return { ...p, driver: catalogDefault, fte: newFte }
+        }
+        // Switching to fixed — preserve existing FTE values intact.
+        return { ...p, driver: 'fixed' }
       })
     )
   }
@@ -726,6 +744,7 @@ export default function StaffingPage() {
                   benefitsRate={benefitsRate}
                   onSelectType={selectPositionType}
                   onUpdateFte={updateFte}
+                  onToggleDriver={toggleDriver}
                   onUpdateSalary={updateSalary}
                   onUpdateTitle={updateTitle}
                   onRemove={removePosition}
@@ -828,6 +847,7 @@ function GroupSection({
   benefitsRate,
   onSelectType,
   onUpdateFte,
+  onToggleDriver,
   onUpdateSalary,
   onUpdateTitle,
   onRemove,
@@ -843,6 +863,7 @@ function GroupSection({
   benefitsRate: number
   onSelectType: (id: string, type: string) => void
   onUpdateFte: (id: string, yearIndex: number, value: number) => void
+  onToggleDriver: (id: string) => void
   onUpdateSalary: (id: string, value: number) => void
   onUpdateTitle: (id: string, value: string) => void
   onRemove: (id: string) => void
@@ -868,6 +889,7 @@ function GroupSection({
           benefitsRate={benefitsRate}
           onSelectType={onSelectType}
           onUpdateFte={onUpdateFte}
+          onToggleDriver={onToggleDriver}
           onUpdateSalary={onUpdateSalary}
           onUpdateTitle={onUpdateTitle}
           onRemove={onRemove}
@@ -907,6 +929,7 @@ function PositionRow({
   benefitsRate,
   onSelectType,
   onUpdateFte,
+  onToggleDriver,
   onUpdateSalary,
   onUpdateTitle,
   onRemove,
@@ -919,6 +942,7 @@ function PositionRow({
   benefitsRate: number
   onSelectType: (id: string, type: string) => void
   onUpdateFte: (id: string, yearIndex: number, value: number) => void
+  onToggleDriver: (id: string) => void
   onUpdateSalary: (id: string, value: number) => void
   onUpdateTitle: (id: string, value: string) => void
   onRemove: (id: string) => void
@@ -927,6 +951,11 @@ function PositionRow({
   canEdit: boolean
 }) {
   const driverLabel = DRIVER_LABELS[pos.driver] || pos.driver.replace(/_/g, ' ')
+  const driverCatalogDefault = getDriver(pos.positionType)
+  const canToggleDriver = driverCatalogDefault !== 'fixed' && canEdit
+  const toggleTargetLabel = pos.driver === 'fixed'
+    ? (DRIVER_LABELS[driverCatalogDefault] || driverCatalogDefault.replace(/_/g, ' '))
+    : 'Fixed'
 
   const sectionTypes = getTypesForClassification(classification)
   const isCustom = pos.positionType === 'custom'
@@ -975,7 +1004,23 @@ function PositionRow({
         )}
       </td>
       <td className="px-2 py-1.5">
-        <span className="text-[10px] text-slate-500">{driverLabel}</span>
+        {canToggleDriver ? (
+          <button
+            type="button"
+            onClick={() => onToggleDriver(pos.id)}
+            title={`Click to switch to ${toggleTargetLabel}`}
+            aria-label={`Driver: ${driverLabel}. Click to switch to ${toggleTargetLabel}.`}
+            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border transition-colors ${
+              pos.driver === 'fixed'
+                ? 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                : 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100'
+            }`}
+          >
+            {driverLabel}
+          </button>
+        ) : (
+          <span className="text-[10px] text-slate-500">{driverLabel}</span>
+        )}
       </td>
       <td className="px-2 py-1.5">
         <input
@@ -995,19 +1040,23 @@ function PositionRow({
           </div>
         )}
       </td>
-      {[0, 1, 2, 3, 4].map((yi) => (
-        <td key={yi} data-year={yi + 1} className="px-2 py-1.5">
-          <input
-            type="number"
-            step={0.5}
-            min={0}
-            value={pos.fte[yi]}
-            onChange={(e) => onUpdateFte(pos.id, yi, Number(e.target.value))}
-            disabled={!canEdit}
-            className="w-14 text-right border border-slate-200 rounded px-1.5 py-1 text-sm disabled:bg-slate-50 disabled:text-slate-600"
-          />
-        </td>
-      ))}
+      {[0, 1, 2, 3, 4].map((yi) => {
+        const isDerivedYear = pos.driver !== 'fixed' && yi !== 0
+        return (
+          <td key={yi} data-year={yi + 1} className="px-2 py-1.5">
+            <input
+              type="number"
+              step={0.5}
+              min={0}
+              value={pos.fte[yi]}
+              onChange={(e) => onUpdateFte(pos.id, yi, Number(e.target.value))}
+              disabled={!canEdit || isDerivedYear}
+              title={isDerivedYear ? "Click 'Per Pupil' above to switch to Fixed if you want to override this year directly." : undefined}
+              className="w-14 text-right border border-slate-200 rounded px-1.5 py-1 text-sm disabled:bg-slate-50 disabled:text-slate-600 disabled:cursor-not-allowed"
+            />
+          </td>
+        )
+      })}
       <td className="px-2 py-1.5">
         {canEdit && (
           <button
