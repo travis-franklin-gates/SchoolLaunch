@@ -286,7 +286,7 @@ export default function SettingsPage() {
       {/* Section: Team Members (CEO only) */}
       {canManageTeam && schoolId && currentUserId && (
         <div id="team-members" className="scroll-mt-6">
-          <TeamSection schoolId={schoolId} currentUserId={currentUserId} />
+          <TeamSection schoolId={schoolId} currentUserId={currentUserId} schoolName={schoolName} />
         </div>
       )}
 

@@ -95,7 +95,13 @@ function ActionMenu({ children }: { children: (close: () => void) => React.React
   )
 }
 
-export default function TeamSection({ schoolId, currentUserId }: { schoolId: string; currentUserId: string }) {
+interface InviteSuccess {
+  url: string
+  email: string
+  role: 'school_editor' | 'school_viewer'
+}
+
+export default function TeamSection({ schoolId, currentUserId, schoolName }: { schoolId: string; currentUserId: string; schoolName: string }) {
   const [members, setMembers] = useState<TeamMember[]>([])
   const [pendingInvites, setPendingInvites] = useState<PendingInvitation[]>([])
   const [loadingTeam, setLoadingTeam] = useState(true)
@@ -103,7 +109,7 @@ export default function TeamSection({ schoolId, currentUserId }: { schoolId: str
   const [inviteRole, setInviteRole] = useState<'school_editor' | 'school_viewer'>('school_editor')
   const [inviting, setInviting] = useState(false)
   const [inviteError, setInviteError] = useState<string | null>(null)
-  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null)
+  const [inviteSuccess, setInviteSuccess] = useState<InviteSuccess | null>(null)
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
 
   const fetchTeam = useCallback(async () => {
@@ -130,17 +136,19 @@ export default function TeamSection({ schoolId, currentUserId }: { schoolId: str
     setInviteSuccess(null)
 
     try {
+      const submittedEmail = inviteEmail.trim()
+      const submittedRole = inviteRole
       const res = await fetch('/api/team/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole, schoolId }),
+        body: JSON.stringify({ email: submittedEmail, role: submittedRole, schoolId }),
       })
       const data = await res.json()
       if (!res.ok) {
         setInviteError(data.error || 'Failed to send invitation')
       } else {
         const fullUrl = `${window.location.origin}${data.inviteUrl}`
-        setInviteSuccess(fullUrl)
+        setInviteSuccess({ url: fullUrl, email: submittedEmail, role: submittedRole })
         setInviteEmail('')
         await fetchTeam()
       }
@@ -148,6 +156,18 @@ export default function TeamSection({ schoolId, currentUserId }: { schoolId: str
       setInviteError('Network error. Please try again.')
     }
     setInviting(false)
+  }
+
+  function buildMailtoHref(success: InviteSuccess): string {
+    const token = new URL(success.url, window.location.origin).searchParams.get('token') || ''
+    const inviteUrl = `https://schoollaunch.vercel.app/invite?token=${token}`
+    const roleLabel = success.role === 'school_editor' ? 'Editor' : 'Viewer'
+    const roleDescription = success.role === 'school_editor'
+      ? 'you can edit the financial model, staffing plan, and revenue assumptions'
+      : 'you can view the financial model and run exports but cannot make changes'
+    const subject = `You're invited to collaborate on ${schoolName} in SchoolLaunch`
+    const body = `Hi,\n\nI'd like to invite you to help build our financial plan for ${schoolName} in SchoolLaunch.\n\nClick this link to accept the invitation and create your account:\n\n${inviteUrl}\n\nYou'll have ${roleLabel} access — ${roleDescription}.\n\nThis invitation expires in 7 days.\n\nThanks!`
+    return `mailto:${success.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   }
 
   async function handleChangeRole(userId: string, newRole: string) {
@@ -345,22 +365,36 @@ export default function TeamSection({ schoolId, currentUserId }: { schoolId: str
         )}
 
         {inviteSuccess && (
-          <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-            <p className="text-xs text-emerald-700 font-medium mb-1">Invitation created! Share this link:</p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                readOnly
-                value={inviteSuccess}
-                className="flex-1 text-xs bg-white border border-emerald-200 rounded px-2 py-1.5 text-slate-700 font-mono"
-                onFocus={(e) => e.target.select()}
-              />
-              <button
-                onClick={() => { navigator.clipboard.writeText(inviteSuccess); }}
-                className="text-xs px-3 py-1.5 bg-emerald-600 text-white rounded hover:bg-emerald-700 whitespace-nowrap"
-              >
-                Copy
-              </button>
+          <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-3">
+            <p className="text-xs text-emerald-700 font-medium mb-2">Invitation created for {inviteSuccess.email}.</p>
+            <a
+              href={inviteSuccess.email ? buildMailtoHref(inviteSuccess) : undefined}
+              aria-disabled={!inviteSuccess.email}
+              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors ${inviteSuccess.email ? '' : 'opacity-50 pointer-events-none'}`}
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <path d="m3 7 9 6 9-6" />
+              </svg>
+              Send Email Invite
+            </a>
+            <div className="mt-3">
+              <p className="text-[11px] text-slate-500 mb-1">Or copy the link to share another way</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={inviteSuccess.url}
+                  className="flex-1 text-xs bg-white border border-emerald-200 rounded px-2 py-1.5 text-slate-700 font-mono"
+                  onFocus={(e) => e.target.select()}
+                />
+                <button
+                  onClick={() => { navigator.clipboard.writeText(inviteSuccess.url); }}
+                  className="text-xs px-3 py-1.5 bg-emerald-600 text-white rounded hover:bg-emerald-700 whitespace-nowrap"
+                >
+                  Copy
+                </button>
+              </div>
             </div>
           </div>
         )}
