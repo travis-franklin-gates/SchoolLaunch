@@ -7,6 +7,9 @@
 
 This is the data‑entry session report. It captures every V11 input that did not enter the platform cleanly, every place SchoolLaunch's defaults diverged from V11, and every UI surprise encountered along the way. No diagnosis is performed here — only logging. Session 2 will run the reconciliation.
 
+> **POST-SESSION ADDENDUM (2026-05-22, written after gap triage)**
+> After Session 1 completed, follow-up research and direct extraction from the V11 workbook resolved several of the items flagged below. The most consequential resolution is that **the "staffing total inconsistency" called out in §6 is not a SchoolLaunch issue — it's a defect in the V11 template itself.** See §14 at the end of this document for the full addendum. Read §14 alongside §6 before acting on anything in this log.
+
 ---
 
 ## 1 · Y1 totals at end of session: SchoolLaunch vs V11
@@ -21,7 +24,7 @@ This is the data‑entry session report. It captures every V11 input that did no
 | Total Expenses | $3,303,175 | (not extracted) | n/a |
 | Net Position Y1 | $824,542 | $46K | **+$778K** |
 | Days of Cash Y1 | 91 | 103 | −12 days |
-| Y1 FTE | 27.25 | 25.75 | **+1.50** (see §6) |
+| Y1 FTE | 27.25 | 25.75 (displayed) / 27.25 (truth) | **see §14** |
 | Personnel % Revenue | 63.1% | (not extracted) | n/a |
 
 **Y2–Y5 enrollment totals match V11 exactly** (480 / 690 / 780 / 780) — only because retention was forced to 100 % (see §3).
@@ -59,12 +62,12 @@ Schema highlights that informed this session:
 | `financial_assumptions.ops_escalator_pct` | 2 % | (not explicitly in V11; V11 doesn't expose a unified ops escalator) | left at 2 % |
 | `financial_assumptions.aafte_pct` (% of headcount) | 95 % | 95 % | already matches ✓ |
 | `regional_factor` (Spokane County) | 1.030× | (V11 uses already-regionalized rates or applies its own; not directly comparable) | left at 1.030 |
-| `retention_rate` | 90 % | (V11 has no retention; implicit 100 %) | **changed → 100** (Settings → Grade Expansion Plan → Save) |
-| `pct_iep` / `pct_frl` / `pct_ell` / `pct_hicap` | 0/0/0/0 | 16/60/13/(unspecified) | **set to 16 / 60 / 13 / 0** (HiCap left at 0 since V11 doesn't expose a HiCap percentage; V11 just applies $32/pupil flat to all enrollment — see §5.A) |
+| `retention_rate` | 92 % | (V11 has no retention; implicit 100 %) | **changed → 100** (Settings → Grade Expansion Plan → Save) |
+| `pct_iep` / `pct_frl` / `pct_ell` / `pct_hicap` | 0/0/0/0 | 16/60/13/(unspecified) | **set to 16 / 60 / 13 / 0** (HiCap left at 0 since V11 doesn't expose a HiCap percentage; V11 just applies $32/pupil flat to all enrollment — see §5.A and §14) |
 | `school_profiles.regular_ed_per_pupil` | $12,000 | $12,613 | **changed → 12613** |
 | `financial_assumptions.sped_per_pupil` (SPED Apportionment) | $4,500 | $455 | **changed → 455** (Note: a 10× difference — SchoolLaunch's default appears to conflate the 3121 General Apportionment with something else; check whether the field's *meaning* is the same in Session 2) |
 | `financial_assumptions.state_sped_per_pupil` | $13,556 | $14,631 | **changed → 14631** |
-| LAP High Poverty | $374/pupil | $370/pupil (V11 has just "LAP" $370/pupil, not a separate "LAP High Poverty" line) | left at $374 — see §5.C |
+| LAP High Poverty | $374/pupil | $370/pupil (V11 has just "LAP" $370/pupil, not a separate "LAP High Poverty" line) | left at $374 — see §5.C and §14 |
 | Levy Equity | $0 | $0 | already matches ✓ |
 | Facilities per pupil | $0 | $0 | already matches ✓ |
 | Operations: Supplies per Student | $200 | (V11 not extracted at this granularity) | left at default |
@@ -107,6 +110,8 @@ These are *missing line items*. Even with overrides on the Revenue page (which e
 
 These are model‑structure differences. They will produce different Y1 values regardless of what rate you enter.
 
+> **See §14 for the OSPI-statute resolution of this section.** Several of these "differences" turn out to be V11 simplifications of formulas that SchoolLaunch implements correctly per RCW 28A.150.260.
+
 ### 5.A — Per-pupil flat vs. per-(qualifying-group) calc
 
 | Line | V11 formula | SchoolLaunch formula | Cedar Grove Y1 effect |
@@ -119,6 +124,8 @@ These are model‑structure differences. They will produce different Y1 values r
 
 The pattern: SchoolLaunch tries to be more sophisticated by multiplying by the qualifying-percentage. V11 just uses a flat per-pupil rate for several lines. This makes side-by-side reconciliation non-trivial.
 
+**Resolved in §14:** OSPI's own statute and LAP Guide confirm that LAP, TBIP, and HiCap allocations are formula-driven on the qualifying population — SchoolLaunch is closer to the statute than V11. V11's flat per-pupil rates are simplified planning presentations of the underlying formula results.
+
 ### 5.B — Authorizer fee base
 
 SchoolLaunch shows Y1 authorizer fee as a stored Operations line of $102,005. V11 INPUTS R122 documents the fee base as "3% of State Revenue" with Cedar Grove Y1 = $100,974. Close but not identical — Session 2 should verify whether SchoolLaunch's $102,005 is 3% of just BEA, BEA+state-categoricals, or BEA + state-categoricals + the regionalization multiplier.
@@ -126,6 +133,8 @@ SchoolLaunch shows Y1 authorizer fee as a stored Operations line of $102,005. V1
 ### 5.C — LAP vs LAP High Poverty
 
 V11 has one "LAP" line at $370/pupil. SchoolLaunch has two: "LAP" (FRL-conditioned at $816/FRL student) AND "LAP High Poverty" ($374/FRL student). Either Cedar Grove's V11 model is omitting the High Poverty add-on (because OSPI lumps them) or SchoolLaunch is splitting LAP in a way V11 doesn't.
+
+**Resolved in §14:** OSPI confirms LAP base and LAP High Poverty are separate allocations. Most likely V11 omits LAP High Poverty because new applicants don't have a 3-year FRPL history yet (the eligibility threshold is a 3-year rolling average ≥ 50%). Tracked as R-REV-02 in BACKLOG.md.
 
 ### 5.D — Food Service revenue
 
@@ -147,13 +156,15 @@ Process: the session brief gave 23 V11 positions with FTE-by-year and salaries. 
 | Y4 | 83.25 | 79.25 | +4.00 |
 | Y5 | 83.25 | 79.25 | +4.00 |
 
-**The brief contains an internal inconsistency.** Either some per-position FTE values in the brief are wrong, or the stated totals are wrong, but they don't reconcile. I went with the per-position values as authoritative because that's what's actually entered position-by-position. **Recommend reconciling against the V11 STAFFING tab in Session 2 to determine which is the V11 truth.**
+**Originally I called this an internal inconsistency in the brief and recommended Session 2 reconcile against V11 STAFFING directly to determine truth.**
+
+> **RESOLVED in §14.** The brief was correct; V11 itself has a SUM-range bug on its R85 "Total Full-Time Employment" row that excludes 6 positions added at the bottom of the table. SchoolLaunch's 27.25 / 49.25 / 71.25 / 83.25 / 83.25 totals are the *correct* truth of Cedar Grove's staffing plan. V11's displayed totals are understated. See §14 for the full diagnosis. **No further action on this item.**
 
 Staffing entry method: hybrid as approved. 3 positions (CEO, Teacher MS, Paraeducator) were edited via the dashboard UI to verify the write path; the remaining 20 positions × 5 years were bulk-inserted via Supabase MCP into the same `staffing_positions` table the UI reads from. All 115 rows present (23 positions × 5 years; positions with FTE = 0 are inserted as rows so the Staffing tab displays them).
 
 Salaries are auto-escalated 3 % per year by the dashboard's `Save Changes` handler. For the bulk SQL inserts I applied the same `salary × 1.03^(year-1)` formula in the INSERT, rounding to integers. This matches V11's COLA assumption.
 
-**One UI bug observed:** editing a position's title via the inline text input on the Staffing tab did NOT persist to the database — only the salary and FTE numeric edits stuck. The default "Classroom Teacher - Elementary" position retains that title even after I typed "Teacher MS" into the input and clicked Save Changes. This was worked around by deleting all default rows and re-inserting with the correct titles via SQL.
+**One UI bug observed:** editing a position's title via the inline text input on the Staffing tab did NOT persist to the database — only the salary and FTE numeric edits stuck. The default "Classroom Teacher - Elementary" position retains that title even after I typed "Teacher MS" into the input and clicked Save Changes. This was worked around by deleting all default rows and re-inserting with the correct titles via SQL. **Tracked as P-UX-12 in BACKLOG.md.**
 
 Salary defaults vs V11 (where the field exists in SchoolLaunch's default catalog):
 
@@ -166,7 +177,7 @@ Salary defaults vs V11 (where the field exists in SchoolLaunch's default catalog
 | Administrative Asst | $52,000 | n/a | $68,000 | SchoolLaunch 24 % below |
 | Paraeducator | $38,000 | $40,000 | $40,000 | SchoolLaunch 5 % below |
 
-If a school onboards using SchoolLaunch's default salaries with WA Charter pathway, **personnel costs will be systematically lower than the Commission's V11 benchmark.** Session 2 may want to surface this in the spec.
+If a school onboards using SchoolLaunch's default salaries with WA Charter pathway, **personnel costs will be systematically lower than the Commission's V11 benchmark.** Tracked as R-REV-05 in BACKLOG.md.
 
 ---
 
@@ -191,7 +202,7 @@ This produces the correct AAFTE per grade per year, but anyone reading the model
 
 The `school_profiles.max_class_size` default is 24 in the schema — the platform appears to assume conventional class sizes by default.
 
-**The retention rate default of 90 % is significant.** With 90 %, the stored `target_enrollment_y2..y5` were 456 / 620 / 648 / 583 — well below V11. Setting retention to 100 % produced the V11-matching 240 / 480 / 690 / 780 / 780. V11's Cedar Grove model implicitly assumes 100 % retention; this should be documented as a default that needs adjustment for V11 alignment.
+**The retention rate default of 92 % is significant.** With 92 %, the stored `target_enrollment_y2..y5` were ~459 / ~628 / ~660 / ~600 — below V11. Setting retention to 100 % produced the V11-matching 240 / 480 / 690 / 780 / 780. V11's Cedar Grove model implicitly assumes 100 % retention; this should be documented as a default that needs adjustment for V11 alignment. **Tracked as P-UX-15 in BACKLOG.md.**
 
 ---
 
@@ -209,7 +220,7 @@ For this fixture I left regionalization at 1.030 and entered V11's $12,613 direc
 The brief specified password "excellent". The form's policy requires "Contains a number or symbol". Resolved by using `excellent!` after asking; original password would have been silently disabled.
 
 ### 10.B — Staffing tab inline title edit doesn't persist
-Editing the position title text input via the dashboard Staffing tab does not save to the database. Salary and FTE inputs on the same row do save. See §6.
+Editing the position title text input via the dashboard Staffing tab does not save to the database. Salary and FTE inputs on the same row do save. See §6. **Tracked as P-UX-12.**
 
 ### 10.C — Dashboard crashes when `startup_funding` JSON has unexpected shape
 After populating `school_profiles.startup_funding` via Supabase MCP with shape `[{id, name, amount, type, status, year_allocations: {y0, y1, y2, y3, y4}}]`, the dashboard Overview page crashed with:
@@ -221,16 +232,16 @@ TypeError: Cannot read properties of undefined (reading 'localeCompare')
   at DashboardPage.useMemo[currentDataHash]
 ```
 
-The error boundary caught it, but the entire dashboard was unrenderable. Resolved by reverting `startup_funding` to `[]`. This is a **defensive-programming gap** in the advisory-hash canonicalizer: it sorts items by a string field that doesn't exist on the JSON shape I used. The exact field name isn't visible in the minified stack. **A real user editing startup funding through the Startup Funding UI is presumably safe** — the UI sets the canonical shape. But any data-import or migration path that builds startup_funding JSON differently can brick the dashboard. Worth a Session 2 follow-up: identify the canonical shape and either tighten the schema or harden the sort comparator.
+The error boundary caught it, but the entire dashboard was unrenderable. Resolved by reverting `startup_funding` to `[]`. This is a **defensive-programming gap** in the advisory-hash canonicalizer: it sorts items by a string field that doesn't exist on the JSON shape I used. The exact field name isn't visible in the minified stack. **A real user editing startup funding through the Startup Funding UI is presumably safe** — the UI sets the canonical shape. But any data-import or migration path that builds startup_funding JSON differently can brick the dashboard. **Tracked as P-UX-11.**
 
 ### 10.D — Advisory briefing is stale after bulk DB changes
 After SQL-inserting 23 staffing positions, the Overview's Advisory Briefing section still describes "18 total staff members" and warns about understaffing. The briefing cache has a stale-detection banner ("Your financial model has changed since the last briefing — click Refresh for updated analysis"), so this is *known behavior*, not a bug — but the screenshot deliverable captures the stale briefing. Refresh was not triggered to avoid blowing API tokens. Session 2 should refresh.
 
 ### 10.E — Onboarding's "Staffing" lite step seeds 6 default positions
-Onboarding's Staffing step seeds 6 default positions (CEO, Principal, Classroom Teacher Elementary @ 10 FTE, SPED Teacher, Admin Assistant, Paraeducators @ 4 FTE) regardless of which positions you actually want. To enter a 23-position V11 plan, you must delete the defaults on the dashboard Staffing tab and re-add. There's no "import from V11" or "clear and restart" affordance.
+Onboarding's Staffing step seeds 6 default positions (CEO, Principal, Classroom Teacher Elementary @ 10 FTE, SPED Teacher, Admin Assistant, Paraeducators @ 4 FTE) regardless of which positions you actually want. To enter a 23-position V11 plan, you must delete the defaults on the dashboard Staffing tab and re-add. There's no "import from V11" or "clear and restart" affordance. **Tracked as P-UX-13.**
 
 ### 10.F — Onboarding completion page blanks for ~5 seconds
-After clicking "Complete Onboarding", the screen goes blank with no visible spinner for several seconds before redirecting. I waited and it eventually landed at /dashboard, but a user could reasonably assume the click failed and refresh, possibly creating a duplicate state.
+After clicking "Complete Onboarding", the screen goes blank with no visible spinner for several seconds before redirecting. I waited and it eventually landed at /dashboard, but a user could reasonably assume the click failed and refresh, possibly creating a duplicate state. **Tracked as P-UX-14.**
 
 ---
 
@@ -257,13 +268,13 @@ Y1 dashboard Overview (the screenshot):
 
 ## 12 · Blockers for Session 2
 
-None hard. Soft items to confirm before Session 2 begins:
+None hard. Soft items, **updated post-Session-1 (see §14 for resolution status):**
 
-1. **Per-position FTE truth.** §6 — does the V11 spreadsheet itself sum to 25.75 (suggesting some position FTE in the brief is too high) or to ~27.25 (suggesting the brief's total is the wrong number)? Need to read the V11 STAFFING sheet directly.
-2. **SPED Apportionment field semantics.** §3, §4 — is SchoolLaunch's `sped_per_pupil` ($455 entered) the equivalent of OSPI 3121, or of OSPI 4121, or a combination?
-3. **Whether `Cedar Grove's $12,613` is regionalized.** §9 — if it's the de-regionalized rate, SchoolLaunch's auto-multiplier overcounts. If it's already-regionalized, leave alone.
-4. **Startup_funding canonical JSON shape.** §10.C — read the source for `canonicalizeProjectionInputs` to learn the expected shape, then re-enter philanthropy and CSP grant.
-5. **Decide on philanthropy ($250K Y1, $300K Y2-Y5) and CSP ($400K Y2-Y5) entry path.** Either through the Revenue page "Startup & Other Grants — Funding Sources" UI (preferred), or via the now-known canonical JSON shape. Without these, Y1 revenue is understated by $250K and Y2-Y5 each by ~$700K.
+1. ~~**Per-position FTE truth.** §6 — does the V11 spreadsheet itself sum to 25.75 (suggesting some position FTE in the brief is too high) or to ~27.25 (suggesting the brief's total is the wrong number)? Need to read the V11 STAFFING sheet directly.~~ **RESOLVED in §14.** V11 R85 has a SUM-range bug. Per-position sum of 27.25 is the truth; SchoolLaunch matches.
+2. **SPED Apportionment field semantics.** §3, §4 — is SchoolLaunch's `sped_per_pupil` ($455 entered) the equivalent of OSPI 3121, or of OSPI 4121, or a combination? Tracked as R-REV-03 in BACKLOG.md.
+3. ~~**Whether `Cedar Grove's $12,613` is regionalized.** §9 — if it's the de-regionalized rate, SchoolLaunch's auto-multiplier overcounts. If it's already-regionalized, leave alone.~~ Still unresolved; OSPI search didn't surface a definitive answer. Carries into Session 2 reconciliation.
+4. **Startup_funding canonical JSON shape.** §10.C — read the source for `canonicalizeProjectionInputs` to learn the expected shape, then re-enter philanthropy and CSP grant. Tracked as P-UX-11.
+5. **Decide on philanthropy ($250K Y1, $300K Y2-Y5) and CSP ($400K Y2-Y5) entry path.** Either through the Revenue page "Startup & Other Grants — Funding Sources" UI (preferred), or via the now-known canonical JSON shape. Without these, Y1 revenue is understated by $250K and Y2-Y5 each by ~$700K. Tracked as R-REV-04 in BACKLOG.md (semantic question).
 
 ---
 
@@ -283,3 +294,89 @@ Opening year:  2027 (Y0 FY27 pre-opening, Y1 FY28 = first operating year)
 ```
 
 End of Session 1 report.
+
+---
+
+## 14 · Post-session addendum (2026-05-22)
+
+Written after Session 1 completed and the gaps log was committed. This section captures three things that resolved or sharpened after additional follow-up: (a) the V11 STAFFING template bug that explains §6's "internal inconsistency", (b) the OSPI statute research that resolves most of §5's formula questions, and (c) the recategorization of the gaps log items into platform bugs, scope gaps, formula adjudications, and not-bugs.
+
+### 14.A — V11 STAFFING R85 is buggy; SchoolLaunch is right
+
+The "internal inconsistency" between per-position FTE sums (27.25 / 49.25 / 71.25 / 83.25 / 83.25) and V11's displayed totals (25.75 / 47.25 / 68.25 / 79.25 / 79.25) is not a brief error or a SchoolLaunch error. It is a defect in the V11 template itself.
+
+V11 STAFFING R85 ("Total Full-Time Employment") uses the formula `=SUM(E52:E77)` for each year. The actual position table extends to row 83 (32 positions across rows 52-83). Rows 78-83 contain six positions added to the staffing taxonomy at some point — Nurse, Librarian, Manager of Student Support, College & Athletics Director, Manager of College Success, Coordinator of College Success — but the SUM range was never extended to include them.
+
+Cedar Grove's actual non-zero FTE in the excluded rows:
+
+| Position | Y1 | Y2 | Y3 | Y4 | Y5 |
+|---|---:|---:|---:|---:|---:|
+| Nurse | 0.5 | 1 | 1 | 1 | 1 |
+| College & Athletics Director | 1 | 1 | 1 | 1 | 1 |
+| Manager of College Success | 0 | 0 | 1 | 1 | 1 |
+| Coordinator of College Success | 0 | 0 | 0 | 1 | 1 |
+| **Sum excluded** | **1.5** | **2.0** | **3.0** | **4.0** | **4.0** |
+
+That's exactly the delta. The Cedar Grove team (preparing the model) and two reviewers (LL and AW) all missed it. The displayed "Total Full-Time Employment" understates Cedar Grove's own staffing plan by 1.5–4.0 FTE per year.
+
+**Implication for SchoolLaunch:** SchoolLaunch's 27.25 Y1 FTE matches the underlying V11 truth. It does not match V11's displayed (buggy) total. This is a SchoolLaunch *win* in the reconciliation, not a discrepancy.
+
+**Implication for Session 2:** when reconciling, compare against the per-position sum of V11 STAFFING R52-R83, not the displayed R85 totals. R85's totals propagate into the Drivers tab (used for the Per FTE expense calculations) and possibly into REPORTS, so those downstream metrics will reflect the buggy total — be aware that *those* figures are also slightly off in V11.
+
+**Not a SchoolLaunch backlog item.** Worth communicating to the WSCSC or ESWA as a heads-up for V12. Not adding to BACKLOG.md because there's nothing for SchoolLaunch to fix.
+
+### 14.B — OSPI statute resolution of §5 formula questions
+
+Web research into OSPI's published per-pupil allocations and RCW 28A.150.260 resolved most of §5.A's formula discrepancies. Short version: **SchoolLaunch's formulas are closer to the underlying OSPI statute than V11's are.**
+
+The relevant statute language (RCW 28A.150.260): the Superintendent of Public Instruction must report state per-pupil allocations for each district for general apportionment, special education, learning assistance, transitional bilingual, highly capable, and career and technical education programs. The published per-pupil rates are **derivations of formula-driven allocations**, not the formulas themselves.
+
+For LAP, the WEA-published explanation and OSPI's own LAP Guide 2025 are explicit: LAP allocations are `district FRPL% × district enrollment × per-formula-child statutory rate`. That's structurally `N × FRL% × rate` — matching SchoolLaunch, not V11's flat `N × $370`. Same shape applies to TBIP (per-ELL-student) and HiCap (per-identified-HiCap-student). V11's flat per-total-enrollment rates appear to be simplified planning shortcuts — the V11 modeler converted Cedar Grove's expected formula-driven allocations into "$X per total enrolled student" to keep the template's per-pupil structure simple.
+
+**LAP High Poverty is real and separate.** OSPI's LAP Guide explicitly describes two allocations: base LAP and high poverty LAP. Schools with a 3-year rolling FRPL average ≥ 50% qualify for the high poverty supplement on top of the base allocation. SchoolLaunch's two-line structure (with the 50% threshold gate added in R-REV-01) is correct per statute. V11's single LAP line for Cedar Grove likely reflects the fact that **new applicant schools don't have a 3-year FRPL history yet** — the rolling average is backward-looking and undefined for Year 1. This is now tracked as R-REV-02 (investigate gating LAP High Poverty on history availability, not just FRL%).
+
+**Title I is a federal allocation with district-level variance.** Neither V11's flat-per-pupil nor SchoolLaunch's `× FRL%` is exactly right — federal Title I per-formula-child amounts vary widely by district based on Census poverty estimates and concentration factors. Both are simplified planning approximations. SchoolLaunch's `× FRL%` is the more accurate simplification because Title I scales with low-income population, not total enrollment.
+
+**BEA regionalization unresolved.** Web research didn't surface whether Cedar Grove's $12,613 BEA is the regionalized or de-regionalized rate. Probably requires either an OSPI staffer or a real WA charter's current apportionment statement to confirm. Carries into Session 2 as an open question.
+
+**Reframe for Session 2:** the $962K Y1 revenue gap is not "SchoolLaunch is wrong vs. V11". It is "SchoolLaunch and V11 use different simplification approaches against the same underlying OSPI formulas, and neither will exactly match what OSPI actually pays Cedar Grove." The Commission isn't expecting V11's exact numbers to materialize — they're expecting *reasonable* projections built on *defensible* methodology. Both qualify.
+
+### 14.C — Gap triage and backlog mapping
+
+The ~30 gaps in this log break down as:
+
+**Confirmed platform bugs (now in BACKLOG.md):**
+- §10.C dashboard crash on bad startup_funding JSON → P-UX-11
+- §10.B staffing title edit doesn't persist → P-UX-12
+- §10.F onboarding completion spinner missing → P-UX-14
+
+**Platform scope gaps (now in BACKLOG.md):**
+- §10.E grade-agnostic onboarding position defaults → P-UX-13
+- §4 missing OSPI revenue line types → R-REV-03
+- §4 CSP recurring-vs-startup semantic decision → R-REV-04
+- §3/§6 default salary benchmarks below market → R-REV-05
+- §5.B authorizer fee base verification → R-REV-06
+- §5.C LAP High Poverty new-applicant gating investigation → R-REV-02
+
+**Defensible behavior, document only:**
+- §8 retention default (92% vs V11's implicit 100%) → P-UX-15 (documentation rather than fix)
+- §5.A Title I / LAP / TBIP / HiCap formula structure → §14.B above (SchoolLaunch is statute-correct)
+
+**Not SchoolLaunch issues:**
+- §6 staffing total inconsistency → §14.A above (V11 template bug)
+- §3 SchoolLaunch regional multiplier overcounting if $12,613 is already-regionalized → still open, carries to Session 2
+
+**Session 1 prompt errors (informational only, not for the platform):**
+- Brief stated V11 totals (25.75 etc.) as authoritative when they were V11-displayed-buggy totals
+- Brief listed 23 positions; V11 actually has 32 in the position table (most at FTE=0 for Cedar Grove)
+- Section/students structure used 5 sections × 24 students instead of V11's 1 × 120 (functionally equivalent but cosmetically different)
+
+### 14.D — Decision: skip Session 1B, proceed directly to Session 2
+
+Originally considered a "Session 1B" to re-enter philanthropy and CSP after fixing the startup_funding crash (P-UX-11). Decided against:
+
+1. The crash is a real bug worth fixing, but it's blocking-but-not-urgent — Session 2's reconciliation can run with philanthropy and CSP excluded as known data-not-entered offsets. Future Sessions can re-enter via the Revenue page UI once P-UX-11 is fixed.
+2. The reframing in §14.B changes Session 2's purpose. Instead of "make SchoolLaunch match V11", it becomes "**document the reconciliation deltas and classify each one as bug / missing line / defensible difference / not-bug**". That work doesn't require philanthropy and CSP to be entered first.
+3. The platform decisions (R-REV-03 add missing line types, R-REV-04 CSP semantic, R-REV-05 salary defaults) are bigger than Session 2 can address. Session 2 should produce a stakeholder-ready report; the actual remediation lands as separate product work.
+
+End of addendum.
