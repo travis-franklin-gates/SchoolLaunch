@@ -290,6 +290,157 @@ line ~244. Low priority, consistency cleanup.
 
 ---
 
+### P-UX-11 · Dashboard crashes when `startup_funding` JSON has unexpected shape
+**Status:** `OPEN` · **Opened:** 2026-05-22 · **Source:** V11 Cedar Grove validation, Session 1
+
+Populating `school_profiles.startup_funding` via direct DB insert with shape
+`[{id, name, amount, type, status, year_allocations: {y0..y4}}]` causes the
+dashboard Overview to crash with:
+
+```
+TypeError: Cannot read properties of undefined (reading 'localeCompare')
+  at canonicalizeProjectionInputs
+  at computeAdvisoryHash
+  at DashboardPage.useMemo[currentDataHash]
+```
+
+The error boundary catches it but the entire dashboard is unrenderable until
+the column is reverted to `[]`. The user UI (Revenue tab Startup Funding editor)
+writes a canonical shape and is presumably safe; this only surfaces for code
+paths that build `startup_funding` JSON outside the editor — direct DB seeding,
+future import features, backfill migrations, manual Supabase MCP edits during
+support work.
+
+**Root cause hypothesis:** `canonicalizeProjectionInputs` sorts startup_funding
+items by a string field that doesn't exist on all valid JSON shapes the schema
+accepts. The sort comparator calls `localeCompare` on `undefined`.
+
+**Proposed fix (pick one, probably 1 + 3):**
+1. Harden the sort comparator: guard `localeCompare` with `?? ''` or
+   `String(x ?? '')`. Cheap, defensive.
+2. Add a JSON schema validator on the column with a CHECK constraint.
+3. Document the canonical shape in a TS type and add a runtime guard in
+   `canonicalizeProjectionInputs` that throws a recognizable error if the
+   shape is wrong, rather than crashing the dashboard render.
+
+**Reference:** `tests/audit/v11-cedar-grove/SESSION_1_GAPS.md` §10.C
+
+---
+
+### P-UX-12 · Staffing tab inline title edit doesn't persist
+**Status:** `OPEN` · **Opened:** 2026-05-22 · **Source:** V11 Cedar Grove validation, Session 1
+
+On the dashboard Staffing tab, editing a position's title text via the inline
+input does not save to the database. Salary and FTE numeric inputs on the same
+row do save correctly. Combined with onboarding's grade-agnostic position
+seeding (P-UX-13), this means founders can't rename a wrong-grade-band default
+position — they have to delete the row and re-create it.
+
+**Reproduction:**
+1. Go to Staffing tab
+2. Type a new title into the title input of any position row
+3. Click Save Changes
+4. Refresh — title reverts to original; salary/FTE changes from the same Save
+   are persisted
+
+**Proposed fix:** the title input is likely not wired into the row's dirty-state
+or update mutation. Check whether the field is included in the patch payload
+sent to Supabase. Probably a single line fix in the row form handler.
+
+**Reference:** `tests/audit/v11-cedar-grove/SESSION_1_GAPS.md` §10.B and §6
+
+---
+
+### P-UX-13 · Onboarding Staffing step seeds 6 generic positions regardless of grade configuration
+**Status:** `OPEN` · **Opened:** 2026-05-22 · **Source:** V11 Cedar Grove validation, Session 1
+
+Onboarding's Staffing step seeds 6 default positions (CEO, Principal, Classroom
+Teacher Elementary @ 10 FTE, SPED Teacher, Admin Assistant, Paraeducators @ 4 FTE)
+regardless of which grades the school will serve or how many sections it plans.
+
+Particularly problematic: "Classroom Teacher - Elementary @ 10 FTE" is seeded
+for a 6-12 school that has no elementary grades. The user must delete the
+default and re-add the correct teacher types. Combined with P-UX-12 (title
+edits don't persist), users can't even rename the wrong-grade-band default.
+
+**Risk:**
+- Inflated personnel cost projections during onboarding from irrelevant default
+  positions
+- Users may not realize they need to delete defaults and end up with wrong
+  personnel numbers downstream
+
+**Proposed fix (pick one):**
+1. Make seeded positions grade-aware: don't seed elementary teachers if no
+   K-5 grades exist; seed HS teachers only when 9-12 grades exist.
+2. Skip default seeding entirely; show an empty staffing table with "+Add
+   Position" prominent.
+3. Show a position-type picker during onboarding: "Which of these roles will
+   you have in Year 1?" with checkboxes pre-populated based on grade
+   configuration.
+
+Recommend (3) — teaches the user the position taxonomy while letting them
+opt in.
+
+**Reference:** `tests/audit/v11-cedar-grove/SESSION_1_GAPS.md` §10.E
+
+---
+
+### P-UX-14 · Onboarding completion blanks for ~5 seconds without spinner
+**Status:** `OPEN` · **Opened:** 2026-05-22 · **Source:** V11 Cedar Grove validation, Session 1
+
+After clicking "Complete Onboarding", the screen goes blank with no visible
+spinner or progress indicator for several seconds before redirecting to
+`/dashboard`. The completion handler does substantial server-side work
+(seeding budget projections, generating initial advisory cache, etc.), so the
+delay is real — it just has no UI affordance.
+
+**Risk:** user assumes the click failed, refreshes the page, potentially
+triggering duplicate state writes or creating a confusing partial-completion
+state.
+
+**Proposed fix:** add a loading state to the Complete Onboarding button:
+1. Inline spinner + disabled button until the redirect fires, or
+2. Full-screen loading interstitial with "Setting up your school…" copy.
+
+Recommend (2) — the user benefits from knowing substantial setup is happening.
+
+**Reference:** `tests/audit/v11-cedar-grove/SESSION_1_GAPS.md` §10.F
+
+---
+
+### P-UX-15 · Default retention rate of 92% diverges from Commission V11's implicit 100%
+**Status:** `OPEN` · **Opened:** 2026-05-22 · **Source:** V11 Cedar Grove validation, Session 1
+
+SchoolLaunch defaults `retention_rate` to 92% (set by R-ENR-01 fix on
+2026-05-11). The Commission's V11 Long-Range Projection template has no
+retention input — it implicitly assumes 100% retention (Y2 enrollment = Y2
+target grade-buildout fill, no cohort attrition).
+
+Result: a school using SchoolLaunch defaults will project lower Y2-Y5
+enrollment than the same school's V11 model produces. For Cedar Grove:
+- 92% retention: Y2 ~459, Y3 ~628, Y4 ~660, Y5 ~600 (approximation)
+- 100% retention: Y2 480, Y3 690, Y4 780, Y5 780 (matches V11)
+
+SchoolLaunch's 92% default is **more conservative and probably more honest**
+than V11's implicit 100% — real charter schools experience attrition — but
+the divergence means applicants comparing the two models see different
+enrollment trajectories without understanding why.
+
+**Proposed fix (pick one):**
+1. Keep 92% default; add Settings copy noting that V11 / many authorizer
+   templates implicitly assume 100%; let users adjust if they need to match.
+2. Add a "Run as Stress Test" view: model at 100% by default for headline
+   metrics, separately show "Stress test at X% retention" view.
+3. Change default to 100% to match V11; force users to opt into attrition
+   modeling.
+
+Recommend (1) — don't downgrade the more-conservative default to match a
+less-conservative template. Documentation is the right fix.
+
+**Reference:** `tests/audit/v11-cedar-grove/SESSION_1_GAPS.md` §8
+
+---
+
 ## Test Infrastructure
 
 ### T-INFRA-01 · No isolated Supabase test environment
@@ -387,7 +538,7 @@ read-only `<span>`. Low priority, test debt.
 
 ---
 
-## Revenue engine — resolved
+## Revenue engine
 
 ### R-REV-01 · LAP High Poverty missing 50% FRL gate + SSE double-accounting
 **Status:** `RESOLVED` · **Opened:** 2026-04-21 · **Resolved:** 2026-04-21
@@ -405,6 +556,173 @@ and Step 2's `totalGrants = rev.total - baseRevenue` could go negative.
 an optional `sse` param to `calcCommissionRevenue` so `rev.total` is now a true
 total; drop the external `+ smallSchoolEnhancement` add at `budgetEngine.ts:533`;
 thread SSE through all remaining callers. Regression guardrail: `tests/session4/revenue-integrity.spec.ts` — 4 tests pinning the threshold gate, SSE inclusion in `rev.total`, Step 2/Step 3 cross-consistency, and the constituent-sum invariant.
+
+---
+
+### R-REV-02 · Investigate possible LAP / LAP High Poverty double-counting for new applicants
+**Status:** `INVESTIGATING` · **Opened:** 2026-05-22 · **Source:** V11 Cedar Grove validation, Session 1
+
+Cedar Grove at 60% FRL × 240 students produces in SchoolLaunch:
+- LAP base: `240 × 0.60 × $816` = $117,504
+- LAP High Poverty: `240 × 0.60 × $374` = $53,856 (gated on FRL ≥ 50%, added in R-REV-01)
+- **Combined: $171,360**
+
+V11's Cedar Grove model has a single LAP line at $370/total-pupil × 240 = $88,800.
+Roughly half of SchoolLaunch's combined output.
+
+**What OSPI confirms:** LAP base and LAP High Poverty are two real, separate
+allocations per OSPI's LAP Guide 2025 and RCW 28A.165.005. Schools with a
+3-year rolling FRPL average ≥ 50% qualify for the High Poverty supplement on
+top of the base allocation. Cedar Grove at 60% FRL would qualify — if it had
+3 years of FRPL history.
+
+**Two possible reasons for the V11 vs. SchoolLaunch gap:**
+1. V11 omits LAP High Poverty for **new applicants** because they don't have
+   a 3-year FRPL history yet (the rolling average is backward-looking).
+2. V11 conflates the two allocations into one line to simplify presentation.
+
+**Action:** confirm whether SchoolLaunch's LAP High Poverty line should be gated
+not just on `FRL ≥ 50%` but also on **whether the school has 3 years of FRPL
+history**. New applicant schools should likely show LAP High Poverty = $0 in
+Years 1–3 and only begin populating in Year 4. Needs WSCSC interpretation: does
+the Commission expect new applicants to project LAP High Poverty as $0 or to
+project it at the FRL%-implied rate?
+
+**Reference:** `tests/audit/v11-cedar-grove/SESSION_1_GAPS.md` §5.C, OSPI LAP
+Guide 2025, RCW 28A.165.005
+
+---
+
+### R-REV-03 · Add missing OSPI revenue line types to WA Charter pathway
+**Status:** `OPEN` · **Opened:** 2026-05-22 · **Source:** V11 Cedar Grove validation, Session 1
+
+Confirmed missing from SchoolLaunch's WA Charter revenue model, all present in V11:
+
+| OSPI account | Line | Notes |
+|---|---|---|
+| Title II | Federal Title II | ~$36/pupil, supports teacher quality |
+| Title III | Federal Title III | ~$23/pupil, English Language Acquisition |
+| 4198 | State Food Service | $23/pupil, separate from federal 6198 |
+| 4199 | Transportation Operations | $595/pupil, currently modeled only as expense |
+| 6100 | OSPI Special Purpose Unassigned | Catch-all for additional OSPI grants |
+| 2200 | Sale of Goods/Supplies/Services | Small but expected |
+| 3121 (semantic) | SPED General Apportionment | May be conflated with 4121 State SPED in current SPED-per-pupil field — verify and split if needed |
+
+**Proposed fix (split approach):**
+
+(a) **For the long tail** (Title II/III, 6100, 2200, 4198): add a "Custom Revenue
+    Lines" UI that surfaces `school_profiles.custom_revenue_lines` (JSONB
+    column already exists in schema, currently unused). Users add
+    OSPI-account-coded lines with name + per-pupil rate + driver + recurring
+    flag. The Revenue page renders these alongside first-class lines.
+    Faster, flexible, doesn't require schema work each time OSPI adds a
+    categorical.
+
+(b) **For the load-bearing ones**: add 4199 Transportation Operations as a
+    first-class line since it has a matching expense (already modeled), and
+    split 3121/4121 SPED since SPED math touches many places. These need
+    direct engine integration.
+
+**Blocker resolution:** once this lands, the V11 Cedar Grove reconciliation
+can close ~$25K–$200K of the Y1 revenue gap depending on which lines are added.
+
+**Reference:** `tests/audit/v11-cedar-grove/SESSION_1_GAPS.md` §4, V11 INPUTS R41-R76
+
+---
+
+### R-REV-04 · CSP semantic decision: recurring operating vs. non-recurring startup
+**Status:** `OPEN` (requires product decision) · **Opened:** 2026-05-22 · **Source:** V11 Cedar Grove validation, Session 1
+
+The federal Charter Schools Program (CSP) grant is modeled differently in
+SchoolLaunch vs. V11:
+
+- **SchoolLaunch:** CSP appears in "Startup & Other Grants — Funding Sources",
+  modeled as one-time startup funding. **Excluded from sustainability metrics**
+  (Total Margin, DCOH calculations that drive FPF scorecard).
+- **V11 (Cedar Grove):** CSP is a recurring operating revenue line at
+  $400,000/year for Y2-Y5 ($1.6M cumulative). **Included in Total Revenue**
+  for FPF scorecard purposes.
+
+**Why this matters:** for a 5-year projection, CSP at $400K/year on a $5-16M
+revenue base affects Total Margin by 2-8 percentage points and DCOH by 30-90
+days. The same school will pass or fail FPF Stage 1/2 thresholds depending on
+which model is applied. CSP is a multi-year federal grant — defensible to
+model either way. WSCSC's actual interpretation determines which one is right
+for charter application financial plans.
+
+**Proposed fix (pick one):**
+1. Move CSP to recurring operating revenue (match V11).
+2. Keep CSP as startup funding but expose a toggle: "Include CSP in operating
+   revenue for FPF calculations: Yes / No". Default ON for WA Charter pathway
+   since V11 (the Commission's template) treats it as recurring.
+3. Leave current behavior, document in spec, let users override on Revenue page.
+
+Recommend (2) — gives users control without forcing a default that may not
+match their authorizer's interpretation.
+
+**Reference:** `tests/audit/v11-cedar-grove/SESSION_1_GAPS.md` §4 (CSP row)
+
+---
+
+### R-REV-05 · Default WA Charter salary benchmarks are 25-40% below V11/OSPI/BLS levels
+**Status:** `OPEN` · **Opened:** 2026-05-22 · **Source:** V11 Cedar Grove validation, Session 1
+
+Comparing SchoolLaunch's default WA Charter salaries against V11's preloaded
+OSPI/BLS benchmarks (V11 STAFFING Section 2):
+
+| Position | SchoolLaunch default | V11 default | Cedar Grove used | Diff |
+|---|---:|---:|---:|---:|
+| CEO/Executive Director | $120,000 | $200,000 | $206,000 | -40% |
+| Principal/Head of School | $95,000 | $130,000 | $133,900 | -27% |
+| SPED Teacher | $62,000 | $85,000 | $85,000 | -27% |
+| Administrative Asst | $52,000 | (V11 blank) | $68,000 | -24% |
+| Paraeducator | $38,000 | $40,000 | $40,000 | -5% |
+
+**Risk:** a WA charter applicant onboarding with SchoolLaunch's defaults and
+not overriding them will submit a financial plan with personnel costs
+systematically below market. Two failure modes: (1) the Commission rejects the
+projection as unrealistic, (2) the school authorizes on an unrealistic budget
+and can't actually hire to plan, triggering Y1 over-spend findings.
+
+**Proposed fix:**
+1. Update default WA Charter salaries to match V11/OSPI/BLS benchmarks.
+2. Add a tooltip or info icon next to each salary input noting the source:
+   "Default from BLS WA / OSPI S-275 — verify against your local market".
+3. Bonus consideration: regionalize salary defaults (Spokane vs. Seattle vs.
+   Yakima market differences are large). May be Phase 2.
+
+**Reference:** `tests/audit/v11-cedar-grove/SESSION_1_GAPS.md` §6 salary
+defaults table
+
+---
+
+### R-REV-06 · Authorizer fee base may not include all state revenue
+**Status:** `INVESTIGATING` · **Opened:** 2026-05-22 · **Source:** V11 Cedar Grove validation, Session 1
+
+SchoolLaunch shows Y1 authorizer fee at $102,005 for Cedar Grove. V11 documents
+the fee base as "3% of State Revenue" and Cedar Grove's V11 Y1 fee is $100,974.
+Close ($1,031 difference, ~1%) but not identical. The discrepancy may be from:
+
+- Different definition of "state revenue" (BEA only vs. BEA + state categoricals)
+- SchoolLaunch applying the 3% before/after regionalization multiplier
+- Inclusion or exclusion of SSE in the base
+
+Cedar Grove's V11 fee base appears to be: BEA + 3121 SPED + 4121 State SPED +
+LAP + TBIP + HiCap + 4198 State Food Service + 4199 Transportation. SSE
+included. Current SchoolLaunch spec (§9.7) says authorizer fee base includes
+SSE as "working assumption pending charter contract verification" — this needs
+verification against a real charter contract or WSCSC publication.
+
+**Action:**
+1. Determine SchoolLaunch's current authorizer fee calculation: which revenue
+   lines are in the base, in what order with regionalization.
+2. Compare against V11's apparent inclusions.
+3. Verify against the WSCSC's actual contract language (Travis has access via
+   the charter community).
+4. Update spec §9.7 to remove "working assumption" language once verified.
+
+**Reference:** `tests/audit/v11-cedar-grove/SESSION_1_GAPS.md` §5.B, V11 INPUTS R122,
+SchoolLaunch Product Spec v4.0 §9.7
 
 ---
 
