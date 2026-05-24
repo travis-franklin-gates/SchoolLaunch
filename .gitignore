@@ -78,3 +78,5 @@ test-results/
 
 # Local-only diagnostic reports — never commit
 DIAGNOSTIC_*.md
+
+tests/audit/v11-cedar-grove/session2/scripts/out/

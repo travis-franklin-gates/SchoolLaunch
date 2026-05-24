@@ -1,0 +1,918 @@
+{
+  "extracted_at": "2026-05-23T16:02:59.363Z",
+  "source": "computeMultiYearDetailed + computeFPFScorecard via tsx",
+  "fixture": {
+    "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+    "school_name": "Cedar Grove Public Schools - V11 Test",
+    "pre_opening_net_assumed": 1250000,
+    "note_on_pre_opening": "V11 Y0 starting cash $1.25M with Y0 net -$22.4K → Y1 starting cash $1,227,620. Fixture has no Y0 transactions; using $1,250,000 as proxy."
+  },
+  "multiyear_detailed": [
+    {
+      "year": 1,
+      "enrollment": 240,
+      "aafte": 228,
+      "revenue": {
+        "regularEd": 2961948,
+        "sped": 17109,
+        "stateSped": 572660,
+        "facilitiesRev": 0,
+        "levyEquity": 0,
+        "titleI": 126720,
+        "idea": 57600,
+        "lap": 117504,
+        "lapHighPoverty": 53856,
+        "tbip": 49920,
+        "hicap": 0,
+        "foodServiceRev": 170400,
+        "transportationRev": 0,
+        "smallSchoolEnhancement": 0,
+        "interestIncome": 18750,
+        "grantRevenue": 0,
+        "operatingRevenue": 4127717,
+        "total": 4146467,
+        "apportionment": 3551717
+      },
+      "personnel": {
+        "certificated": 1060000,
+        "classified": 377500,
+        "admin": 566850,
+        "benefits": 601305,
+        "total": 2605655,
+        "totalSalaries": 2004350
+      },
+      "operations": {
+        "facilities": 180000,
+        "supplies": 48000,
+        "contracted": 36000,
+        "technology": 43200,
+        "authorizerFee": 106552,
+        "insurance": 18000,
+        "foodService": 0,
+        "transportation": 0,
+        "curriculum": 120000,
+        "profDev": 18000,
+        "marketing": 48000,
+        "fundraising": 15000,
+        "contingency": 64768,
+        "total": 697520
+      },
+      "totalExpenses": 3303175,
+      "net": 843292,
+      "cumulativeNet": 2093292,
+      "reserveDays": 231,
+      "staffing": {
+        "teachers": 15,
+        "paras": 2,
+        "officeStaff": 1,
+        "otherStaff": 9.25,
+        "totalPositions": 27.25,
+        "totalPersonnelCost": 2605655,
+        "totalSalaries": 2004350,
+        "totalBenefits": 601305
+      },
+      "expansionDetail": {
+        "returning": 0,
+        "newGrade": 0,
+        "grades": [
+          "6",
+          "9"
+        ],
+        "newGrades": []
+      }
+    },
+    {
+      "year": 2,
+      "enrollment": 480,
+      "aafte": 456,
+      "revenue": {
+        "regularEd": 6101736,
+        "sped": 35240,
+        "stateSped": 1195194,
+        "facilitiesRev": 0,
+        "levyEquity": 0,
+        "titleI": 260928,
+        "idea": 118656,
+        "lap": 241920,
+        "lapHighPoverty": 110880,
+        "tbip": 102835,
+        "hicap": 0,
+        "foodServiceRev": 350880,
+        "transportationRev": 0,
+        "smallSchoolEnhancement": 0,
+        "interestIncome": 62799,
+        "grantRevenue": 0,
+        "operatingRevenue": 8518269,
+        "total": 8581068,
+        "apportionment": 7332170
+      },
+      "personnel": {
+        "certificated": 2408245,
+        "classified": 535755,
+        "admin": 743426.5,
+        "benefits": 1106227,
+        "total": 4793653.5,
+        "totalSalaries": 3687426.5
+      },
+      "operations": {
+        "facilities": 183600,
+        "supplies": 97920,
+        "contracted": 73440,
+        "technology": 88128,
+        "authorizerFee": 219965,
+        "insurance": 18360,
+        "foodService": 0,
+        "transportation": 0,
+        "curriculum": 244800,
+        "profDev": 18360,
+        "marketing": 48960,
+        "fundraising": 15300,
+        "contingency": 116050,
+        "total": 1124883
+      },
+      "totalExpenses": 5918536.5,
+      "net": 2662531.5,
+      "cumulativeNet": 4755823.5,
+      "reserveDays": 293,
+      "staffing": {
+        "teachers": 32,
+        "paras": 4,
+        "officeStaff": 1,
+        "otherStaff": 12.25,
+        "totalPositions": 49.25,
+        "totalPersonnelCost": 4654030,
+        "totalSalaries": 3580023,
+        "totalBenefits": 1074007
+      },
+      "expansionDetail": {
+        "returning": 240,
+        "newGrade": 240,
+        "grades": [
+          "6",
+          "7",
+          "9",
+          "10"
+        ],
+        "newGrades": [
+          "7",
+          "10"
+        ]
+      }
+    },
+    {
+      "year": 3,
+      "enrollment": 690,
+      "aafte": 655,
+      "revenue": {
+        "regularEd": 9027865,
+        "sped": 52086,
+        "stateSped": 1758680,
+        "facilitiesRev": 0,
+        "levyEquity": 0,
+        "titleI": 386676,
+        "idea": 175646,
+        "lap": 358524,
+        "lapHighPoverty": 164358,
+        "tbip": 152221,
+        "hicap": 0,
+        "foodServiceRev": 519570,
+        "transportationRev": 0,
+        "smallSchoolEnhancement": 0,
+        "interestIncome": 142675,
+        "grantRevenue": 0,
+        "operatingRevenue": 12595626,
+        "total": 12738301,
+        "apportionment": 10838631
+      },
+      "personnel": {
+        "certificated": 3697314,
+        "classified": 858762,
+        "admin": 975363.75,
+        "benefits": 1659430,
+        "total": 7190869.75,
+        "totalSalaries": 5531439.75
+      },
+      "operations": {
+        "facilities": 187272,
+        "supplies": 143575,
+        "contracted": 107681,
+        "technology": 129218,
+        "authorizerFee": 325159,
+        "insurance": 18727,
+        "foodService": 0,
+        "transportation": 0,
+        "curriculum": 358938,
+        "profDev": 18727,
+        "marketing": 49939,
+        "fundraising": 15606,
+        "contingency": 170914,
+        "total": 1525756
+      },
+      "totalExpenses": 8716625.75,
+      "net": 4021675.25,
+      "cumulativeNet": 8777498.75,
+      "reserveDays": 368,
+      "staffing": {
+        "teachers": 45,
+        "paras": 6,
+        "officeStaff": 2,
+        "otherStaff": 18.25,
+        "totalPositions": 71.25,
+        "totalPersonnelCost": 6778072.5,
+        "totalSalaries": 5213902.5,
+        "totalBenefits": 1564170
+      },
+      "expansionDetail": {
+        "returning": 480,
+        "newGrade": 210,
+        "grades": [
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "11"
+        ],
+        "newGrades": [
+          "8",
+          "11"
+        ]
+      }
+    },
+    {
+      "year": 4,
+      "enrollment": 780,
+      "aafte": 741,
+      "revenue": {
+        "regularEd": 10519236,
+        "sped": 60703,
+        "stateSped": 2058375,
+        "facilitiesRev": 0,
+        "levyEquity": 0,
+        "titleI": 450216,
+        "idea": 204547,
+        "lap": 417456,
+        "lapHighPoverty": 191412,
+        "tbip": 177247,
+        "hicap": 0,
+        "foodServiceRev": 605280,
+        "transportationRev": 0,
+        "smallSchoolEnhancement": 0,
+        "interestIncome": 263325,
+        "grantRevenue": 0,
+        "operatingRevenue": 14684472,
+        "total": 14947797,
+        "apportionment": 12638314
+      },
+      "personnel": {
+        "certificated": 4662796,
+        "classified": 1012557,
+        "admin": 1151602,
+        "benefits": 2048090,
+        "total": 8875045,
+        "totalSalaries": 6826955
+      },
+      "operations": {
+        "facilities": 191017,
+        "supplies": 165548,
+        "contracted": 124161,
+        "technology": 148994,
+        "authorizerFee": 379149,
+        "insurance": 19102,
+        "foodService": 0,
+        "transportation": 0,
+        "curriculum": 413871,
+        "profDev": 19102,
+        "marketing": 50938,
+        "fundraising": 15918,
+        "contingency": 208057,
+        "total": 1735857
+      },
+      "totalExpenses": 10610902,
+      "net": 4336895,
+      "cumulativeNet": 13114393.75,
+      "reserveDays": 451,
+      "staffing": {
+        "teachers": 53,
+        "paras": 7,
+        "officeStaff": 2,
+        "otherStaff": 21.25,
+        "totalPositions": 83.25,
+        "totalPersonnelCost": 8121905.5,
+        "totalSalaries": 6247617.5,
+        "totalBenefits": 1874288
+      },
+      "expansionDetail": {
+        "returning": 690,
+        "newGrade": 90,
+        "grades": [
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12"
+        ],
+        "newGrades": [
+          "12"
+        ]
+      }
+    },
+    {
+      "year": 5,
+      "enrollment": 780,
+      "aafte": 741,
+      "revenue": {
+        "regularEd": 10834902,
+        "sped": 62481,
+        "stateSped": 2120125,
+        "facilitiesRev": 0,
+        "levyEquity": 0,
+        "titleI": 463320,
+        "idea": 210662,
+        "lap": 429624,
+        "lapHighPoverty": 197028,
+        "tbip": 182621,
+        "hicap": 0,
+        "foodServiceRev": 623220,
+        "transportationRev": 0,
+        "smallSchoolEnhancement": 0,
+        "interestIncome": 393432,
+        "grantRevenue": 0,
+        "operatingRevenue": 15123983,
+        "total": 15517415,
+        "apportionment": 13017508
+      },
+      "personnel": {
+        "certificated": 4946737,
+        "classified": 1074218,
+        "admin": 1221737,
+        "benefits": 2172809,
+        "total": 9415501,
+        "totalSalaries": 7242692
+      },
+      "operations": {
+        "facilities": 194838,
+        "supplies": 168859,
+        "contracted": 126645,
+        "technology": 151973,
+        "authorizerFee": 390525,
+        "insurance": 19484,
+        "foodService": 0,
+        "transportation": 0,
+        "curriculum": 422149,
+        "profDev": 19484,
+        "marketing": 51957,
+        "fundraising": 16236,
+        "contingency": 219553,
+        "total": 1781703
+      },
+      "totalExpenses": 11197204,
+      "net": 4320211,
+      "cumulativeNet": 17434604.75,
+      "reserveDays": 568,
+      "staffing": {
+        "teachers": 53,
+        "paras": 7,
+        "officeStaff": 2,
+        "otherStaff": 21.25,
+        "totalPositions": 83.25,
+        "totalPersonnelCost": 8365568.75,
+        "totalSalaries": 6435051.75,
+        "totalBenefits": 1930517
+      },
+      "expansionDetail": {
+        "returning": 780,
+        "newGrade": 0,
+        "grades": [
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12"
+        ],
+        "newGrades": []
+      }
+    }
+  ],
+  "summary_per_year": [
+    {
+      "year": 1,
+      "enrollment": 240,
+      "totalRevenue": 4146467,
+      "totalExpenses": 3303175,
+      "netPosition": 843292,
+      "cumulativeNet": 2093292,
+      "reserveDays": 231,
+      "totalPersonnel": 2605655,
+      "operatingRevenue": 4127717
+    },
+    {
+      "year": 2,
+      "enrollment": 480,
+      "totalRevenue": 8581068,
+      "totalExpenses": 5918536.5,
+      "netPosition": 2662531.5,
+      "cumulativeNet": 4755823.5,
+      "reserveDays": 293,
+      "totalPersonnel": 4793653.5,
+      "operatingRevenue": 8518269
+    },
+    {
+      "year": 3,
+      "enrollment": 690,
+      "totalRevenue": 12738301,
+      "totalExpenses": 8716625.75,
+      "netPosition": 4021675.25,
+      "cumulativeNet": 8777498.75,
+      "reserveDays": 368,
+      "totalPersonnel": 7190869.75,
+      "operatingRevenue": 12595626
+    },
+    {
+      "year": 4,
+      "enrollment": 780,
+      "totalRevenue": 14947797,
+      "totalExpenses": 10610902,
+      "netPosition": 4336895,
+      "cumulativeNet": 13114393.75,
+      "reserveDays": 451,
+      "totalPersonnel": 8875045,
+      "operatingRevenue": 14684472
+    },
+    {
+      "year": 5,
+      "enrollment": 780,
+      "totalRevenue": 15517415,
+      "totalExpenses": 11197204,
+      "netPosition": 4320211,
+      "cumulativeNet": 17434604.75,
+      "reserveDays": 568,
+      "totalPersonnel": 9415501,
+      "operatingRevenue": 15123983
+    }
+  ],
+  "fpf": {
+    "measures": [
+      {
+        "name": "Current Ratio",
+        "formula": "Current Assets ÷ Current Liabilities",
+        "values": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "stage1Target": "≥ 1.0",
+        "stage2Target": "≥ 1.1",
+        "stage1Approaching": "0.9–0.99",
+        "stage2Approaching": "1.0–1.09",
+        "statuses": [
+          "does_not_meet",
+          "does_not_meet",
+          "does_not_meet",
+          "does_not_meet",
+          "does_not_meet"
+        ],
+        "note": "Planning proxy: Ending Cash ÷ (Annual Expenses / 12). The Commission calculates this from audited balance sheet data."
+      },
+      {
+        "name": "Days of Cash",
+        "formula": "Unrestricted Cash ÷ ((Expenses − Depreciation) / 365)",
+        "values": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "stage1Target": "≥ 30 days",
+        "stage2Target": "≥ 60 days",
+        "stage1Approaching": "21–29",
+        "stage2Approaching": "30–59",
+        "statuses": [
+          "does_not_meet",
+          "does_not_meet",
+          "does_not_meet",
+          "does_not_meet",
+          "does_not_meet"
+        ]
+      },
+      {
+        "name": "Total Margin",
+        "formula": "Net Income ÷ Operating Revenue",
+        "values": [
+          20.4,
+          31.3,
+          31.9,
+          29.5,
+          28.6
+        ],
+        "stage1Target": "≥ 0%",
+        "stage2Target": "≥ 0%",
+        "stage1Approaching": "-2% to 0%",
+        "stage2Approaching": "-2% to 0%",
+        "statuses": [
+          "meets",
+          "meets",
+          "meets",
+          "meets",
+          "meets"
+        ]
+      },
+      {
+        "name": "3-Year Total Margin",
+        "formula": "(Y(n-2)+Y(n-1)+Yn Net) ÷ (Y(n-2)+Y(n-1)+Yn Revenue)",
+        "values": [
+          null,
+          null,
+          29.8,
+          30.8,
+          29.9
+        ],
+        "stage1Target": "N/A",
+        "stage2Target": "> 0%",
+        "stage2Approaching": "-1.5% to 0%",
+        "statuses": [
+          "na",
+          "na",
+          "meets",
+          "meets",
+          "meets"
+        ]
+      },
+      {
+        "name": "Debt-to-Asset",
+        "formula": "Total Liabilities ÷ Total Assets",
+        "values": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "stage1Target": "< 0.90",
+        "stage2Target": "< 0.90",
+        "stage1Approaching": "0.90–1.0",
+        "stage2Approaching": "0.90–1.0",
+        "statuses": [
+          "meets",
+          "meets",
+          "meets",
+          "meets",
+          "meets"
+        ],
+        "note": "No liabilities modeled. The Commission calculates this from audited balance sheet data."
+      },
+      {
+        "name": "Debt Default",
+        "formula": "In default of loan covenants?",
+        "values": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "stage1Target": "No default",
+        "stage2Target": "No default",
+        "statuses": [
+          "na",
+          "na",
+          "na",
+          "na",
+          "na"
+        ],
+        "note": "N/A — No debt modeled in planning mode."
+      },
+      {
+        "name": "Cash Flow",
+        "formula": "Year-End Cash − Prior Year-End Cash",
+        "values": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "stage1Target": "> $0",
+        "stage2Target": "> $0",
+        "statuses": [
+          "na",
+          "does_not_meet",
+          "does_not_meet",
+          "does_not_meet",
+          "does_not_meet"
+        ]
+      },
+      {
+        "name": "Multi-Year Cash Flow",
+        "formula": "Year N Cash − Year (N−2) Cash",
+        "values": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "stage1Target": "N/A",
+        "stage2Target": "> $0",
+        "statuses": [
+          "na",
+          "na",
+          "does_not_meet",
+          "does_not_meet",
+          "does_not_meet"
+        ]
+      },
+      {
+        "name": "Enrollment Variance",
+        "formula": "Actual Enrollment ÷ Projected Enrollment",
+        "values": [
+          90,
+          90,
+          90,
+          90,
+          90
+        ],
+        "stage1Target": "≥ 95%",
+        "stage2Target": "≥ 95%",
+        "stage1Approaching": "85–94%",
+        "stage2Approaching": "85–94%",
+        "statuses": [
+          "approaches",
+          "approaches",
+          "approaches",
+          "approaches",
+          "approaches"
+        ],
+        "note": "Informational — becomes meaningful when operating with actual enrollment data."
+      }
+    ],
+    "overallStatus": "red",
+    "overallMessage": "Your model does not meet Stage 1 standards for: Current Ratio, Days of Cash, Cash Flow — address before submitting."
+  },
+  "budget_projections_y1": [
+    {
+      "id": "d8a9163b",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Operations",
+      "subcategory": "Authorizer Fee",
+      "amount": 102005,
+      "is_revenue": false
+    },
+    {
+      "id": "53e3b8bf",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Operations",
+      "subcategory": "Contracted Services",
+      "amount": 36000,
+      "is_revenue": false
+    },
+    {
+      "id": "a34be2f1",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Operations",
+      "subcategory": "Curriculum & Materials",
+      "amount": 120000,
+      "is_revenue": false
+    },
+    {
+      "id": "675e843d",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Operations",
+      "subcategory": "Facilities",
+      "amount": 180000,
+      "is_revenue": false
+    },
+    {
+      "id": "f7a147d2",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Operations",
+      "subcategory": "Food Service",
+      "amount": 0,
+      "is_revenue": false
+    },
+    {
+      "id": "4eb83152",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Operations",
+      "subcategory": "Fundraising",
+      "amount": 15000,
+      "is_revenue": false
+    },
+    {
+      "id": "54606e07",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Operations",
+      "subcategory": "Insurance",
+      "amount": 18000,
+      "is_revenue": false
+    },
+    {
+      "id": "35e819fd",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Operations",
+      "subcategory": "Marketing & Outreach",
+      "amount": 48000,
+      "is_revenue": false
+    },
+    {
+      "id": "847fff50",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Operations",
+      "subcategory": "Misc/Contingency",
+      "amount": 40150,
+      "is_revenue": false
+    },
+    {
+      "id": "050d3c12",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Operations",
+      "subcategory": "Professional Development",
+      "amount": 18000,
+      "is_revenue": false
+    },
+    {
+      "id": "51a7942c",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Operations",
+      "subcategory": "Supplies & Materials",
+      "amount": 48000,
+      "is_revenue": false
+    },
+    {
+      "id": "ddea4f55",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Operations",
+      "subcategory": "Technology",
+      "amount": 43200,
+      "is_revenue": false
+    },
+    {
+      "id": "937eb100",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Operations",
+      "subcategory": "Transportation",
+      "amount": 0,
+      "is_revenue": false
+    },
+    {
+      "id": "f471c101",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Revenue",
+      "subcategory": "Facilities Revenue",
+      "amount": 0,
+      "is_revenue": true
+    },
+    {
+      "id": "1160ec09",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Revenue",
+      "subcategory": "HiCap",
+      "amount": 0,
+      "is_revenue": true
+    },
+    {
+      "id": "74822689",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Revenue",
+      "subcategory": "IDEA",
+      "amount": 57600,
+      "is_revenue": true
+    },
+    {
+      "id": "1b8dfc0c",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Revenue",
+      "subcategory": "LAP",
+      "amount": 117504,
+      "is_revenue": true
+    },
+    {
+      "id": "067172f9",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Revenue",
+      "subcategory": "LAP High Poverty",
+      "amount": 53856,
+      "is_revenue": true
+    },
+    {
+      "id": "2b65ea9f",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Revenue",
+      "subcategory": "Levy Equity",
+      "amount": 0,
+      "is_revenue": true
+    },
+    {
+      "id": "cccfef7c",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Revenue",
+      "subcategory": "Regular Ed Apportionment",
+      "amount": 2773848,
+      "is_revenue": true
+    },
+    {
+      "id": "f33d060b",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Revenue",
+      "subcategory": "Small School Enhancement",
+      "amount": 0,
+      "is_revenue": true
+    },
+    {
+      "id": "96f35774",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Revenue",
+      "subcategory": "SPED Apportionment",
+      "amount": 95724,
+      "is_revenue": true
+    },
+    {
+      "id": "e4ea6afd",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Revenue",
+      "subcategory": "State Special Education",
+      "amount": 530594,
+      "is_revenue": true
+    },
+    {
+      "id": "1e24d039",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Revenue",
+      "subcategory": "TBIP",
+      "amount": 49920,
+      "is_revenue": true
+    },
+    {
+      "id": "d566ff62",
+      "school_id": "63fedd25-90b0-4078-9854-7ec7071e0fb2",
+      "year": 1,
+      "category": "Revenue",
+      "subcategory": "Title I",
+      "amount": 126720,
+      "is_revenue": true
+    }
+  ],
+  "staffing_summary_per_year": [
+    {
+      "year": 1,
+      "position_rows": 23,
+      "total_fte": 27.25,
+      "total_salaries": 2004350
+    },
+    {
+      "year": 2,
+      "position_rows": 23,
+      "total_fte": 49.25,
+      "total_salaries": 3580023
+    },
+    {
+      "year": 3,
+      "position_rows": 23,
+      "total_fte": 71.25,
+      "total_salaries": 5213902.5
+    },
+    {
+      "year": 4,
+      "position_rows": 23,
+      "total_fte": 83.25,
+      "total_salaries": 6247617.5
+    },
+    {
+      "year": 5,
+      "position_rows": 23,
+      "total_fte": 83.25,
+      "total_salaries": 6435051.75
+    }
+  ]
+}

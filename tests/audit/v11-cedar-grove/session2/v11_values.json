@@ -1,0 +1,3547 @@
+{
+  "extracted_at": "2026-05-23T15:56:42.888Z",
+  "v11_source": "docs/v11-validation/V11_WA_Charter_Financial_Projection__Cedar_Grove__v3_LL_edits__AW_edits.xlsx",
+  "sheets": [
+    "GUIDE",
+    "INPUTS",
+    "ENROLLMENT",
+    "STAFFING",
+    "DEBT",
+    "P&L",
+    "Cash",
+    "Balance Sheet",
+    "REPORTS",
+    "DASHBOARD",
+    "Drivers",
+    "Roster",
+    "FY26 LAP Corrections",
+    "FY26 SpEd BEA Rates"
+  ],
+  "values": {
+    "revenue": {
+      "sale_of_goods_2200": {
+        "label": "2200 - Sale of Goods, Supplies, & Services",
+        "row": 122,
+        "y0": {
+          "value": 6000,
+          "cell": "P&L!D122",
+          "formula": "IFS($K122=  \"Per Pupil\",           D$57*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Per Pupil - EL\",      D$66*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Per Pupil - SPED\",    D$61*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Direct\",                   SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Average Cash on Hand\",     SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C122))"
+        },
+        "y1": {
+          "value": 6149.999999999999,
+          "cell": "P&L!E122",
+          "formula": "IFS($K122=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C122))"
+        },
+        "y2": {
+          "value": 6303.749999999998,
+          "cell": "P&L!F122",
+          "formula": "IFS($K122=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C122))"
+        },
+        "y3": {
+          "value": 6461.343749999997,
+          "cell": "P&L!G122",
+          "formula": "IFS($K122=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C122))"
+        },
+        "y4": {
+          "value": 6622.877343749997,
+          "cell": "P&L!H122",
+          "formula": "IFS($K122=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C122))"
+        },
+        "y5": {
+          "value": 6788.449277343746,
+          "cell": "P&L!I122",
+          "formula": "IFS($K122=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C122),\n     $K122=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C122))"
+        }
+      },
+      "investment_earnings_2300": {
+        "label": "2300 - Investment Earnings",
+        "row": 123,
+        "y0": {
+          "value": null,
+          "cell": "P&L!D123",
+          "formula": null
+        },
+        "y1": {
+          "value": 0,
+          "cell": "P&L!E123",
+          "formula": "IFS($K123=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C123))"
+        },
+        "y2": {
+          "value": 0,
+          "cell": "P&L!F123",
+          "formula": "IFS($K123=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C123))"
+        },
+        "y3": {
+          "value": 0,
+          "cell": "P&L!G123",
+          "formula": "IFS($K123=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C123))"
+        },
+        "y4": {
+          "value": 0,
+          "cell": "P&L!H123",
+          "formula": "IFS($K123=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C123))"
+        },
+        "y5": {
+          "value": 0,
+          "cell": "P&L!I123",
+          "formula": "IFS($K123=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C123),\n     $K123=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C123))"
+        }
+      },
+      "donations_local_2500": {
+        "label": "2500 - Gifts, Grants, and Donations (Local)",
+        "row": 124,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D124",
+          "formula": "IFS($K124=  \"Per Pupil\",           D$57*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Per Pupil - EL\",      D$66*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Per Pupil - SPED\",    D$61*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Direct\",                   SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Average Cash on Hand\",     SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C124))"
+        },
+        "y1": {
+          "value": 0,
+          "cell": "P&L!E124",
+          "formula": "IFS($K124=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C124))"
+        },
+        "y2": {
+          "value": 0,
+          "cell": "P&L!F124",
+          "formula": "IFS($K124=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C124))"
+        },
+        "y3": {
+          "value": 0,
+          "cell": "P&L!G124",
+          "formula": "IFS($K124=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C124))"
+        },
+        "y4": {
+          "value": 0,
+          "cell": "P&L!H124",
+          "formula": "IFS($K124=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C124))"
+        },
+        "y5": {
+          "value": 0,
+          "cell": "P&L!I124",
+          "formula": "IFS($K124=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C124),\n     $K124=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C124))"
+        }
+      },
+      "bea_3100": {
+        "label": "3100 - Basic Education Apportionment",
+        "row": 127,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D127",
+          "formula": "IFS($K127=  \"Per Pupil\",           D$57*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Per Pupil - EL\",      D$66*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Per Pupil - SPED\",    D$61*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Direct\",                   SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Average Cash on Hand\",     SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C127))"
+        },
+        "y1": {
+          "value": 3102797.9999999995,
+          "cell": "P&L!E127",
+          "formula": "IFS($K127=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C127))"
+        },
+        "y2": {
+          "value": 6360735.899999999,
+          "cell": "P&L!F127",
+          "formula": "IFS($K127=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C127))"
+        },
+        "y3": {
+          "value": 9372146.802656248,
+          "cell": "P&L!G127",
+          "formula": "IFS($K127=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C127))"
+        },
+        "y4": {
+          "value": 10859465.751773434,
+          "cell": "P&L!H127",
+          "formula": "IFS($K127=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C127))"
+        },
+        "y5": {
+          "value": 11130952.39556777,
+          "cell": "P&L!I127",
+          "formula": "IFS($K127=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C127),\n     $K127=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C127))"
+        }
+      },
+      "sped_general_3121": {
+        "label": "3121 - SPED General Apportionment",
+        "row": 128,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D128",
+          "formula": "IFS($K128=  \"Per Pupil\",           D$57*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Per Pupil - EL\",      D$66*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Per Pupil - SPED\",    D$61*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Direct\",                   SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Average Cash on Hand\",     SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C128))"
+        },
+        "y1": {
+          "value": 17908.799999999996,
+          "cell": "P&L!E128",
+          "formula": "IFS($K128=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C128))"
+        },
+        "y2": {
+          "value": 36713.03999999999,
+          "cell": "P&L!F128",
+          "formula": "IFS($K128=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C128))"
+        },
+        "y3": {
+          "value": 54094.36987499998,
+          "cell": "P&L!G128",
+          "formula": "IFS($K128=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C128))"
+        },
+        "y4": {
+          "value": 62678.911181249976,
+          "cell": "P&L!H128",
+          "formula": "IFS($K128=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C128))"
+        },
+        "y5": {
+          "value": 64245.883960781226,
+          "cell": "P&L!I128",
+          "formula": "IFS($K128=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C128),\n     $K128=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C128))"
+        }
+      },
+      "sped_state_4121": {
+        "label": "4121 - State Special Education",
+        "row": 131,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D131",
+          "formula": "IFS($K131=  \"Per Pupil\",           D$57*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Per Pupil - EL\",      D$66*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Per Pupil - SPED\",    D$61*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Direct\",                   SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Average Cash on Hand\",     SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C131))"
+        },
+        "y1": {
+          "value": 575876.1599999999,
+          "cell": "P&L!E131",
+          "formula": "IFS($K131=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C131))"
+        },
+        "y2": {
+          "value": 1180546.1279999998,
+          "cell": "P&L!F131",
+          "formula": "IFS($K131=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C131))"
+        },
+        "y3": {
+          "value": 1739460.9354749997,
+          "cell": "P&L!G131",
+          "formula": "IFS($K131=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C131))"
+        },
+        "y4": {
+          "value": 2015505.8230612492,
+          "cell": "P&L!H131",
+          "formula": "IFS($K131=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C131))"
+        },
+        "y5": {
+          "value": 2065893.4686377803,
+          "cell": "P&L!I131",
+          "formula": "IFS($K131=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C131),\n     $K131=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C131))"
+        }
+      },
+      "lap_4155": {
+        "label": "4155 - Learning Assistance Program (LAP)",
+        "row": 132,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D132",
+          "formula": "IFS($K132=  \"Per Pupil\",           D$57*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Per Pupil - EL\",      D$66*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Per Pupil - SPED\",    D$61*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Direct\",                   SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Average Cash on Hand\",     SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C132))"
+        },
+        "y1": {
+          "value": 91019.99999999999,
+          "cell": "P&L!E132",
+          "formula": "IFS($K132=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C132))"
+        },
+        "y2": {
+          "value": 186590.99999999997,
+          "cell": "P&L!F132",
+          "formula": "IFS($K132=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C132))"
+        },
+        "y3": {
+          "value": 274930.17656249995,
+          "cell": "P&L!G132",
+          "formula": "IFS($K132=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C132))"
+        },
+        "y4": {
+          "value": 318560.40023437486,
+          "cell": "P&L!H132",
+          "formula": "IFS($K132=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C132))"
+        },
+        "y5": {
+          "value": 326524.4102402342,
+          "cell": "P&L!I132",
+          "formula": "IFS($K132=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C132),\n     $K132=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C132))"
+        }
+      },
+      "tbip_4165": {
+        "label": "4165 - Transitional Bilingual (TBIP)",
+        "row": 133,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D133",
+          "formula": "IFS($K133=  \"Per Pupil\",           D$57*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Per Pupil - EL\",      D$66*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Per Pupil - SPED\",    D$61*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Direct\",                   SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Average Cash on Hand\",     SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C133))"
+        },
+        "y1": {
+          "value": 5916.299999999999,
+          "cell": "P&L!E133",
+          "formula": "IFS($K133=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C133))"
+        },
+        "y2": {
+          "value": 12128.414999999999,
+          "cell": "P&L!F133",
+          "formula": "IFS($K133=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C133))"
+        },
+        "y3": {
+          "value": 17870.461476562497,
+          "cell": "P&L!G133",
+          "formula": "IFS($K133=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C133))"
+        },
+        "y4": {
+          "value": 20706.42601523437,
+          "cell": "P&L!H133",
+          "formula": "IFS($K133=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C133))"
+        },
+        "y5": {
+          "value": 21224.08666561523,
+          "cell": "P&L!I133",
+          "formula": "IFS($K133=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C133),\n     $K133=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C133))"
+        }
+      },
+      "hicap_4174": {
+        "label": "4174 - Highly Capable",
+        "row": 134,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D134",
+          "formula": "IFS($K134=  \"Per Pupil\",           D$57*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Per Pupil - EL\",      D$66*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Per Pupil - SPED\",    D$61*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Direct\",                   SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Average Cash on Hand\",     SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C134))"
+        },
+        "y1": {
+          "value": 7871.999999999999,
+          "cell": "P&L!E134",
+          "formula": "IFS($K134=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C134))"
+        },
+        "y2": {
+          "value": 16137.599999999999,
+          "cell": "P&L!F134",
+          "formula": "IFS($K134=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C134))"
+        },
+        "y3": {
+          "value": 23777.745,
+          "cell": "P&L!G134",
+          "formula": "IFS($K134=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C134))"
+        },
+        "y4": {
+          "value": 27551.169749999994,
+          "cell": "P&L!H134",
+          "formula": "IFS($K134=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C134))"
+        },
+        "y5": {
+          "value": 28239.948993749993,
+          "cell": "P&L!I134",
+          "formula": "IFS($K134=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C134),\n     $K134=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C134))"
+        }
+      },
+      "food_service_state_4198": {
+        "label": "4198 - School Food Service (State)",
+        "row": 135,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D135",
+          "formula": "IFS($K135=  \"Per Pupil\",           D$57*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Per Pupil - EL\",      D$66*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Per Pupil - SPED\",    D$61*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Direct\",                   SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Average Cash on Hand\",     SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C135))"
+        },
+        "y1": {
+          "value": 5658,
+          "cell": "P&L!E135",
+          "formula": "IFS($K135=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C135))"
+        },
+        "y2": {
+          "value": 11598.899999999998,
+          "cell": "P&L!F135",
+          "formula": "IFS($K135=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C135))"
+        },
+        "y3": {
+          "value": 17090.254218749997,
+          "cell": "P&L!G135",
+          "formula": "IFS($K135=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C135))"
+        },
+        "y4": {
+          "value": 19802.403257812493,
+          "cell": "P&L!H135",
+          "formula": "IFS($K135=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C135))"
+        },
+        "y5": {
+          "value": 20297.463339257803,
+          "cell": "P&L!I135",
+          "formula": "IFS($K135=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C135),\n     $K135=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C135))"
+        }
+      },
+      "transportation_4199": {
+        "label": "4199 - Transportation Operations",
+        "row": 136,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D136",
+          "formula": "IFS($K136=  \"Per Pupil\",           D$57*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Per Pupil - EL\",      D$66*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Per Pupil - SPED\",    D$61*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Direct\",                   SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Average Cash on Hand\",     SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C136))"
+        },
+        "y1": {
+          "value": 146370,
+          "cell": "P&L!E136",
+          "formula": "IFS($K136=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C136))"
+        },
+        "y2": {
+          "value": 300058.49999999994,
+          "cell": "P&L!F136",
+          "formula": "IFS($K136=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C136))"
+        },
+        "y3": {
+          "value": 442117.44609374995,
+          "cell": "P&L!G136",
+          "formula": "IFS($K136=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C136))"
+        },
+        "y4": {
+          "value": 512279.5625390624,
+          "cell": "P&L!H136",
+          "formula": "IFS($K136=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C136))"
+        },
+        "y5": {
+          "value": 525086.5516025389,
+          "cell": "P&L!I136",
+          "formula": "IFS($K136=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C136),\n     $K136=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C136))"
+        }
+      },
+      "title_i": {
+        "label": "Title I",
+        "row": 140,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D140",
+          "formula": "IFS($K140=  \"Per Pupil\",           D$57*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Per Pupil - EL\",      D$66*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Per Pupil - SPED\",    D$61*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Direct\",                   SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Average Cash on Hand\",     SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C140))"
+        },
+        "y1": {
+          "value": 72349.2,
+          "cell": "P&L!E140",
+          "formula": "IFS($K140=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C140))"
+        },
+        "y2": {
+          "value": 146868.876,
+          "cell": "P&L!F140",
+          "formula": "IFS($K140=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C140))"
+        },
+        "y3": {
+          "value": 214290.86938874994,
+          "cell": "P&L!G140",
+          "formula": "IFS($K140=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C140))"
+        },
+        "y4": {
+          "value": 245875.4801377874,
+          "cell": "P&L!H140",
+          "formula": "IFS($K140=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C140))"
+        },
+        "y5": {
+          "value": 249563.6123398542,
+          "cell": "P&L!I140",
+          "formula": "IFS($K140=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C140),\n     $K140=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C140))"
+        }
+      },
+      "title_ii": {
+        "label": "Title II",
+        "row": 141,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D141",
+          "formula": "IFS($K141=  \"Per Pupil\",           D$57*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Per Pupil - EL\",      D$66*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Per Pupil - SPED\",    D$61*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Direct\",                   SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Average Cash on Hand\",     SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C141))"
+        },
+        "y1": {
+          "value": 8769.6,
+          "cell": "P&L!E141",
+          "formula": "IFS($K141=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C141))"
+        },
+        "y2": {
+          "value": 17802.288,
+          "cell": "P&L!F141",
+          "formula": "IFS($K141=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C141))"
+        },
+        "y3": {
+          "value": 25974.650834999997,
+          "cell": "P&L!G141",
+          "formula": "IFS($K141=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C141))"
+        },
+        "y4": {
+          "value": 29803.08850154999,
+          "cell": "P&L!H141",
+          "formula": "IFS($K141=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C141))"
+        },
+        "y5": {
+          "value": 30250.134829073235,
+          "cell": "P&L!I141",
+          "formula": "IFS($K141=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C141),\n     $K141=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C141))"
+        }
+      },
+      "title_iii": {
+        "label": "Title III",
+        "row": 142,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D142",
+          "formula": "IFS($K142=  \"Per Pupil\",           D$57*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Per Pupil - EL\",      D$66*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Per Pupil - SPED\",    D$61*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Direct\",                   SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Average Cash on Hand\",     SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C142))"
+        },
+        "y1": {
+          "value": 5602.799999999999,
+          "cell": "P&L!E142",
+          "formula": "IFS($K142=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C142))"
+        },
+        "y2": {
+          "value": 11373.683999999997,
+          "cell": "P&L!F142",
+          "formula": "IFS($K142=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C142))"
+        },
+        "y3": {
+          "value": 16594.915811249994,
+          "cell": "P&L!G142",
+          "formula": "IFS($K142=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C142))"
+        },
+        "y4": {
+          "value": 19040.862098212492,
+          "cell": "P&L!H142",
+          "formula": "IFS($K142=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C142))"
+        },
+        "y5": {
+          "value": 19326.47502968568,
+          "cell": "P&L!I142",
+          "formula": "IFS($K142=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C142),\n     $K142=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C142))"
+        }
+      },
+      "idea": {
+        "label": "IDEA Funding",
+        "row": 143,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D143",
+          "formula": "IFS($K143=  \"Per Pupil\",           D$57*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Per Pupil - EL\",      D$66*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Per Pupil - SPED\",    D$61*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Direct\",                   SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Average Cash on Hand\",     SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C143))"
+        },
+        "y1": {
+          "value": 132921,
+          "cell": "P&L!E143",
+          "formula": "IFS($K143=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C143))"
+        },
+        "y2": {
+          "value": 134914.81499999997,
+          "cell": "P&L!F143",
+          "formula": "IFS($K143=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C143))"
+        },
+        "y3": {
+          "value": 136938.53722499995,
+          "cell": "P&L!G143",
+          "formula": "IFS($K143=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C143))"
+        },
+        "y4": {
+          "value": 138992.61528337494,
+          "cell": "P&L!H143",
+          "formula": "IFS($K143=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C143))"
+        },
+        "y5": {
+          "value": 141077.50451262554,
+          "cell": "P&L!I143",
+          "formula": "IFS($K143=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C143),\n     $K143=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C143))"
+        }
+      },
+      "csp": {
+        "label": "CSP (Charter Schools Program)",
+        "row": 144,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D144",
+          "formula": "IFS($K144=  \"Per Pupil\",           D$57*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Per Pupil - EL\",      D$66*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Per Pupil - SPED\",    D$61*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Direct\",                   SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Average Cash on Hand\",     SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C144))"
+        },
+        "y1": {
+          "value": 400000,
+          "cell": "P&L!E144",
+          "formula": "IFS($K144=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C144))"
+        },
+        "y2": {
+          "value": 400000,
+          "cell": "P&L!F144",
+          "formula": "IFS($K144=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C144))"
+        },
+        "y3": {
+          "value": 400000,
+          "cell": "P&L!G144",
+          "formula": "IFS($K144=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C144))"
+        },
+        "y4": {
+          "value": 400000,
+          "cell": "P&L!H144",
+          "formula": "IFS($K144=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C144))"
+        },
+        "y5": {
+          "value": 400000,
+          "cell": "P&L!I144",
+          "formula": "IFS($K144=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C144),\n     $K144=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C144))"
+        }
+      },
+      "ospi_special_purpose_6100": {
+        "label": "6100 - OSPI Special Purpose Unassigned",
+        "row": 147,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D147",
+          "formula": "IFS($K147=  \"Per Pupil\",           D$57*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Per Pupil - EL\",      D$66*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Per Pupil - SPED\",    D$61*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Direct\",                   SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Average Cash on Hand\",     SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C147))"
+        },
+        "y1": {
+          "value": 17000,
+          "cell": "P&L!E147",
+          "formula": "IFS($K147=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C147))"
+        },
+        "y2": {
+          "value": 17000,
+          "cell": "P&L!F147",
+          "formula": "IFS($K147=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C147))"
+        },
+        "y3": {
+          "value": 17000,
+          "cell": "P&L!G147",
+          "formula": "IFS($K147=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C147))"
+        },
+        "y4": {
+          "value": 17000,
+          "cell": "P&L!H147",
+          "formula": "IFS($K147=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C147))"
+        },
+        "y5": {
+          "value": 17000,
+          "cell": "P&L!I147",
+          "formula": "IFS($K147=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C147),\n     $K147=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C147))"
+        }
+      },
+      "food_service_federal_6198": {
+        "label": "6198 - School Food Services (Federal)",
+        "row": 148,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D148",
+          "formula": "IFS($K148=  \"Per Pupil\",           D$57*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Per Pupil - EL\",      D$66*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Per Pupil - SPED\",    D$61*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Direct\",                   SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Average Cash on Hand\",     SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C148))"
+        },
+        "y1": {
+          "value": 193662,
+          "cell": "P&L!E148",
+          "formula": "IFS($K148=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C148))"
+        },
+        "y2": {
+          "value": 393133.8599999999,
+          "cell": "P&L!F148",
+          "formula": "IFS($K148=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C148))"
+        },
+        "y3": {
+          "value": 573606.8726062499,
+          "cell": "P&L!G148",
+          "formula": "IFS($K148=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C148))"
+        },
+        "y4": {
+          "value": 658151.5377425622,
+          "cell": "P&L!H148",
+          "formula": "IFS($K148=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C148))"
+        },
+        "y5": {
+          "value": 668023.8108087006,
+          "cell": "P&L!I148",
+          "formula": "IFS($K148=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C148),\n     $K148=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C148))"
+        }
+      },
+      "private_foundations_8200": {
+        "label": "8200 - Private Foundations",
+        "row": 155,
+        "y0": {
+          "value": 250000,
+          "cell": "P&L!D155",
+          "formula": "IFS($K155=  \"Per Pupil\",           D$57*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Per Pupil - EL\",      D$66*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Per Pupil - SPED\",    D$61*SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Direct\",                   SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Average Cash on Hand\",     SUMIFS(INPUTS!D$32:D$76, INPUTS!$B$32:$B$76, $C155))"
+        },
+        "y1": {
+          "value": 300000,
+          "cell": "P&L!E155",
+          "formula": "IFS($K155=  \"Per Pupil\",           E$57*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Per Pupil - EL\",      E$66*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Per Pupil - SPED\",    E$61*SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Direct\",                   SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Average Cash on Hand\",     SUMIFS(INPUTS!E$32:E$76, INPUTS!$B$32:$B$76, $C155))"
+        },
+        "y2": {
+          "value": 300000,
+          "cell": "P&L!F155",
+          "formula": "IFS($K155=  \"Per Pupil\",           F$57*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Per Pupil - EL\",      F$66*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Per Pupil - SPED\",    F$61*SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Direct\",                   SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Average Cash on Hand\",     SUMIFS(INPUTS!F$32:F$76, INPUTS!$B$32:$B$76, $C155))"
+        },
+        "y3": {
+          "value": 300000,
+          "cell": "P&L!G155",
+          "formula": "IFS($K155=  \"Per Pupil\",           G$57*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Per Pupil - EL\",      G$66*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Per Pupil - SPED\",    G$61*SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Direct\",                   SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Average Cash on Hand\",     SUMIFS(INPUTS!G$32:G$76, INPUTS!$B$32:$B$76, $C155))"
+        },
+        "y4": {
+          "value": 300000,
+          "cell": "P&L!H155",
+          "formula": "IFS($K155=  \"Per Pupil\",           H$57*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Per Pupil - EL\",      H$66*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Per Pupil - SPED\",    H$61*SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Direct\",                   SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Average Cash on Hand\",     SUMIFS(INPUTS!H$32:H$76, INPUTS!$B$32:$B$76, $C155))"
+        },
+        "y5": {
+          "value": 300000,
+          "cell": "P&L!I155",
+          "formula": "IFS($K155=  \"Per Pupil\",           I$57*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Per Pupil - EL\",      I$66*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Per Pupil - SPED\",    I$61*SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Direct\",                   SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C155),\n     $K155=  \"Average Cash on Hand\",     SUMIFS(INPUTS!I$32:I$76, INPUTS!$B$32:$B$76, $C155))"
+        }
+      }
+    },
+    "revenue_subtotals": {
+      "subtotal_1000_local_taxes": {
+        "row": 121,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D121",
+          "formula": "SUM(D119:D120)"
+        },
+        "y1": {
+          "value": 0,
+          "cell": "P&L!E121",
+          "formula": "SUM(E119:E120)"
+        },
+        "y2": {
+          "value": 0,
+          "cell": "P&L!F121",
+          "formula": "SUM(F119:F120)"
+        },
+        "y3": {
+          "value": 0,
+          "cell": "P&L!G121",
+          "formula": "SUM(G119:G120)"
+        },
+        "y4": {
+          "value": 0,
+          "cell": "P&L!H121",
+          "formula": "SUM(H119:H120)"
+        },
+        "y5": {
+          "value": 0,
+          "cell": "P&L!I121",
+          "formula": "SUM(I119:I120)"
+        }
+      },
+      "subtotal_2000_local_non_tax": {
+        "row": 126,
+        "y0": {
+          "value": 6000,
+          "cell": "P&L!D126",
+          "formula": "SUM(D122:D125)"
+        },
+        "y1": {
+          "value": 6149.999999999999,
+          "cell": "P&L!E126",
+          "formula": "SUM(E122:E125)"
+        },
+        "y2": {
+          "value": 6303.749999999998,
+          "cell": "P&L!F126",
+          "formula": "SUM(F122:F125)"
+        },
+        "y3": {
+          "value": 6461.343749999997,
+          "cell": "P&L!G126",
+          "formula": "SUM(G122:G125)"
+        },
+        "y4": {
+          "value": 6622.877343749997,
+          "cell": "P&L!H126",
+          "formula": "SUM(H122:H125)"
+        },
+        "y5": {
+          "value": 6788.449277343746,
+          "cell": "P&L!I126",
+          "formula": "SUM(I122:I125)"
+        }
+      },
+      "subtotal_3000_state_general": {
+        "row": 130,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D130",
+          "formula": "SUM(D127:D129)"
+        },
+        "y1": {
+          "value": 3120706.7999999993,
+          "cell": "P&L!E130",
+          "formula": "SUM(E127:E129)"
+        },
+        "y2": {
+          "value": 6397448.9399999995,
+          "cell": "P&L!F130",
+          "formula": "SUM(F127:F129)"
+        },
+        "y3": {
+          "value": 9426241.172531249,
+          "cell": "P&L!G130",
+          "formula": "SUM(G127:G129)"
+        },
+        "y4": {
+          "value": 10922144.662954684,
+          "cell": "P&L!H130",
+          "formula": "SUM(H127:H129)"
+        },
+        "y5": {
+          "value": 11195198.27952855,
+          "cell": "P&L!I130",
+          "formula": "SUM(I127:I129)"
+        }
+      },
+      "subtotal_4000_state_special": {
+        "row": 138,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D138",
+          "formula": "SUM(D131:D137)"
+        },
+        "y1": {
+          "value": 832712.46,
+          "cell": "P&L!E138",
+          "formula": "SUM(E131:E137)"
+        },
+        "y2": {
+          "value": 1707060.5429999998,
+          "cell": "P&L!F138",
+          "formula": "SUM(F131:F137)"
+        },
+        "y3": {
+          "value": 2515247.018826562,
+          "cell": "P&L!G138",
+          "formula": "SUM(G131:G137)"
+        },
+        "y4": {
+          "value": 2914405.784857733,
+          "cell": "P&L!H138",
+          "formula": "SUM(H131:H137)"
+        },
+        "y5": {
+          "value": 2987265.929479177,
+          "cell": "P&L!I138",
+          "formula": "SUM(I131:I137)"
+        }
+      },
+      "subtotal_5000_fed_general": {
+        "row": 146,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D146",
+          "formula": "SUM(D139:D145)"
+        },
+        "y1": {
+          "value": 619642.6,
+          "cell": "P&L!E146",
+          "formula": "SUM(E139:E145)"
+        },
+        "y2": {
+          "value": 710959.663,
+          "cell": "P&L!F146",
+          "formula": "SUM(F139:F145)"
+        },
+        "y3": {
+          "value": 793798.9732599999,
+          "cell": "P&L!G146",
+          "formula": "SUM(G139:G145)"
+        },
+        "y4": {
+          "value": 833712.0460209248,
+          "cell": "P&L!H146",
+          "formula": "SUM(H139:H145)"
+        },
+        "y5": {
+          "value": 840217.7267112386,
+          "cell": "P&L!I146",
+          "formula": "SUM(I139:I145)"
+        }
+      },
+      "subtotal_6000_fed_special": {
+        "row": 150,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D150",
+          "formula": "SUM(D147:D149)"
+        },
+        "y1": {
+          "value": 210662,
+          "cell": "P&L!E150",
+          "formula": "SUM(E147:E149)"
+        },
+        "y2": {
+          "value": 410133.8599999999,
+          "cell": "P&L!F150",
+          "formula": "SUM(F147:F149)"
+        },
+        "y3": {
+          "value": 590606.8726062499,
+          "cell": "P&L!G150",
+          "formula": "SUM(G147:G149)"
+        },
+        "y4": {
+          "value": 675151.5377425622,
+          "cell": "P&L!H150",
+          "formula": "SUM(H147:H149)"
+        },
+        "y5": {
+          "value": 685023.8108087006,
+          "cell": "P&L!I150",
+          "formula": "SUM(I147:I149)"
+        }
+      },
+      "subtotal_7000_other_districts": {
+        "row": 153,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D153",
+          "formula": "SUM(D151:D152)"
+        },
+        "y1": {
+          "value": 0,
+          "cell": "P&L!E153",
+          "formula": "SUM(E151:E152)"
+        },
+        "y2": {
+          "value": 0,
+          "cell": "P&L!F153",
+          "formula": "SUM(F151:F152)"
+        },
+        "y3": {
+          "value": 0,
+          "cell": "P&L!G153",
+          "formula": "SUM(G151:G152)"
+        },
+        "y4": {
+          "value": 0,
+          "cell": "P&L!H153",
+          "formula": "SUM(H151:H152)"
+        },
+        "y5": {
+          "value": 0,
+          "cell": "P&L!I153",
+          "formula": "SUM(I151:I152)"
+        }
+      },
+      "subtotal_8000_other_entities": {
+        "row": 158,
+        "y0": {
+          "value": 250000,
+          "cell": "P&L!D158",
+          "formula": "SUM(D154:D157)"
+        },
+        "y1": {
+          "value": 300000,
+          "cell": "P&L!E158",
+          "formula": "SUM(E154:E157)"
+        },
+        "y2": {
+          "value": 300000,
+          "cell": "P&L!F158",
+          "formula": "SUM(F154:F157)"
+        },
+        "y3": {
+          "value": 300000,
+          "cell": "P&L!G158",
+          "formula": "SUM(G154:G157)"
+        },
+        "y4": {
+          "value": 300000,
+          "cell": "P&L!H158",
+          "formula": "SUM(H154:H157)"
+        },
+        "y5": {
+          "value": 300000,
+          "cell": "P&L!I158",
+          "formula": "SUM(I154:I157)"
+        }
+      },
+      "subtotal_9000_other_financing": {
+        "row": 162,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D162",
+          "formula": "SUM(D159:D161)"
+        },
+        "y1": {
+          "value": 0,
+          "cell": "P&L!E162",
+          "formula": "SUM(E159:E161)"
+        },
+        "y2": {
+          "value": 0,
+          "cell": "P&L!F162",
+          "formula": "SUM(F159:F161)"
+        },
+        "y3": {
+          "value": 0,
+          "cell": "P&L!G162",
+          "formula": "SUM(G159:G161)"
+        },
+        "y4": {
+          "value": 0,
+          "cell": "P&L!H162",
+          "formula": "SUM(H159:H161)"
+        },
+        "y5": {
+          "value": 0,
+          "cell": "P&L!I162",
+          "formula": "SUM(I159:I161)"
+        }
+      },
+      "total_revenue": {
+        "row": 164,
+        "y0": {
+          "value": 256000,
+          "cell": "P&L!D164",
+          "formula": "SUM(D162,D158,D153,D150,D146,D138,D130,D126,D121)"
+        },
+        "y1": {
+          "value": 5089873.859999999,
+          "cell": "P&L!E164",
+          "formula": "SUM(E162,E158,E153,E150,E146,E138,E130,E126,E121)"
+        },
+        "y2": {
+          "value": 9531906.756,
+          "cell": "P&L!F164",
+          "formula": "SUM(F162,F158,F153,F150,F146,F138,F130,F126,F121)"
+        },
+        "y3": {
+          "value": 13632355.380974062,
+          "cell": "P&L!G164",
+          "formula": "SUM(G162,G158,G153,G150,G146,G138,G130,G126,G121)"
+        },
+        "y4": {
+          "value": 15652036.908919655,
+          "cell": "P&L!H164",
+          "formula": "SUM(H162,H158,H153,H150,H146,H138,H130,H126,H121)"
+        },
+        "y5": {
+          "value": 16014494.195805011,
+          "cell": "P&L!I164",
+          "formula": "SUM(I162,I158,I153,I150,I146,I138,I130,I126,I121)"
+        }
+      },
+      "total_recurring_revenue": {
+        "row": 169,
+        "y0": {
+          "value": 6000,
+          "cell": "P&L!D169",
+          "formula": "IFERROR(SUMIFS(D:D,$L:$L, \"Recurring\"), 0)"
+        },
+        "y1": {
+          "value": 4789873.859999999,
+          "cell": "P&L!E169",
+          "formula": "IFERROR(SUMIFS(D:D,$L:$L, \"Recurring\"), 0)"
+        },
+        "y2": {
+          "value": 9231906.756,
+          "cell": "P&L!F169",
+          "formula": "IFERROR(SUMIFS(D:D,$L:$L, \"Recurring\"), 0)"
+        },
+        "y3": {
+          "value": 13332355.380974058,
+          "cell": "P&L!G169",
+          "formula": "IFERROR(SUMIFS(D:D,$L:$L, \"Recurring\"), 0)"
+        },
+        "y4": {
+          "value": 15352036.908919655,
+          "cell": "P&L!H169",
+          "formula": "IFERROR(SUMIFS(D:D,$L:$L, \"Recurring\"), 0)"
+        },
+        "y5": {
+          "value": 15714494.195805013,
+          "cell": "P&L!I169",
+          "formula": "IFERROR(SUMIFS(D:D,$L:$L, \"Recurring\"), 0)"
+        }
+      },
+      "total_non_recurring_revenue": {
+        "row": 170,
+        "y0": {
+          "value": 250000,
+          "cell": "P&L!D170",
+          "formula": "SUMIFS(D:D, $L:$L, \"Non-Recurring\")"
+        },
+        "y1": {
+          "value": 300000,
+          "cell": "P&L!E170",
+          "formula": "SUMIFS(D:D, $L:$L, \"Non-Recurring\")"
+        },
+        "y2": {
+          "value": 300000,
+          "cell": "P&L!F170",
+          "formula": "SUMIFS(D:D, $L:$L, \"Non-Recurring\")"
+        },
+        "y3": {
+          "value": 300000,
+          "cell": "P&L!G170",
+          "formula": "SUMIFS(D:D, $L:$L, \"Non-Recurring\")"
+        },
+        "y4": {
+          "value": 300000,
+          "cell": "P&L!H170",
+          "formula": "SUMIFS(D:D, $L:$L, \"Non-Recurring\")"
+        },
+        "y5": {
+          "value": 300000,
+          "cell": "P&L!I170",
+          "formula": "SUMIFS(D:D, $L:$L, \"Non-Recurring\")"
+        }
+      },
+      "total_operating_revenue": {
+        "row": 173,
+        "y0": {
+          "value": 6000,
+          "cell": "P&L!D173",
+          "formula": "IFERROR(SUMIFS(D:D,$M:$M, \"Operating\"), 0)"
+        },
+        "y1": {
+          "value": 4789873.859999999,
+          "cell": "P&L!E173",
+          "formula": "IFERROR(SUMIFS(D:D,$M:$M, \"Operating\"), 0)"
+        },
+        "y2": {
+          "value": 9231906.756,
+          "cell": "P&L!F173",
+          "formula": "IFERROR(SUMIFS(D:D,$M:$M, \"Operating\"), 0)"
+        },
+        "y3": {
+          "value": 13332355.380974058,
+          "cell": "P&L!G173",
+          "formula": "IFERROR(SUMIFS(D:D,$M:$M, \"Operating\"), 0)"
+        },
+        "y4": {
+          "value": 15352036.908919655,
+          "cell": "P&L!H173",
+          "formula": "IFERROR(SUMIFS(D:D,$M:$M, \"Operating\"), 0)"
+        },
+        "y5": {
+          "value": 15714494.195805013,
+          "cell": "P&L!I173",
+          "formula": "IFERROR(SUMIFS(D:D,$M:$M, \"Operating\"), 0)"
+        }
+      },
+      "total_non_operating_revenue": {
+        "row": 174,
+        "y0": {
+          "value": 250000,
+          "cell": "P&L!D174",
+          "formula": "IFERROR(SUMIFS(D:D,$M:$M, \"Non-Operating\"), 0)"
+        },
+        "y1": {
+          "value": 300000,
+          "cell": "P&L!E174",
+          "formula": "IFERROR(SUMIFS(D:D,$M:$M, \"Non-Operating\"), 0)"
+        },
+        "y2": {
+          "value": 300000,
+          "cell": "P&L!F174",
+          "formula": "IFERROR(SUMIFS(D:D,$M:$M, \"Non-Operating\"), 0)"
+        },
+        "y3": {
+          "value": 300000,
+          "cell": "P&L!G174",
+          "formula": "IFERROR(SUMIFS(D:D,$M:$M, \"Non-Operating\"), 0)"
+        },
+        "y4": {
+          "value": 300000,
+          "cell": "P&L!H174",
+          "formula": "IFERROR(SUMIFS(D:D,$M:$M, \"Non-Operating\"), 0)"
+        },
+        "y5": {
+          "value": 300000,
+          "cell": "P&L!I174",
+          "formula": "IFERROR(SUMIFS(D:D,$M:$M, \"Non-Operating\"), 0)"
+        }
+      }
+    },
+    "expenses_detail": {
+      "accounting_audit": {
+        "label": "Accounting / Audit",
+        "group": "contracted_services",
+        "row": 231,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D231",
+          "formula": "INPUTS!D120"
+        },
+        "y1": {
+          "value": 0,
+          "cell": "P&L!E231",
+          "formula": "INPUTS!E120"
+        },
+        "y2": {
+          "value": 30000,
+          "cell": "P&L!F231",
+          "formula": "INPUTS!F120"
+        },
+        "y3": {
+          "value": 35000,
+          "cell": "P&L!G231",
+          "formula": "INPUTS!G120"
+        },
+        "y4": {
+          "value": 35000,
+          "cell": "P&L!H231",
+          "formula": "INPUTS!H120"
+        },
+        "y5": {
+          "value": 35000,
+          "cell": "P&L!I231",
+          "formula": "INPUTS!I120"
+        }
+      },
+      "legal": {
+        "label": "Legal",
+        "group": "contracted_services",
+        "row": 232,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D232",
+          "formula": "INPUTS!D121"
+        },
+        "y1": {
+          "value": 0,
+          "cell": "P&L!E232",
+          "formula": "INPUTS!E121"
+        },
+        "y2": {
+          "value": 0,
+          "cell": "P&L!F232",
+          "formula": "INPUTS!F121"
+        },
+        "y3": {
+          "value": 0,
+          "cell": "P&L!G232",
+          "formula": "INPUTS!G121"
+        },
+        "y4": {
+          "value": 0,
+          "cell": "P&L!H232",
+          "formula": "INPUTS!H121"
+        },
+        "y5": {
+          "value": 0,
+          "cell": "P&L!I232",
+          "formula": "INPUTS!I121"
+        }
+      },
+      "authorizer_fee": {
+        "label": "Oversight Fee (3% of state revenue)",
+        "group": "contracted_services",
+        "row": 233,
+        "y0": {
+          "value": 180,
+          "cell": "P&L!D233",
+          "formula": "INPUTS!D122"
+        },
+        "y1": {
+          "value": 100973.52899999997,
+          "cell": "P&L!E233",
+          "formula": "INPUTS!E122"
+        },
+        "y2": {
+          "value": 206806.62194999997,
+          "cell": "P&L!F233",
+          "formula": "INPUTS!F122"
+        },
+        "y3": {
+          "value": 304631.8268927342,
+          "cell": "P&L!G233",
+          "formula": "INPUTS!G122"
+        },
+        "y4": {
+          "value": 352949.65772740997,
+          "cell": "P&L!H233",
+          "formula": "INPUTS!H122"
+        },
+        "y5": {
+          "value": 361773.39917059534,
+          "cell": "P&L!I233",
+          "formula": "INPUTS!I122"
+        }
+      },
+      "management_company_fee": {
+        "label": "Management Company Fee",
+        "group": "contracted_services",
+        "row": 234,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D234",
+          "formula": "INPUTS!D123"
+        },
+        "y1": {
+          "value": 0,
+          "cell": "P&L!E234",
+          "formula": "INPUTS!E123"
+        },
+        "y2": {
+          "value": 0,
+          "cell": "P&L!F234",
+          "formula": "INPUTS!F123"
+        },
+        "y3": {
+          "value": 0,
+          "cell": "P&L!G234",
+          "formula": "INPUTS!G123"
+        },
+        "y4": {
+          "value": 0,
+          "cell": "P&L!H234",
+          "formula": "INPUTS!H123"
+        },
+        "y5": {
+          "value": 0,
+          "cell": "P&L!I234",
+          "formula": "INPUTS!I123"
+        }
+      },
+      "payroll_services": {
+        "label": "Payroll Services",
+        "group": "contracted_services",
+        "row": 235,
+        "y0": {
+          "value": 1200,
+          "cell": "P&L!D235",
+          "formula": "INPUTS!D124"
+        },
+        "y1": {
+          "value": 30900,
+          "cell": "P&L!E235",
+          "formula": "INPUTS!E124"
+        },
+        "y2": {
+          "value": 56700,
+          "cell": "P&L!F235",
+          "formula": "INPUTS!F124"
+        },
+        "y3": {
+          "value": 81900,
+          "cell": "P&L!G235",
+          "formula": "INPUTS!G124"
+        },
+        "y4": {
+          "value": 95100,
+          "cell": "P&L!H235",
+          "formula": "INPUTS!H124"
+        },
+        "y5": {
+          "value": 95100,
+          "cell": "P&L!I235",
+          "formula": "INPUTS!I124"
+        }
+      },
+      "nurse_services": {
+        "label": "Nurse Services",
+        "group": "contracted_services",
+        "row": 236,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D236",
+          "formula": "INPUTS!D125"
+        },
+        "y1": {
+          "value": 43200,
+          "cell": "P&L!E236",
+          "formula": "INPUTS!E125"
+        },
+        "y2": {
+          "value": 86400,
+          "cell": "P&L!F236",
+          "formula": "INPUTS!F125"
+        },
+        "y3": {
+          "value": 124200,
+          "cell": "P&L!G236",
+          "formula": "INPUTS!G125"
+        },
+        "y4": {
+          "value": 140400,
+          "cell": "P&L!H236",
+          "formula": "INPUTS!H125"
+        },
+        "y5": {
+          "value": 140400,
+          "cell": "P&L!I236",
+          "formula": "INPUTS!I125"
+        }
+      },
+      "special_ed_services": {
+        "label": "Special Ed Services",
+        "group": "contracted_services",
+        "row": 237,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D237",
+          "formula": "INPUTS!D126"
+        },
+        "y1": {
+          "value": 264000,
+          "cell": "P&L!E237",
+          "formula": "INPUTS!E126"
+        },
+        "y2": {
+          "value": 528000,
+          "cell": "P&L!F237",
+          "formula": "INPUTS!F126"
+        },
+        "y3": {
+          "value": 759000,
+          "cell": "P&L!G237",
+          "formula": "INPUTS!G126"
+        },
+        "y4": {
+          "value": 858000,
+          "cell": "P&L!H237",
+          "formula": "INPUTS!H126"
+        },
+        "y5": {
+          "value": 858000,
+          "cell": "P&L!I237",
+          "formula": "INPUTS!I126"
+        }
+      },
+      "titlement_services": {
+        "label": "Titlement Services",
+        "group": "contracted_services",
+        "row": 238,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D238",
+          "formula": "INPUTS!D127"
+        },
+        "y1": {
+          "value": 52800,
+          "cell": "P&L!E238",
+          "formula": "INPUTS!E127"
+        },
+        "y2": {
+          "value": 105600,
+          "cell": "P&L!F238",
+          "formula": "INPUTS!F127"
+        },
+        "y3": {
+          "value": 151800,
+          "cell": "P&L!G238",
+          "formula": "INPUTS!G127"
+        },
+        "y4": {
+          "value": 171600,
+          "cell": "P&L!H238",
+          "formula": "INPUTS!H127"
+        },
+        "y5": {
+          "value": 171600,
+          "cell": "P&L!I238",
+          "formula": "INPUTS!I127"
+        }
+      },
+      "all_other_contracted": {
+        "label": "All Other Contracted Services",
+        "group": "contracted_services",
+        "row": 239,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D239",
+          "formula": "INPUTS!D128"
+        },
+        "y1": {
+          "value": 36000,
+          "cell": "P&L!E239",
+          "formula": "INPUTS!E128"
+        },
+        "y2": {
+          "value": 72000,
+          "cell": "P&L!F239",
+          "formula": "INPUTS!F128"
+        },
+        "y3": {
+          "value": 103500,
+          "cell": "P&L!G239",
+          "formula": "INPUTS!G128"
+        },
+        "y4": {
+          "value": 117000,
+          "cell": "P&L!H239",
+          "formula": "INPUTS!H128"
+        },
+        "y5": {
+          "value": 117000,
+          "cell": "P&L!I239",
+          "formula": "INPUTS!I128"
+        }
+      },
+      "board_expenses": {
+        "label": "Board Expenses",
+        "group": "school_operations",
+        "row": 240,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D240",
+          "formula": "INPUTS!D129"
+        },
+        "y1": {
+          "value": 18000,
+          "cell": "P&L!E240",
+          "formula": "INPUTS!E129"
+        },
+        "y2": {
+          "value": 22000,
+          "cell": "P&L!F240",
+          "formula": "INPUTS!F129"
+        },
+        "y3": {
+          "value": 22000,
+          "cell": "P&L!G240",
+          "formula": "INPUTS!G129"
+        },
+        "y4": {
+          "value": 22000,
+          "cell": "P&L!H240",
+          "formula": "INPUTS!H129"
+        },
+        "y5": {
+          "value": 22000,
+          "cell": "P&L!I240",
+          "formula": "INPUTS!I129"
+        }
+      },
+      "classroom_supplies": {
+        "label": "Classroom/Teaching Supplies",
+        "group": "school_operations",
+        "row": 241,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D241",
+          "formula": "INPUTS!D130"
+        },
+        "y1": {
+          "value": 50400,
+          "cell": "P&L!E241",
+          "formula": "INPUTS!E130"
+        },
+        "y2": {
+          "value": 100800,
+          "cell": "P&L!F241",
+          "formula": "INPUTS!F130"
+        },
+        "y3": {
+          "value": 144900,
+          "cell": "P&L!G241",
+          "formula": "INPUTS!G130"
+        },
+        "y4": {
+          "value": 163800,
+          "cell": "P&L!H241",
+          "formula": "INPUTS!H130"
+        },
+        "y5": {
+          "value": 163800,
+          "cell": "P&L!I241",
+          "formula": "INPUTS!I130"
+        }
+      },
+      "sped_supplies": {
+        "label": "Special Ed Supplies",
+        "group": "school_operations",
+        "row": 242,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D242",
+          "formula": "INPUTS!D131"
+        },
+        "y1": {
+          "value": 33600,
+          "cell": "P&L!E242",
+          "formula": "INPUTS!E131"
+        },
+        "y2": {
+          "value": 67200,
+          "cell": "P&L!F242",
+          "formula": "INPUTS!F131"
+        },
+        "y3": {
+          "value": 96600,
+          "cell": "P&L!G242",
+          "formula": "INPUTS!G131"
+        },
+        "y4": {
+          "value": 109200,
+          "cell": "P&L!H242",
+          "formula": "INPUTS!H131"
+        },
+        "y5": {
+          "value": 109200,
+          "cell": "P&L!I242",
+          "formula": "INPUTS!I131"
+        }
+      },
+      "textbooks": {
+        "label": "Textbooks/Workbooks",
+        "group": "school_operations",
+        "row": 243,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D243",
+          "formula": "INPUTS!D132"
+        },
+        "y1": {
+          "value": 67200,
+          "cell": "P&L!E243",
+          "formula": "INPUTS!E132"
+        },
+        "y2": {
+          "value": 134400,
+          "cell": "P&L!F243",
+          "formula": "INPUTS!F132"
+        },
+        "y3": {
+          "value": 193200,
+          "cell": "P&L!G243",
+          "formula": "INPUTS!G132"
+        },
+        "y4": {
+          "value": 218400,
+          "cell": "P&L!H243",
+          "formula": "INPUTS!H132"
+        },
+        "y5": {
+          "value": 218400,
+          "cell": "P&L!I243",
+          "formula": "INPUTS!I132"
+        }
+      },
+      "supplies_other": {
+        "label": "Supplies & Materials Other",
+        "group": "school_operations",
+        "row": 244,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D244",
+          "formula": "INPUTS!D133"
+        },
+        "y1": {
+          "value": 19200,
+          "cell": "P&L!E244",
+          "formula": "INPUTS!E133"
+        },
+        "y2": {
+          "value": 38400,
+          "cell": "P&L!F244",
+          "formula": "INPUTS!F133"
+        },
+        "y3": {
+          "value": 55200,
+          "cell": "P&L!G244",
+          "formula": "INPUTS!G133"
+        },
+        "y4": {
+          "value": 62400,
+          "cell": "P&L!H244",
+          "formula": "INPUTS!H133"
+        },
+        "y5": {
+          "value": 62400,
+          "cell": "P&L!I244",
+          "formula": "INPUTS!I133"
+        }
+      },
+      "equipment_furniture": {
+        "label": "School Ops Equipment/Furniture",
+        "group": "school_operations",
+        "row": 245,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D245",
+          "formula": "INPUTS!D134"
+        },
+        "y1": {
+          "value": 52800,
+          "cell": "P&L!E245",
+          "formula": "INPUTS!E134"
+        },
+        "y2": {
+          "value": 105600,
+          "cell": "P&L!F245",
+          "formula": "INPUTS!F134"
+        },
+        "y3": {
+          "value": 151800,
+          "cell": "P&L!G245",
+          "formula": "INPUTS!G134"
+        },
+        "y4": {
+          "value": 143000,
+          "cell": "P&L!H245",
+          "formula": "INPUTS!H134"
+        },
+        "y5": {
+          "value": 50000,
+          "cell": "P&L!I245",
+          "formula": "INPUTS!I134"
+        }
+      },
+      "telephone": {
+        "label": "Telephone",
+        "group": "school_operations",
+        "row": 246,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D246",
+          "formula": "INPUTS!D135"
+        },
+        "y1": {
+          "value": 6000,
+          "cell": "P&L!E246",
+          "formula": "INPUTS!E135"
+        },
+        "y2": {
+          "value": 8000,
+          "cell": "P&L!F246",
+          "formula": "INPUTS!F135"
+        },
+        "y3": {
+          "value": 8000,
+          "cell": "P&L!G246",
+          "formula": "INPUTS!G135"
+        },
+        "y4": {
+          "value": 8000,
+          "cell": "P&L!H246",
+          "formula": "INPUTS!H135"
+        },
+        "y5": {
+          "value": 8000,
+          "cell": "P&L!I246",
+          "formula": "INPUTS!I135"
+        }
+      },
+      "technology": {
+        "label": "Technology",
+        "group": "school_operations",
+        "row": 247,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D247",
+          "formula": "INPUTS!D136"
+        },
+        "y1": {
+          "value": 84000,
+          "cell": "P&L!E247",
+          "formula": "INPUTS!E136"
+        },
+        "y2": {
+          "value": 168000,
+          "cell": "P&L!F247",
+          "formula": "INPUTS!F136"
+        },
+        "y3": {
+          "value": 241500,
+          "cell": "P&L!G247",
+          "formula": "INPUTS!G136"
+        },
+        "y4": {
+          "value": 273000,
+          "cell": "P&L!H247",
+          "formula": "INPUTS!H136"
+        },
+        "y5": {
+          "value": 150000,
+          "cell": "P&L!I247",
+          "formula": "INPUTS!I136"
+        }
+      },
+      "testing": {
+        "label": "Student Testing & Assessment",
+        "group": "school_operations",
+        "row": 248,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D248",
+          "formula": "INPUTS!D137"
+        },
+        "y1": {
+          "value": 21600,
+          "cell": "P&L!E248",
+          "formula": "INPUTS!E137"
+        },
+        "y2": {
+          "value": 43200,
+          "cell": "P&L!F248",
+          "formula": "INPUTS!F137"
+        },
+        "y3": {
+          "value": 62100,
+          "cell": "P&L!G248",
+          "formula": "INPUTS!G137"
+        },
+        "y4": {
+          "value": 70200,
+          "cell": "P&L!H248",
+          "formula": "INPUTS!H137"
+        },
+        "y5": {
+          "value": 70200,
+          "cell": "P&L!I248",
+          "formula": "INPUTS!I137"
+        }
+      },
+      "field_trips": {
+        "label": "Field Trips",
+        "group": "school_operations",
+        "row": 249,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D249",
+          "formula": "INPUTS!D138"
+        },
+        "y1": {
+          "value": 18000,
+          "cell": "P&L!E249",
+          "formula": "INPUTS!E138"
+        },
+        "y2": {
+          "value": 36000,
+          "cell": "P&L!F249",
+          "formula": "INPUTS!F138"
+        },
+        "y3": {
+          "value": 51750,
+          "cell": "P&L!G249",
+          "formula": "INPUTS!G138"
+        },
+        "y4": {
+          "value": 58500,
+          "cell": "P&L!H249",
+          "formula": "INPUTS!H138"
+        },
+        "y5": {
+          "value": 58500,
+          "cell": "P&L!I249",
+          "formula": "INPUTS!I138"
+        }
+      },
+      "transportation_student": {
+        "label": "Transportation (Student)",
+        "group": "school_operations",
+        "row": 250,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D250",
+          "formula": "INPUTS!D139"
+        },
+        "y1": {
+          "value": 202800,
+          "cell": "P&L!E250",
+          "formula": "INPUTS!E139"
+        },
+        "y2": {
+          "value": 405600,
+          "cell": "P&L!F250",
+          "formula": "INPUTS!F139"
+        },
+        "y3": {
+          "value": 583050,
+          "cell": "P&L!G250",
+          "formula": "INPUTS!G139"
+        },
+        "y4": {
+          "value": 659100,
+          "cell": "P&L!H250",
+          "formula": "INPUTS!H139"
+        },
+        "y5": {
+          "value": 659100,
+          "cell": "P&L!I250",
+          "formula": "INPUTS!I139"
+        }
+      },
+      "student_services_other": {
+        "label": "Student Services Other",
+        "group": "school_operations",
+        "row": 251,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D251",
+          "formula": "INPUTS!D140"
+        },
+        "y1": {
+          "value": 14400,
+          "cell": "P&L!E251",
+          "formula": "INPUTS!E140"
+        },
+        "y2": {
+          "value": 28800,
+          "cell": "P&L!F251",
+          "formula": "INPUTS!F140"
+        },
+        "y3": {
+          "value": 41400,
+          "cell": "P&L!G251",
+          "formula": "INPUTS!G140"
+        },
+        "y4": {
+          "value": 46800,
+          "cell": "P&L!H251",
+          "formula": "INPUTS!H140"
+        },
+        "y5": {
+          "value": 46800,
+          "cell": "P&L!I251",
+          "formula": "INPUTS!I140"
+        }
+      },
+      "office_expense": {
+        "label": "Office Expense",
+        "group": "school_operations",
+        "row": 252,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D252",
+          "formula": "INPUTS!D141"
+        },
+        "y1": {
+          "value": 14000,
+          "cell": "P&L!E252",
+          "formula": "INPUTS!E141"
+        },
+        "y2": {
+          "value": 18000,
+          "cell": "P&L!F252",
+          "formula": "INPUTS!F141"
+        },
+        "y3": {
+          "value": 18000,
+          "cell": "P&L!G252",
+          "formula": "INPUTS!G141"
+        },
+        "y4": {
+          "value": 18000,
+          "cell": "P&L!H252",
+          "formula": "INPUTS!H141"
+        },
+        "y5": {
+          "value": 18000,
+          "cell": "P&L!I252",
+          "formula": "INPUTS!I141"
+        }
+      },
+      "staff_development": {
+        "label": "Staff Development",
+        "group": "school_operations",
+        "row": 253,
+        "y0": {
+          "value": 800,
+          "cell": "P&L!D253",
+          "formula": "INPUTS!D142"
+        },
+        "y1": {
+          "value": 20600,
+          "cell": "P&L!E253",
+          "formula": "INPUTS!E142"
+        },
+        "y2": {
+          "value": 37800,
+          "cell": "P&L!F253",
+          "formula": "INPUTS!F142"
+        },
+        "y3": {
+          "value": 54600,
+          "cell": "P&L!G253",
+          "formula": "INPUTS!G142"
+        },
+        "y4": {
+          "value": 63400,
+          "cell": "P&L!H253",
+          "formula": "INPUTS!H142"
+        },
+        "y5": {
+          "value": 63400,
+          "cell": "P&L!I253",
+          "formula": "INPUTS!I142"
+        }
+      },
+      "staff_recruitment": {
+        "label": "Staff Recruitment",
+        "group": "school_operations",
+        "row": 254,
+        "y0": {
+          "value": 8000,
+          "cell": "P&L!D254",
+          "formula": "INPUTS!D143"
+        },
+        "y1": {
+          "value": 12875,
+          "cell": "P&L!E254",
+          "formula": "INPUTS!E143"
+        },
+        "y2": {
+          "value": 23625,
+          "cell": "P&L!F254",
+          "formula": "INPUTS!F143"
+        },
+        "y3": {
+          "value": 34125,
+          "cell": "P&L!G254",
+          "formula": "INPUTS!G143"
+        },
+        "y4": {
+          "value": 39625,
+          "cell": "P&L!H254",
+          "formula": "INPUTS!H143"
+        },
+        "y5": {
+          "value": 39625,
+          "cell": "P&L!I254",
+          "formula": "INPUTS!I143"
+        }
+      },
+      "marketing": {
+        "label": "Student Recruitment/Marketing",
+        "group": "school_operations",
+        "row": 255,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D255",
+          "formula": "INPUTS!D144"
+        },
+        "y1": {
+          "value": 28000,
+          "cell": "P&L!E255",
+          "formula": "INPUTS!E144"
+        },
+        "y2": {
+          "value": 20000,
+          "cell": "P&L!F255",
+          "formula": "INPUTS!F144"
+        },
+        "y3": {
+          "value": 20000,
+          "cell": "P&L!G255",
+          "formula": "INPUTS!G144"
+        },
+        "y4": {
+          "value": 20000,
+          "cell": "P&L!H255",
+          "formula": "INPUTS!H144"
+        },
+        "y5": {
+          "value": 20000,
+          "cell": "P&L!I255",
+          "formula": "INPUTS!I144"
+        }
+      },
+      "school_meals": {
+        "label": "School Meals/Lunch",
+        "group": "school_operations",
+        "row": 256,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D256",
+          "formula": "INPUTS!D145"
+        },
+        "y1": {
+          "value": 198000,
+          "cell": "P&L!E256",
+          "formula": "INPUTS!E145"
+        },
+        "y2": {
+          "value": 396000,
+          "cell": "P&L!F256",
+          "formula": "INPUTS!F145"
+        },
+        "y3": {
+          "value": 569250,
+          "cell": "P&L!G256",
+          "formula": "INPUTS!G145"
+        },
+        "y4": {
+          "value": 643500,
+          "cell": "P&L!H256",
+          "formula": "INPUTS!H145"
+        },
+        "y5": {
+          "value": 643500,
+          "cell": "P&L!I256",
+          "formula": "INPUTS!I145"
+        }
+      },
+      "stipends": {
+        "label": "Stipends/Bonuses",
+        "group": "school_operations",
+        "row": 257,
+        "y0": {
+          "value": 400,
+          "cell": "P&L!D257",
+          "formula": "INPUTS!D146"
+        },
+        "y1": {
+          "value": 10300,
+          "cell": "P&L!E257",
+          "formula": "INPUTS!E146"
+        },
+        "y2": {
+          "value": 18900,
+          "cell": "P&L!F257",
+          "formula": "INPUTS!F146"
+        },
+        "y3": {
+          "value": 27300,
+          "cell": "P&L!G257",
+          "formula": "INPUTS!G146"
+        },
+        "y4": {
+          "value": 31700,
+          "cell": "P&L!H257",
+          "formula": "INPUTS!H146"
+        },
+        "y5": {
+          "value": 31700,
+          "cell": "P&L!I257",
+          "formula": "INPUTS!I146"
+        }
+      },
+      "fundraising_exp": {
+        "label": "Fundraising (expense)",
+        "group": "school_operations",
+        "row": 258,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D258",
+          "formula": "INPUTS!D147"
+        },
+        "y1": {
+          "value": 5000,
+          "cell": "P&L!E258",
+          "formula": "INPUTS!E147"
+        },
+        "y2": {
+          "value": 7000,
+          "cell": "P&L!F258",
+          "formula": "INPUTS!F147"
+        },
+        "y3": {
+          "value": 7000,
+          "cell": "P&L!G258",
+          "formula": "INPUTS!G147"
+        },
+        "y4": {
+          "value": 7000,
+          "cell": "P&L!H258",
+          "formula": "INPUTS!H147"
+        },
+        "y5": {
+          "value": 7000,
+          "cell": "P&L!I258",
+          "formula": "INPUTS!I147"
+        }
+      },
+      "extracurricular": {
+        "label": "Extra Curricular",
+        "group": "school_operations",
+        "row": 259,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D259",
+          "formula": "INPUTS!D148"
+        },
+        "y1": {
+          "value": 26400,
+          "cell": "P&L!E259",
+          "formula": "INPUTS!E148"
+        },
+        "y2": {
+          "value": 52800,
+          "cell": "P&L!F259",
+          "formula": "INPUTS!F148"
+        },
+        "y3": {
+          "value": 75900,
+          "cell": "P&L!G259",
+          "formula": "INPUTS!G148"
+        },
+        "y4": {
+          "value": 85800,
+          "cell": "P&L!H259",
+          "formula": "INPUTS!H148"
+        },
+        "y5": {
+          "value": 85800,
+          "cell": "P&L!I259",
+          "formula": "INPUTS!I148"
+        }
+      },
+      "misc_ops": {
+        "label": "Misc. Operating Expenses",
+        "group": "school_operations",
+        "row": 260,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D260",
+          "formula": "INPUTS!D149"
+        },
+        "y1": {
+          "value": 13200,
+          "cell": "P&L!E260",
+          "formula": "INPUTS!E149"
+        },
+        "y2": {
+          "value": 26400,
+          "cell": "P&L!F260",
+          "formula": "INPUTS!F149"
+        },
+        "y3": {
+          "value": 37950,
+          "cell": "P&L!G260",
+          "formula": "INPUTS!G149"
+        },
+        "y4": {
+          "value": 42900,
+          "cell": "P&L!H260",
+          "formula": "INPUTS!H149"
+        },
+        "y5": {
+          "value": 42900,
+          "cell": "P&L!I260",
+          "formula": "INPUTS!I149"
+        }
+      },
+      "all_other_school_ops": {
+        "label": "All Other School Operations",
+        "group": "school_operations",
+        "row": 261,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D261",
+          "formula": "INPUTS!D150"
+        },
+        "y1": {
+          "value": 10000,
+          "cell": "P&L!E261",
+          "formula": "INPUTS!E150"
+        },
+        "y2": {
+          "value": 12000,
+          "cell": "P&L!F261",
+          "formula": "INPUTS!F150"
+        },
+        "y3": {
+          "value": 12000,
+          "cell": "P&L!G261",
+          "formula": "INPUTS!G150"
+        },
+        "y4": {
+          "value": 12000,
+          "cell": "P&L!H261",
+          "formula": "INPUTS!H150"
+        },
+        "y5": {
+          "value": 12000,
+          "cell": "P&L!I261",
+          "formula": "INPUTS!I150"
+        }
+      },
+      "insurance": {
+        "label": "Insurance",
+        "group": "facility_om",
+        "row": 262,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D262",
+          "formula": "INPUTS!D151"
+        },
+        "y1": {
+          "value": 28000,
+          "cell": "P&L!E262",
+          "formula": "INPUTS!E151"
+        },
+        "y2": {
+          "value": 32000,
+          "cell": "P&L!F262",
+          "formula": "INPUTS!F151"
+        },
+        "y3": {
+          "value": 32000,
+          "cell": "P&L!G262",
+          "formula": "INPUTS!G151"
+        },
+        "y4": {
+          "value": 32000,
+          "cell": "P&L!H262",
+          "formula": "INPUTS!H151"
+        },
+        "y5": {
+          "value": 32000,
+          "cell": "P&L!I262",
+          "formula": "INPUTS!I151"
+        }
+      },
+      "janitorial": {
+        "label": "Janitorial Services",
+        "group": "facility_om",
+        "row": 263,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D263",
+          "formula": "INPUTS!D152"
+        },
+        "y1": {
+          "value": 36000,
+          "cell": "P&L!E263",
+          "formula": "INPUTS!E152"
+        },
+        "y2": {
+          "value": 52000,
+          "cell": "P&L!F263",
+          "formula": "INPUTS!F152"
+        },
+        "y3": {
+          "value": 52000,
+          "cell": "P&L!G263",
+          "formula": "INPUTS!G152"
+        },
+        "y4": {
+          "value": 52000,
+          "cell": "P&L!H263",
+          "formula": "INPUTS!H152"
+        },
+        "y5": {
+          "value": 52000,
+          "cell": "P&L!I263",
+          "formula": "INPUTS!I152"
+        }
+      },
+      "rent_lease": {
+        "label": "Building and Land Rent/Lease",
+        "group": "facility_om",
+        "row": 264,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D264",
+          "formula": "INPUTS!D153"
+        },
+        "y1": {
+          "value": 240000,
+          "cell": "P&L!E264",
+          "formula": "INPUTS!E153"
+        },
+        "y2": {
+          "value": 300000,
+          "cell": "P&L!F264",
+          "formula": "INPUTS!F153"
+        },
+        "y3": {
+          "value": 300000,
+          "cell": "P&L!G264",
+          "formula": "INPUTS!G153"
+        },
+        "y4": {
+          "value": 300000,
+          "cell": "P&L!H264",
+          "formula": "INPUTS!H153"
+        },
+        "y5": {
+          "value": 300000,
+          "cell": "P&L!I264",
+          "formula": "INPUTS!I153"
+        }
+      },
+      "repairs_maintenance": {
+        "label": "Repairs & Maintenance",
+        "group": "facility_om",
+        "row": 265,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D265",
+          "formula": "INPUTS!D154"
+        },
+        "y1": {
+          "value": 18000,
+          "cell": "P&L!E265",
+          "formula": "INPUTS!E154"
+        },
+        "y2": {
+          "value": 24000,
+          "cell": "P&L!F265",
+          "formula": "INPUTS!F154"
+        },
+        "y3": {
+          "value": 24000,
+          "cell": "P&L!G265",
+          "formula": "INPUTS!G154"
+        },
+        "y4": {
+          "value": 24000,
+          "cell": "P&L!H265",
+          "formula": "INPUTS!H154"
+        },
+        "y5": {
+          "value": 24000,
+          "cell": "P&L!I265",
+          "formula": "INPUTS!I154"
+        }
+      },
+      "facility_equipment": {
+        "label": "Facility Equipment/Furniture",
+        "group": "facility_om",
+        "row": 266,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D266",
+          "formula": "INPUTS!D155"
+        },
+        "y1": {
+          "value": 8000,
+          "cell": "P&L!E266",
+          "formula": "INPUTS!E155"
+        },
+        "y2": {
+          "value": 5000,
+          "cell": "P&L!F266",
+          "formula": "INPUTS!F155"
+        },
+        "y3": {
+          "value": 5000,
+          "cell": "P&L!G266",
+          "formula": "INPUTS!G155"
+        },
+        "y4": {
+          "value": 5000,
+          "cell": "P&L!H266",
+          "formula": "INPUTS!H155"
+        },
+        "y5": {
+          "value": 5000,
+          "cell": "P&L!I266",
+          "formula": "INPUTS!I155"
+        }
+      },
+      "security": {
+        "label": "Security Services",
+        "group": "facility_om",
+        "row": 267,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D267",
+          "formula": "INPUTS!D156"
+        },
+        "y1": {
+          "value": 22000,
+          "cell": "P&L!E267",
+          "formula": "INPUTS!E156"
+        },
+        "y2": {
+          "value": 28000,
+          "cell": "P&L!F267",
+          "formula": "INPUTS!F156"
+        },
+        "y3": {
+          "value": 28000,
+          "cell": "P&L!G267",
+          "formula": "INPUTS!G156"
+        },
+        "y4": {
+          "value": 28000,
+          "cell": "P&L!H267",
+          "formula": "INPUTS!H156"
+        },
+        "y5": {
+          "value": 28000,
+          "cell": "P&L!I267",
+          "formula": "INPUTS!I156"
+        }
+      },
+      "utilities": {
+        "label": "Utilities",
+        "group": "facility_om",
+        "row": 268,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D268",
+          "formula": "INPUTS!D157"
+        },
+        "y1": {
+          "value": 48000,
+          "cell": "P&L!E268",
+          "formula": "INPUTS!E157"
+        },
+        "y2": {
+          "value": 62000,
+          "cell": "P&L!F268",
+          "formula": "INPUTS!F157"
+        },
+        "y3": {
+          "value": 62000,
+          "cell": "P&L!G268",
+          "formula": "INPUTS!G157"
+        },
+        "y4": {
+          "value": 62000,
+          "cell": "P&L!H268",
+          "formula": "INPUTS!H157"
+        },
+        "y5": {
+          "value": 62000,
+          "cell": "P&L!I268",
+          "formula": "INPUTS!I157"
+        }
+      },
+      "all_other_facilities": {
+        "label": "All Other Facilities",
+        "group": "facility_om",
+        "row": 269,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D269",
+          "formula": "INPUTS!D158"
+        },
+        "y1": {
+          "value": 8000,
+          "cell": "P&L!E269",
+          "formula": "INPUTS!E158"
+        },
+        "y2": {
+          "value": 10000,
+          "cell": "P&L!F269",
+          "formula": "INPUTS!F158"
+        },
+        "y3": {
+          "value": 10000,
+          "cell": "P&L!G269",
+          "formula": "INPUTS!G158"
+        },
+        "y4": {
+          "value": 10000,
+          "cell": "P&L!H269",
+          "formula": "INPUTS!H158"
+        },
+        "y5": {
+          "value": 10000,
+          "cell": "P&L!I269",
+          "formula": "INPUTS!I158"
+        }
+      },
+      "contingency_reserves": {
+        "label": "Reserves/Contingency",
+        "group": "contingency",
+        "row": 270,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D270",
+          "formula": "INPUTS!D159"
+        },
+        "y1": {
+          "value": 0,
+          "cell": "P&L!E270",
+          "formula": "INPUTS!E159"
+        },
+        "y2": {
+          "value": 0,
+          "cell": "P&L!F270",
+          "formula": "INPUTS!F159"
+        },
+        "y3": {
+          "value": 0,
+          "cell": "P&L!G270",
+          "formula": "INPUTS!G159"
+        },
+        "y4": {
+          "value": 0,
+          "cell": "P&L!H270",
+          "formula": "INPUTS!H159"
+        },
+        "y5": {
+          "value": 0,
+          "cell": "P&L!I270",
+          "formula": "INPUTS!I159"
+        }
+      },
+      "interest_expense": {
+        "label": "Interest Expense",
+        "group": "finance",
+        "row": 271,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D271",
+          "formula": "INPUTS!D160"
+        },
+        "y1": {
+          "value": 257016.07125742125,
+          "cell": "P&L!E271",
+          "formula": "INPUTS!E160"
+        },
+        "y2": {
+          "value": 253109.85234050342,
+          "cell": "P&L!F271",
+          "formula": "INPUTS!F160"
+        },
+        "y3": {
+          "value": 249003.78385025455,
+          "cell": "P&L!G271",
+          "formula": "INPUTS!G160"
+        },
+        "y4": {
+          "value": 244687.64110321214,
+          "cell": "P&L!H271",
+          "formula": "INPUTS!H160"
+        },
+        "y5": {
+          "value": 240150.6763017025,
+          "cell": "P&L!I271",
+          "formula": "INPUTS!I160"
+        }
+      },
+      "depreciation": {
+        "label": "Depreciation & Amortization",
+        "group": "finance",
+        "row": 272,
+        "y0": {
+          "value": 0,
+          "cell": "P&L!D272",
+          "formula": "INPUTS!D161"
+        },
+        "y1": {
+          "value": 172500,
+          "cell": "P&L!E272",
+          "formula": "INPUTS!E161"
+        },
+        "y2": {
+          "value": 172500,
+          "cell": "P&L!F272",
+          "formula": "INPUTS!F161"
+        },
+        "y3": {
+          "value": 172500,
+          "cell": "P&L!G272",
+          "formula": "INPUTS!G161"
+        },
+        "y4": {
+          "value": 172500,
+          "cell": "P&L!H272",
+          "formula": "INPUTS!H161"
+        },
+        "y5": {
+          "value": 172500,
+          "cell": "P&L!I272",
+          "formula": "INPUTS!I161"
+        }
+      },
+      "personnel_services_costs": {
+        "label": "Personnel Services Costs (echo)",
+        "group": "personnel",
+        "row": 273,
+        "y0": {
+          "value": 206000,
+          "cell": "P&L!D273",
+          "formula": "INPUTS!D162"
+        },
+        "y1": {
+          "value": 2117025.95,
+          "cell": "P&L!E273",
+          "formula": "INPUTS!E162"
+        },
+        "y2": {
+          "value": 3784113.6009999993,
+          "cell": "P&L!F273",
+          "formula": "INPUTS!F162"
+        },
+        "y3": {
+          "value": 5513867.66019,
+          "cell": "P&L!G273",
+          "formula": "INPUTS!G162"
+        },
+        "y4": {
+          "value": 6606702.949435702,
+          "cell": "P&L!H273",
+          "formula": "INPUTS!H162"
+        },
+        "y5": {
+          "value": 6804904.037918772,
+          "cell": "P&L!I273",
+          "formula": "INPUTS!I162"
+        }
+      },
+      "personnel_taxes_benefits": {
+        "label": "Personnel Taxes & Benefits Costs (echo)",
+        "group": "personnel",
+        "row": 274,
+        "y0": {
+          "value": 61800,
+          "cell": "P&L!D274",
+          "formula": "INPUTS!D163"
+        },
+        "y1": {
+          "value": 635107.7849999999,
+          "cell": "P&L!E274",
+          "formula": "INPUTS!E163"
+        },
+        "y2": {
+          "value": 1135234.0803,
+          "cell": "P&L!F274",
+          "formula": "INPUTS!F163"
+        },
+        "y3": {
+          "value": 1654160.2980570002,
+          "cell": "P&L!G274",
+          "formula": "INPUTS!G163"
+        },
+        "y4": {
+          "value": 1982010.8848307098,
+          "cell": "P&L!H274",
+          "formula": "INPUTS!H163"
+        },
+        "y5": {
+          "value": 2041471.2113756312,
+          "cell": "P&L!I274",
+          "formula": "INPUTS!I163"
+        }
+      }
+    },
+    "expenses_totals": {
+      "total_personnel_services_costs": {
+        "row": 218,
+        "sum_description": "SUM(E185:E217)",
+        "y0": {
+          "value": 206000,
+          "cell": "P&L!D218",
+          "formula": "SUM(D185:D217)"
+        },
+        "y1": {
+          "value": 2117025.95,
+          "cell": "P&L!E218",
+          "formula": "SUM(E185:E217)"
+        },
+        "y2": {
+          "value": 3784113.6009999993,
+          "cell": "P&L!F218",
+          "formula": "SUM(F185:F217)"
+        },
+        "y3": {
+          "value": 5513867.66019,
+          "cell": "P&L!G218",
+          "formula": "SUM(G185:G217)"
+        },
+        "y4": {
+          "value": 6606702.949435702,
+          "cell": "P&L!H218",
+          "formula": "SUM(H185:H217)"
+        },
+        "y5": {
+          "value": 6804904.037918772,
+          "cell": "P&L!I218",
+          "formula": "SUM(I185:I217)"
+        }
+      },
+      "total_taxes_benefits": {
+        "row": 227,
+        "sum_description": "SUMPRODUCT(positions × benefit%)",
+        "y0": {
+          "value": 61800,
+          "cell": "P&L!D227",
+          "formula": "SUMPRODUCT(D185:D217,INPUTS!$J$83:$J$115)"
+        },
+        "y1": {
+          "value": 635107.7849999999,
+          "cell": "P&L!E227",
+          "formula": "SUMPRODUCT(E185:E217,INPUTS!$J$83:$J$115)"
+        },
+        "y2": {
+          "value": 1135234.0803,
+          "cell": "P&L!F227",
+          "formula": "SUMPRODUCT(F185:F217,INPUTS!$J$83:$J$115)"
+        },
+        "y3": {
+          "value": 1654160.2980570002,
+          "cell": "P&L!G227",
+          "formula": "SUMPRODUCT(G185:G217,INPUTS!$J$83:$J$115)"
+        },
+        "y4": {
+          "value": 1982010.8848307098,
+          "cell": "P&L!H227",
+          "formula": "SUMPRODUCT(H185:H217,INPUTS!$J$83:$J$115)"
+        },
+        "y5": {
+          "value": 2041471.2113756312,
+          "cell": "P&L!I227",
+          "formula": "SUMPRODUCT(I185:I217,INPUTS!$J$83:$J$115)"
+        }
+      },
+      "total_expenses": {
+        "row": 275,
+        "sum_description": "SUM(E231:E274)",
+        "y0": {
+          "value": 278380,
+          "cell": "P&L!D275",
+          "formula": "SUM(D231:D274)"
+        },
+        "y1": {
+          "value": 5043898.335257422,
+          "cell": "P&L!E275",
+          "formula": "SUM(E231:E274)"
+        },
+        "y2": {
+          "value": 8713989.155590503,
+          "cell": "P&L!F275",
+          "formula": "SUM(F231:F274)"
+        },
+        "y3": {
+          "value": 12170188.568989988,
+          "cell": "P&L!G275",
+          "formula": "SUM(G231:G274)"
+        },
+        "y4": {
+          "value": 14087276.133097034,
+          "cell": "P&L!H275",
+          "formula": "SUM(H231:H274)"
+        },
+        "y5": {
+          "value": 14133224.324766701,
+          "cell": "P&L!I275",
+          "formula": "SUM(I231:I274)"
+        }
+      }
+    },
+    "bottom_line": {
+      "net_income_y0": {
+        "value": -22380,
+        "derivation": "total_revenue − total_expenses"
+      },
+      "net_income_y1": {
+        "value": 45975.524742577225,
+        "derivation": "total_revenue − total_expenses"
+      },
+      "net_income_y2": {
+        "value": 817917.6004094966,
+        "derivation": "total_revenue − total_expenses"
+      },
+      "net_income_y3": {
+        "value": 1462166.8119840734,
+        "derivation": "total_revenue − total_expenses"
+      },
+      "net_income_y4": {
+        "value": 1564760.7758226208,
+        "derivation": "total_revenue − total_expenses"
+      },
+      "net_income_y5": {
+        "value": 1881269.8710383102,
+        "derivation": "total_revenue − total_expenses"
+      },
+      "current_assets": {
+        "row": 25,
+        "y0": {
+          "value": 1227620,
+          "cell": "DASHBOARD!B25",
+          "formula": "'Balance Sheet'!F10"
+        },
+        "y1": {
+          "value": 1369745.36810946,
+          "cell": "DASHBOARD!C25",
+          "formula": "'Balance Sheet'!G10"
+        },
+        "y2": {
+          "value": 2279906.5929689216,
+          "cell": "DASHBOARD!D25",
+          "formula": "'Balance Sheet'!H10"
+        },
+        "y3": {
+          "value": 3830210.960912711,
+          "cell": "DASHBOARD!E25",
+          "formula": "'Balance Sheet'!I10"
+        },
+        "y4": {
+          "value": 5478793.149948006,
+          "cell": "DASHBOARD!F25",
+          "formula": "'Balance Sheet'!J10"
+        },
+        "y5": {
+          "value": 7439347.46939748,
+          "cell": "DASHBOARD!G25",
+          "formula": "'Balance Sheet'!K10"
+        }
+      },
+      "current_liabilities": {
+        "row": 26,
+        "y0": {
+          "value": 0,
+          "cell": "DASHBOARD!B26",
+          "formula": "'Balance Sheet'!F27"
+        },
+        "y1": {
+          "value": 0,
+          "cell": "DASHBOARD!C26",
+          "formula": "'Balance Sheet'!G27"
+        },
+        "y2": {
+          "value": 0,
+          "cell": "DASHBOARD!D26",
+          "formula": "'Balance Sheet'!H27"
+        },
+        "y3": {
+          "value": 0,
+          "cell": "DASHBOARD!E26",
+          "formula": "'Balance Sheet'!I27"
+        },
+        "y4": {
+          "value": 0,
+          "cell": "DASHBOARD!F26",
+          "formula": "'Balance Sheet'!J27"
+        },
+        "y5": {
+          "value": 0,
+          "cell": "DASHBOARD!G26",
+          "formula": "'Balance Sheet'!K27"
+        }
+      },
+      "unrestricted_cash": {
+        "row": 27,
+        "y0": {
+          "value": 1227620,
+          "cell": "DASHBOARD!B27",
+          "formula": "'Balance Sheet'!F5"
+        },
+        "y1": {
+          "value": 1369745.36810946,
+          "cell": "DASHBOARD!C27",
+          "formula": "'Balance Sheet'!G5"
+        },
+        "y2": {
+          "value": 2279906.5929689216,
+          "cell": "DASHBOARD!D27",
+          "formula": "'Balance Sheet'!H5"
+        },
+        "y3": {
+          "value": 3830210.960912711,
+          "cell": "DASHBOARD!E27",
+          "formula": "'Balance Sheet'!I5"
+        },
+        "y4": {
+          "value": 5478793.149948006,
+          "cell": "DASHBOARD!F27",
+          "formula": "'Balance Sheet'!J5"
+        },
+        "y5": {
+          "value": 7439347.46939748,
+          "cell": "DASHBOARD!G27",
+          "formula": "'Balance Sheet'!K5"
+        }
+      },
+      "total_expenses_dashboard": {
+        "row": 28,
+        "y0": {
+          "value": 278380,
+          "cell": "DASHBOARD!B28",
+          "formula": "'P&L'!D23"
+        },
+        "y1": {
+          "value": 5043898.335257422,
+          "cell": "DASHBOARD!C28",
+          "formula": "'P&L'!E23"
+        },
+        "y2": {
+          "value": 8713989.155590503,
+          "cell": "DASHBOARD!D28",
+          "formula": "'P&L'!F23"
+        },
+        "y3": {
+          "value": 12170188.568989988,
+          "cell": "DASHBOARD!E28",
+          "formula": "'P&L'!G23"
+        },
+        "y4": {
+          "value": 14087276.133097034,
+          "cell": "DASHBOARD!F28",
+          "formula": "'P&L'!H23"
+        },
+        "y5": {
+          "value": 14133224.324766701,
+          "cell": "DASHBOARD!G28",
+          "formula": "'P&L'!I23"
+        }
+      },
+      "depreciation_dashboard": {
+        "row": 29,
+        "y0": {
+          "value": 0,
+          "cell": "DASHBOARD!B29",
+          "formula": "'P&L'!D272"
+        },
+        "y1": {
+          "value": 172500,
+          "cell": "DASHBOARD!C29",
+          "formula": "'P&L'!E272"
+        },
+        "y2": {
+          "value": 172500,
+          "cell": "DASHBOARD!D29",
+          "formula": "'P&L'!F272"
+        },
+        "y3": {
+          "value": 172500,
+          "cell": "DASHBOARD!E29",
+          "formula": "'P&L'!G272"
+        },
+        "y4": {
+          "value": 172500,
+          "cell": "DASHBOARD!F29",
+          "formula": "'P&L'!H272"
+        },
+        "y5": {
+          "value": 172500,
+          "cell": "DASHBOARD!G29",
+          "formula": "'P&L'!I272"
+        }
+      },
+      "total_assets": {
+        "row": 30,
+        "y0": {
+          "value": 1227620,
+          "cell": "DASHBOARD!B30",
+          "formula": "'Balance Sheet'!F16"
+        },
+        "y1": {
+          "value": 6544745.36810946,
+          "cell": "DASHBOARD!C30",
+          "formula": "'Balance Sheet'!G16"
+        },
+        "y2": {
+          "value": 7454906.592968922,
+          "cell": "DASHBOARD!D30",
+          "formula": "'Balance Sheet'!H16"
+        },
+        "y3": {
+          "value": 9005210.960912712,
+          "cell": "DASHBOARD!E30",
+          "formula": "'Balance Sheet'!I16"
+        },
+        "y4": {
+          "value": 10653793.149948005,
+          "cell": "DASHBOARD!F30",
+          "formula": "'Balance Sheet'!J16"
+        },
+        "y5": {
+          "value": 12614347.46939748,
+          "cell": "DASHBOARD!G30",
+          "formula": "'Balance Sheet'!K16"
+        }
+      },
+      "total_liabilities": {
+        "row": 31,
+        "y0": {
+          "value": 0,
+          "cell": "DASHBOARD!B31",
+          "formula": "'Balance Sheet'!F31"
+        },
+        "y1": {
+          "value": 0,
+          "cell": "DASHBOARD!C31",
+          "formula": "'Balance Sheet'!G31"
+        },
+        "y2": {
+          "value": 0,
+          "cell": "DASHBOARD!D31",
+          "formula": "'Balance Sheet'!H31"
+        },
+        "y3": {
+          "value": 0,
+          "cell": "DASHBOARD!E31",
+          "formula": "'Balance Sheet'!I31"
+        },
+        "y4": {
+          "value": 0,
+          "cell": "DASHBOARD!F31",
+          "formula": "'Balance Sheet'!J31"
+        },
+        "y5": {
+          "value": 0,
+          "cell": "DASHBOARD!G31",
+          "formula": "'Balance Sheet'!K31"
+        }
+      },
+      "dcoh_or_label_mismatch": {
+        "row": 32,
+        "y0": {
+          "value": 91.98206945158833,
+          "cell": "DASHBOARD!B32",
+          "formula": "'P&L'!D335"
+        },
+        "y1": {
+          "value": 102.63111840833139,
+          "cell": "DASHBOARD!C32",
+          "formula": "'P&L'!E335"
+        },
+        "y2": {
+          "value": 97.42632593392621,
+          "cell": "DASHBOARD!D32",
+          "formula": "'P&L'!F335"
+        },
+        "y3": {
+          "value": 116.52469496054194,
+          "cell": "DASHBOARD!E32",
+          "formula": "'P&L'!G335"
+        },
+        "y4": {
+          "value": 143.71481658080637,
+          "cell": "DASHBOARD!F32",
+          "formula": "'P&L'!H335"
+        },
+        "y5": {
+          "value": 194.50006770157015,
+          "cell": "DASHBOARD!G32",
+          "formula": "'P&L'!I335"
+        }
+      },
+      "net_income": {
+        "row": 33,
+        "y0": {
+          "value": -22380,
+          "cell": "DASHBOARD!B33",
+          "formula": "'P&L'!D12"
+        },
+        "y1": {
+          "value": 45975.524742577225,
+          "cell": "DASHBOARD!C33",
+          "formula": "'P&L'!E12"
+        },
+        "y2": {
+          "value": 817917.6004094966,
+          "cell": "DASHBOARD!D33",
+          "formula": "'P&L'!F12"
+        },
+        "y3": {
+          "value": 1462166.8119840734,
+          "cell": "DASHBOARD!E33",
+          "formula": "'P&L'!G12"
+        },
+        "y4": {
+          "value": 1564760.7758226208,
+          "cell": "DASHBOARD!F33",
+          "formula": "'P&L'!H12"
+        },
+        "y5": {
+          "value": 1881269.8710383102,
+          "cell": "DASHBOARD!G33",
+          "formula": "'P&L'!I12"
+        }
+      },
+      "total_revenue_dashboard": {
+        "row": 34,
+        "y0": {
+          "value": 256000,
+          "cell": "DASHBOARD!B34",
+          "formula": "'P&L'!D16"
+        },
+        "y1": {
+          "value": 5089873.859999999,
+          "cell": "DASHBOARD!C34",
+          "formula": "'P&L'!E16"
+        },
+        "y2": {
+          "value": 9531906.756,
+          "cell": "DASHBOARD!D34",
+          "formula": "'P&L'!F16"
+        },
+        "y3": {
+          "value": 13632355.380974062,
+          "cell": "DASHBOARD!E34",
+          "formula": "'P&L'!G16"
+        },
+        "y4": {
+          "value": 15652036.908919655,
+          "cell": "DASHBOARD!F34",
+          "formula": "'P&L'!H16"
+        },
+        "y5": {
+          "value": 16014494.195805011,
+          "cell": "DASHBOARD!G34",
+          "formula": "'P&L'!I16"
+        }
+      },
+      "year1_starting_cash": {
+        "value": 1227620,
+        "cell": "Cash!B4"
+      }
+    },
+    "staffing": {
+      "total_fte_per_position_sum": {
+        "y0": {
+          "value": 1,
+          "derivation": "Σ E52:E83 (32 position rows, true total)",
+          "rows_summed": 32
+        },
+        "y1": {
+          "value": 27.25,
+          "derivation": "Σ F52:F83 (32 position rows, true total)",
+          "rows_summed": 32
+        },
+        "y2": {
+          "value": 49.25,
+          "derivation": "Σ G52:G83 (32 position rows, true total)",
+          "rows_summed": 32
+        },
+        "y3": {
+          "value": 71.25,
+          "derivation": "Σ H52:H83 (32 position rows, true total)",
+          "rows_summed": 32
+        },
+        "y4": {
+          "value": 83.25,
+          "derivation": "Σ I52:I83 (32 position rows, true total)",
+          "rows_summed": 32
+        },
+        "y5": {
+          "value": 83.25,
+          "derivation": "Σ J52:J83 (32 position rows, true total)",
+          "rows_summed": 32
+        }
+      },
+      "total_fte_r85_displayed": {
+        "y0": {
+          "value": 1,
+          "formula": "SUM(E52:E77)",
+          "cell": "STAFFING!E85",
+          "note": "V11 displays this; SUM range stops at row 77 — see template defect"
+        },
+        "y1": {
+          "value": 25.75,
+          "formula": "SUM(F52:F77)",
+          "cell": "STAFFING!F85",
+          "note": "V11 displays this; SUM range stops at row 77 — see template defect"
+        },
+        "y2": {
+          "value": 47.25,
+          "formula": "SUM(G52:G77)",
+          "cell": "STAFFING!G85",
+          "note": "V11 displays this; SUM range stops at row 77 — see template defect"
+        },
+        "y3": {
+          "value": 68.25,
+          "formula": "SUM(H52:H77)",
+          "cell": "STAFFING!H85",
+          "note": "V11 displays this; SUM range stops at row 77 — see template defect"
+        },
+        "y4": {
+          "value": 79.25,
+          "formula": "SUM(I52:I77)",
+          "cell": "STAFFING!I85",
+          "note": "V11 displays this; SUM range stops at row 77 — see template defect"
+        },
+        "y5": {
+          "value": 79.25,
+          "formula": "SUM(J52:J77)",
+          "cell": "STAFFING!J85",
+          "note": "V11 displays this; SUM range stops at row 77 — see template defect"
+        }
+      }
+    },
+    "fpf_self_reported": {
+      "fpf_current_ratio": {
+        "row": 37,
+        "y0": {
+          "value": null,
+          "cell": "DASHBOARD!B37",
+          "formula": "IFERROR(B25/B26, \"NA\")"
+        },
+        "y1": {
+          "value": null,
+          "cell": "DASHBOARD!C37",
+          "formula": "IFERROR(C25/C26, \"NA\")"
+        },
+        "y2": {
+          "value": null,
+          "cell": "DASHBOARD!D37",
+          "formula": "IFERROR(D25/D26, \"NA\")"
+        },
+        "y3": {
+          "value": null,
+          "cell": "DASHBOARD!E37",
+          "formula": "IFERROR(E25/E26, \"NA\")"
+        },
+        "y4": {
+          "value": null,
+          "cell": "DASHBOARD!F37",
+          "formula": "IFERROR(F25/F26, \"NA\")"
+        },
+        "y5": {
+          "value": null,
+          "cell": "DASHBOARD!G37",
+          "formula": "IFERROR(G25/G26, \"NA\")"
+        }
+      },
+      "fpf_dcoh": {
+        "row": 38,
+        "y0": {
+          "value": 91.98206945158833,
+          "cell": "DASHBOARD!B38",
+          "formula": "'P&L'!D335"
+        },
+        "y1": {
+          "value": 102.63111840833139,
+          "cell": "DASHBOARD!C38",
+          "formula": "'P&L'!E335"
+        },
+        "y2": {
+          "value": 97.42632593392621,
+          "cell": "DASHBOARD!D38",
+          "formula": "'P&L'!F335"
+        },
+        "y3": {
+          "value": 116.52469496054194,
+          "cell": "DASHBOARD!E38",
+          "formula": "'P&L'!G335"
+        },
+        "y4": {
+          "value": 143.71481658080637,
+          "cell": "DASHBOARD!F38",
+          "formula": "'P&L'!H335"
+        },
+        "y5": {
+          "value": 194.50006770157015,
+          "cell": "DASHBOARD!G38",
+          "formula": "'P&L'!I335"
+        }
+      },
+      "fpf_total_margin_annual": {
+        "row": 40,
+        "y0": {
+          "value": 0,
+          "cell": "DASHBOARD!B40",
+          "formula": "'P&L'!D11"
+        },
+        "y1": {
+          "value": 0,
+          "cell": "DASHBOARD!C40",
+          "formula": "'P&L'!E11"
+        },
+        "y2": {
+          "value": 0,
+          "cell": "DASHBOARD!D40",
+          "formula": "'P&L'!F11"
+        },
+        "y3": {
+          "value": 0,
+          "cell": "DASHBOARD!E40",
+          "formula": "'P&L'!G11"
+        },
+        "y4": {
+          "value": 0,
+          "cell": "DASHBOARD!F40",
+          "formula": "'P&L'!H11"
+        },
+        "y5": {
+          "value": 0,
+          "cell": "DASHBOARD!G40",
+          "formula": "'P&L'!I11"
+        }
+      },
+      "fpf_3yr_total_margin": {
+        "row": 41,
+        "y0": {
+          "value": -0.087421875,
+          "cell": "DASHBOARD!B41",
+          "formula": "SUM('P&L'!$D12:D12)/SUM('P&L'!$D16:D16)"
+        },
+        "y1": {
+          "value": 0.004413782547158198,
+          "cell": "DASHBOARD!C41",
+          "formula": "SUM('P&L'!$D12:E12)/SUM('P&L'!$D16:E16)"
+        },
+        "y2": {
+          "value": 0.05656173772633037,
+          "cell": "DASHBOARD!D41",
+          "formula": "SUM('P&L'!$D12:F12)/SUM('P&L'!$D16:F16)"
+        },
+        "y3": {
+          "value": 0.08232635170246444,
+          "cell": "DASHBOARD!E41",
+          "formula": "SUM('P&L'!E12:G12)/SUM('P&L'!E16:G16)"
+        },
+        "y4": {
+          "value": 0.09905233839192941,
+          "cell": "DASHBOARD!F41",
+          "formula": "SUM('P&L'!F12:H12)/SUM('P&L'!F16:H16)"
+        },
+        "y5": {
+          "value": 0.10835139314946664,
+          "cell": "DASHBOARD!G41",
+          "formula": "SUM('P&L'!G12:I12)/SUM('P&L'!G16:I16)"
+        }
+      },
+      "fpf_debt_to_asset": {
+        "row": 42,
+        "y0": {
+          "value": 0,
+          "cell": "DASHBOARD!B42",
+          "formula": "B31/B30"
+        },
+        "y1": {
+          "value": 0,
+          "cell": "DASHBOARD!C42",
+          "formula": "C31/C30"
+        },
+        "y2": {
+          "value": 0,
+          "cell": "DASHBOARD!D42",
+          "formula": "D31/D30"
+        },
+        "y3": {
+          "value": 0,
+          "cell": "DASHBOARD!E42",
+          "formula": "E31/E30"
+        },
+        "y4": {
+          "value": 0,
+          "cell": "DASHBOARD!F42",
+          "formula": "F31/F30"
+        },
+        "y5": {
+          "value": 0,
+          "cell": "DASHBOARD!G42",
+          "formula": "G31/G30"
+        }
+      },
+      "fpf_cash_flow_annual": {
+        "row": 43,
+        "y0": {
+          "value": -22380,
+          "cell": "DASHBOARD!B43",
+          "formula": "'P&L'!D304"
+        },
+        "y1": {
+          "value": 142125.3681094601,
+          "cell": "DASHBOARD!C43",
+          "formula": "'P&L'!E304"
+        },
+        "y2": {
+          "value": 910161.2248594617,
+          "cell": "DASHBOARD!D43",
+          "formula": "'P&L'!F304"
+        },
+        "y3": {
+          "value": 1550304.3679437896,
+          "cell": "DASHBOARD!E43",
+          "formula": "'P&L'!G304"
+        },
+        "y4": {
+          "value": 1648582.1890352946,
+          "cell": "DASHBOARD!F43",
+          "formula": "'P&L'!H304"
+        },
+        "y5": {
+          "value": 1960554.3194494743,
+          "cell": "DASHBOARD!G43",
+          "formula": "'P&L'!I304"
+        }
+      },
+      "fpf_3yr_cash_flow": {
+        "row": 44,
+        "y0": {
+          "value": -22380,
+          "cell": "DASHBOARD!B44",
+          "formula": "SUM($B43:B43)"
+        },
+        "y1": {
+          "value": 119745.3681094601,
+          "cell": "DASHBOARD!C44",
+          "formula": "SUM($B43:C43)"
+        },
+        "y2": {
+          "value": 1029906.5929689218,
+          "cell": "DASHBOARD!D44",
+          "formula": "SUM($B43:D43)"
+        },
+        "y3": {
+          "value": 2602590.960912711,
+          "cell": "DASHBOARD!E44",
+          "formula": "SUM(C43:E43)"
+        },
+        "y4": {
+          "value": 4109047.7818385456,
+          "cell": "DASHBOARD!F44",
+          "formula": "SUM(D43:F43)"
+        },
+        "y5": {
+          "value": 5159440.8764285585,
+          "cell": "DASHBOARD!G44",
+          "formula": "SUM(E43:G43)"
+        }
+      },
+      "fpf_enrollment_variance": {
+        "row": 48,
+        "y0": {
+          "value": null,
+          "cell": "DASHBOARD!B48",
+          "formula": "IFERROR(DASHBOARD!B49/ENROLLMENT!E36, \"NA\")"
+        },
+        "y1": {
+          "value": 1,
+          "cell": "DASHBOARD!C48",
+          "formula": "IFERROR(DASHBOARD!C49/ENROLLMENT!F36, \"NA\")"
+        },
+        "y2": {
+          "value": 1,
+          "cell": "DASHBOARD!D48",
+          "formula": "IFERROR(DASHBOARD!D49/ENROLLMENT!G36, \"NA\")"
+        },
+        "y3": {
+          "value": 1,
+          "cell": "DASHBOARD!E48",
+          "formula": "IFERROR(DASHBOARD!E49/ENROLLMENT!H36, \"NA\")"
+        },
+        "y4": {
+          "value": 1,
+          "cell": "DASHBOARD!F48",
+          "formula": "IFERROR(DASHBOARD!F49/ENROLLMENT!I36, \"NA\")"
+        },
+        "y5": {
+          "value": 1,
+          "cell": "DASHBOARD!G48",
+          "formula": "IFERROR(DASHBOARD!G49/ENROLLMENT!J36, \"NA\")"
+        }
+      },
+      "fpf_actual_enrollment": {
+        "row": 49,
+        "y0": {
+          "value": 0,
+          "cell": "DASHBOARD!B49",
+          "formula": "'P&L'!D57"
+        },
+        "y1": {
+          "value": 240,
+          "cell": "DASHBOARD!C49",
+          "formula": "'P&L'!E57"
+        },
+        "y2": {
+          "value": 480,
+          "cell": "DASHBOARD!D49",
+          "formula": "'P&L'!F57"
+        },
+        "y3": {
+          "value": 690,
+          "cell": "DASHBOARD!E49",
+          "formula": "'P&L'!G57"
+        },
+        "y4": {
+          "value": 780,
+          "cell": "DASHBOARD!F49",
+          "formula": "'P&L'!H57"
+        },
+        "y5": {
+          "value": 780,
+          "cell": "DASHBOARD!G49",
+          "formula": "'P&L'!I57"
+        }
+      }
+    }
+  },
+  "v11_template_defects": [
+    {
+      "cell": "STAFFING!E85 through J85",
+      "formula_as_written": "=SUM(E52:E77) (and same shape for F-J)",
+      "expected_formula": "=SUM(E52:E83)",
+      "excluded_rows": "R78-R83 (Nurse, Librarian, Manager of Student Support, College & Athletics Director, Manager of College Success, Coordinator of College Success)",
+      "impact_y1_y5": {
+        "y1": 1.5,
+        "y2": 2,
+        "y3": 3,
+        "y4": 4,
+        "y5": 4
+      },
+      "description": "R85 SUM range truncated; understates Total FTE by 1.5-4.0 FTE per year. Propagates to Drivers tab (Per FTE expense lines) and REPORTS."
+    }
+  ],
+  "sum_formula_audit_total_revenue": {
+    "formula": "SUM(E162,E158,E153,E150,E146,E138,E130,E126,E121)",
+    "expected_rows": [
+      121,
+      126,
+      130,
+      138,
+      146,
+      150,
+      153,
+      158,
+      162
+    ],
+    "status": "covers all 9 OSPI revenue subtotals (1000-9000)"
+  },
+  "sum_formula_audit_total_expenses": {
+    "formula": "SUM(E231:E274)",
+    "expected_range": "E231:E274",
+    "status": "covers all expense detail rows 231-272 plus personnel echoes 273-274"
+  }
+}

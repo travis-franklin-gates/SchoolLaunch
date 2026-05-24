@@ -1,0 +1,256 @@
+{
+  "generated_at": "2026-05-23T18:15:09.716Z",
+  "source": "src/lib/budgetEngine.ts:computeFPFScorecard",
+  "inputs": {
+    "starting_cash": 1250000,
+    "conservative_mode": false,
+    "multi_year_summary": [
+      {
+        "year": 1,
+        "enrollment": 240,
+        "operating_revenue": 4127717,
+        "total_revenue": 4146467,
+        "total_expenses": 3303175,
+        "net": 843292,
+        "cumulative_net": 2093292
+      },
+      {
+        "year": 2,
+        "enrollment": 480,
+        "operating_revenue": 8518269,
+        "total_revenue": 8581068,
+        "total_expenses": 5918536.5,
+        "net": 2662531.5,
+        "cumulative_net": 4755823.5
+      },
+      {
+        "year": 3,
+        "enrollment": 690,
+        "operating_revenue": 12595626,
+        "total_revenue": 12738301,
+        "total_expenses": 8716625.75,
+        "net": 4021675.25,
+        "cumulative_net": 8777498.75
+      },
+      {
+        "year": 4,
+        "enrollment": 780,
+        "operating_revenue": 14684472,
+        "total_revenue": 14947797,
+        "total_expenses": 10610902,
+        "net": 4336895,
+        "cumulative_net": 13114393.75
+      },
+      {
+        "year": 5,
+        "enrollment": 780,
+        "operating_revenue": 15123983,
+        "total_revenue": 15517415,
+        "total_expenses": 11197204,
+        "net": 4320211,
+        "cumulative_net": 17434604.75
+      }
+    ]
+  },
+  "scorecard": {
+    "measures": [
+      {
+        "name": "Current Ratio",
+        "formula": "Current Assets ÷ Current Liabilities",
+        "values": [
+          7.6,
+          9.64,
+          12.08,
+          14.83,
+          18.68
+        ],
+        "stage1Target": "≥ 1.0",
+        "stage2Target": "≥ 1.1",
+        "stage1Approaching": "0.9–0.99",
+        "stage2Approaching": "1.0–1.09",
+        "statuses": [
+          "meets",
+          "meets",
+          "meets",
+          "meets",
+          "meets"
+        ],
+        "note": "Planning proxy: Ending Cash ÷ (Annual Expenses / 12). The Commission calculates this from audited balance sheet data."
+      },
+      {
+        "name": "Days of Cash",
+        "formula": "Unrestricted Cash ÷ ((Expenses − Depreciation) / 365)",
+        "values": [
+          231,
+          293,
+          368,
+          451,
+          568
+        ],
+        "stage1Target": "≥ 30 days",
+        "stage2Target": "≥ 60 days",
+        "stage1Approaching": "21–29",
+        "stage2Approaching": "30–59",
+        "statuses": [
+          "meets",
+          "meets",
+          "meets",
+          "meets",
+          "meets"
+        ]
+      },
+      {
+        "name": "Total Margin",
+        "formula": "Net Income ÷ Operating Revenue",
+        "values": [
+          20.4,
+          31.3,
+          31.9,
+          29.5,
+          28.6
+        ],
+        "stage1Target": "≥ 0%",
+        "stage2Target": "≥ 0%",
+        "stage1Approaching": "-2% to 0%",
+        "stage2Approaching": "-2% to 0%",
+        "statuses": [
+          "meets",
+          "meets",
+          "meets",
+          "meets",
+          "meets"
+        ]
+      },
+      {
+        "name": "3-Year Total Margin",
+        "formula": "(Y(n-2)+Y(n-1)+Yn Net) ÷ (Y(n-2)+Y(n-1)+Yn Revenue)",
+        "values": [
+          null,
+          null,
+          29.8,
+          30.8,
+          29.9
+        ],
+        "stage1Target": "N/A",
+        "stage2Target": "> 0%",
+        "stage2Approaching": "-1.5% to 0%",
+        "statuses": [
+          "na",
+          "na",
+          "meets",
+          "meets",
+          "meets"
+        ]
+      },
+      {
+        "name": "Debt-to-Asset",
+        "formula": "Total Liabilities ÷ Total Assets",
+        "values": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "stage1Target": "< 0.90",
+        "stage2Target": "< 0.90",
+        "stage1Approaching": "0.90–1.0",
+        "stage2Approaching": "0.90–1.0",
+        "statuses": [
+          "meets",
+          "meets",
+          "meets",
+          "meets",
+          "meets"
+        ],
+        "note": "No liabilities modeled. The Commission calculates this from audited balance sheet data."
+      },
+      {
+        "name": "Debt Default",
+        "formula": "In default of loan covenants?",
+        "values": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "stage1Target": "No default",
+        "stage2Target": "No default",
+        "statuses": [
+          "na",
+          "na",
+          "na",
+          "na",
+          "na"
+        ],
+        "note": "N/A — No debt modeled in planning mode."
+      },
+      {
+        "name": "Cash Flow",
+        "formula": "Year-End Cash − Prior Year-End Cash",
+        "values": [
+          null,
+          2662531.5,
+          4021675.25,
+          4336895,
+          4320211
+        ],
+        "stage1Target": "> $0",
+        "stage2Target": "> $0",
+        "statuses": [
+          "na",
+          "meets",
+          "meets",
+          "meets",
+          "meets"
+        ]
+      },
+      {
+        "name": "Multi-Year Cash Flow",
+        "formula": "Year N Cash − Year (N−2) Cash",
+        "values": [
+          null,
+          null,
+          6684206.75,
+          8358570.25,
+          8657106
+        ],
+        "stage1Target": "N/A",
+        "stage2Target": "> $0",
+        "statuses": [
+          "na",
+          "na",
+          "meets",
+          "meets",
+          "meets"
+        ]
+      },
+      {
+        "name": "Enrollment Variance",
+        "formula": "Actual Enrollment ÷ Projected Enrollment",
+        "values": [
+          100,
+          100,
+          100,
+          100,
+          100
+        ],
+        "stage1Target": "≥ 95%",
+        "stage2Target": "≥ 95%",
+        "stage1Approaching": "85–94%",
+        "stage2Approaching": "85–94%",
+        "statuses": [
+          "meets",
+          "meets",
+          "meets",
+          "meets",
+          "meets"
+        ],
+        "note": "Informational — becomes meaningful when operating with actual enrollment data."
+      }
+    ],
+    "overallStatus": "green",
+    "overallMessage": "Your model meets all Stage 1 standards for Years 1-2 and all Stage 2 standards for Years 3-5."
+  }
+}

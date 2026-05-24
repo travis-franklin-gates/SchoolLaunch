@@ -1,0 +1,551 @@
+{
+  "generated_at": "2026-05-23T18:15:09.719Z",
+  "source": "Recomputed via src/lib/budgetEngine.ts:computeFPFScorecard on V11 synthetic data",
+  "inputs": {
+    "starting_cash": 1227620,
+    "conservative_mode": false,
+    "multi_year_summary": [
+      {
+        "year": 1,
+        "enrollment": 240,
+        "operating_revenue": 4789873.859999999,
+        "total_revenue": 5089873.859999999,
+        "total_expenses": 5043898.335257422,
+        "net": 45975.524742577225
+      },
+      {
+        "year": 2,
+        "enrollment": 480,
+        "operating_revenue": 9231906.756,
+        "total_revenue": 9531906.756,
+        "total_expenses": 8713989.155590503,
+        "net": 817917.6004094966
+      },
+      {
+        "year": 3,
+        "enrollment": 690,
+        "operating_revenue": 13332355.380974058,
+        "total_revenue": 13632355.380974062,
+        "total_expenses": 12170188.568989988,
+        "net": 1462166.8119840734
+      },
+      {
+        "year": 4,
+        "enrollment": 780,
+        "operating_revenue": 15352036.908919655,
+        "total_revenue": 15652036.908919655,
+        "total_expenses": 14087276.133097034,
+        "net": 1564760.7758226208
+      },
+      {
+        "year": 5,
+        "enrollment": 780,
+        "operating_revenue": 15714494.195805013,
+        "total_revenue": 16014494.195805011,
+        "total_expenses": 14133224.324766701,
+        "net": 1881269.8710383102
+      }
+    ]
+  },
+  "scorecard": {
+    "measures": [
+      {
+        "name": "Current Ratio",
+        "formula": "Current Assets ÷ Current Liabilities",
+        "values": [
+          3.03,
+          2.88,
+          3.5,
+          4.36,
+          5.94
+        ],
+        "stage1Target": "≥ 1.0",
+        "stage2Target": "≥ 1.1",
+        "stage1Approaching": "0.9–0.99",
+        "stage2Approaching": "1.0–1.09",
+        "statuses": [
+          "meets",
+          "meets",
+          "meets",
+          "meets",
+          "meets"
+        ],
+        "note": "Planning proxy: Ending Cash ÷ (Annual Expenses / 12). The Commission calculates this from audited balance sheet data."
+      },
+      {
+        "name": "Days of Cash",
+        "formula": "Unrestricted Cash ÷ ((Expenses − Depreciation) / 365)",
+        "values": [
+          92,
+          88,
+          107,
+          133,
+          181
+        ],
+        "stage1Target": "≥ 30 days",
+        "stage2Target": "≥ 60 days",
+        "stage1Approaching": "21–29",
+        "stage2Approaching": "30–59",
+        "statuses": [
+          "meets",
+          "meets",
+          "meets",
+          "meets",
+          "meets"
+        ]
+      },
+      {
+        "name": "Total Margin",
+        "formula": "Net Income ÷ Operating Revenue",
+        "values": [
+          1,
+          8.9,
+          11,
+          10.2,
+          12
+        ],
+        "stage1Target": "≥ 0%",
+        "stage2Target": "≥ 0%",
+        "stage1Approaching": "-2% to 0%",
+        "stage2Approaching": "-2% to 0%",
+        "statuses": [
+          "meets",
+          "meets",
+          "meets",
+          "meets",
+          "meets"
+        ]
+      },
+      {
+        "name": "3-Year Total Margin",
+        "formula": "(Y(n-2)+Y(n-1)+Yn Net) ÷ (Y(n-2)+Y(n-1)+Yn Revenue)",
+        "values": [
+          null,
+          null,
+          8.5,
+          10.1,
+          11.1
+        ],
+        "stage1Target": "N/A",
+        "stage2Target": "> 0%",
+        "stage2Approaching": "-1.5% to 0%",
+        "statuses": [
+          "na",
+          "na",
+          "meets",
+          "meets",
+          "meets"
+        ]
+      },
+      {
+        "name": "Debt-to-Asset",
+        "formula": "Total Liabilities ÷ Total Assets",
+        "values": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "stage1Target": "< 0.90",
+        "stage2Target": "< 0.90",
+        "stage1Approaching": "0.90–1.0",
+        "stage2Approaching": "0.90–1.0",
+        "statuses": [
+          "meets",
+          "meets",
+          "meets",
+          "meets",
+          "meets"
+        ],
+        "note": "No liabilities modeled. The Commission calculates this from audited balance sheet data."
+      },
+      {
+        "name": "Debt Default",
+        "formula": "In default of loan covenants?",
+        "values": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "stage1Target": "No default",
+        "stage2Target": "No default",
+        "statuses": [
+          "na",
+          "na",
+          "na",
+          "na",
+          "na"
+        ],
+        "note": "N/A — No debt modeled in planning mode."
+      },
+      {
+        "name": "Cash Flow",
+        "formula": "Year-End Cash − Prior Year-End Cash",
+        "values": [
+          null,
+          817917.6004094966,
+          1462166.8119840734,
+          1564760.7758226208,
+          1881269.8710383102
+        ],
+        "stage1Target": "> $0",
+        "stage2Target": "> $0",
+        "statuses": [
+          "na",
+          "meets",
+          "meets",
+          "meets",
+          "meets"
+        ]
+      },
+      {
+        "name": "Multi-Year Cash Flow",
+        "formula": "Year N Cash − Year (N−2) Cash",
+        "values": [
+          null,
+          null,
+          2280084.41239357,
+          3026927.587806694,
+          3446030.646860931
+        ],
+        "stage1Target": "N/A",
+        "stage2Target": "> $0",
+        "statuses": [
+          "na",
+          "na",
+          "meets",
+          "meets",
+          "meets"
+        ]
+      },
+      {
+        "name": "Enrollment Variance",
+        "formula": "Actual Enrollment ÷ Projected Enrollment",
+        "values": [
+          100,
+          100,
+          100,
+          100,
+          100
+        ],
+        "stage1Target": "≥ 95%",
+        "stage2Target": "≥ 95%",
+        "stage1Approaching": "85–94%",
+        "stage2Approaching": "85–94%",
+        "statuses": [
+          "meets",
+          "meets",
+          "meets",
+          "meets",
+          "meets"
+        ],
+        "note": "Informational — becomes meaningful when operating with actual enrollment data."
+      }
+    ],
+    "overallStatus": "green",
+    "overallMessage": "Your model meets all Stage 1 standards for Years 1-2 and all Stage 2 standards for Years 3-5."
+  },
+  "v11_self_reported_fpf": {
+    "fpf_current_ratio": {
+      "row": 37,
+      "y0": {
+        "value": null,
+        "cell": "DASHBOARD!B37",
+        "formula": "IFERROR(B25/B26, \"NA\")"
+      },
+      "y1": {
+        "value": null,
+        "cell": "DASHBOARD!C37",
+        "formula": "IFERROR(C25/C26, \"NA\")"
+      },
+      "y2": {
+        "value": null,
+        "cell": "DASHBOARD!D37",
+        "formula": "IFERROR(D25/D26, \"NA\")"
+      },
+      "y3": {
+        "value": null,
+        "cell": "DASHBOARD!E37",
+        "formula": "IFERROR(E25/E26, \"NA\")"
+      },
+      "y4": {
+        "value": null,
+        "cell": "DASHBOARD!F37",
+        "formula": "IFERROR(F25/F26, \"NA\")"
+      },
+      "y5": {
+        "value": null,
+        "cell": "DASHBOARD!G37",
+        "formula": "IFERROR(G25/G26, \"NA\")"
+      }
+    },
+    "fpf_dcoh": {
+      "row": 38,
+      "y0": {
+        "value": 91.98206945158833,
+        "cell": "DASHBOARD!B38",
+        "formula": "'P&L'!D335"
+      },
+      "y1": {
+        "value": 102.63111840833139,
+        "cell": "DASHBOARD!C38",
+        "formula": "'P&L'!E335"
+      },
+      "y2": {
+        "value": 97.42632593392621,
+        "cell": "DASHBOARD!D38",
+        "formula": "'P&L'!F335"
+      },
+      "y3": {
+        "value": 116.52469496054194,
+        "cell": "DASHBOARD!E38",
+        "formula": "'P&L'!G335"
+      },
+      "y4": {
+        "value": 143.71481658080637,
+        "cell": "DASHBOARD!F38",
+        "formula": "'P&L'!H335"
+      },
+      "y5": {
+        "value": 194.50006770157015,
+        "cell": "DASHBOARD!G38",
+        "formula": "'P&L'!I335"
+      }
+    },
+    "fpf_total_margin_annual": {
+      "row": 40,
+      "y0": {
+        "value": 0,
+        "cell": "DASHBOARD!B40",
+        "formula": "'P&L'!D11"
+      },
+      "y1": {
+        "value": 0,
+        "cell": "DASHBOARD!C40",
+        "formula": "'P&L'!E11"
+      },
+      "y2": {
+        "value": 0,
+        "cell": "DASHBOARD!D40",
+        "formula": "'P&L'!F11"
+      },
+      "y3": {
+        "value": 0,
+        "cell": "DASHBOARD!E40",
+        "formula": "'P&L'!G11"
+      },
+      "y4": {
+        "value": 0,
+        "cell": "DASHBOARD!F40",
+        "formula": "'P&L'!H11"
+      },
+      "y5": {
+        "value": 0,
+        "cell": "DASHBOARD!G40",
+        "formula": "'P&L'!I11"
+      }
+    },
+    "fpf_3yr_total_margin": {
+      "row": 41,
+      "y0": {
+        "value": -0.087421875,
+        "cell": "DASHBOARD!B41",
+        "formula": "SUM('P&L'!$D12:D12)/SUM('P&L'!$D16:D16)"
+      },
+      "y1": {
+        "value": 0.004413782547158198,
+        "cell": "DASHBOARD!C41",
+        "formula": "SUM('P&L'!$D12:E12)/SUM('P&L'!$D16:E16)"
+      },
+      "y2": {
+        "value": 0.05656173772633037,
+        "cell": "DASHBOARD!D41",
+        "formula": "SUM('P&L'!$D12:F12)/SUM('P&L'!$D16:F16)"
+      },
+      "y3": {
+        "value": 0.08232635170246444,
+        "cell": "DASHBOARD!E41",
+        "formula": "SUM('P&L'!E12:G12)/SUM('P&L'!E16:G16)"
+      },
+      "y4": {
+        "value": 0.09905233839192941,
+        "cell": "DASHBOARD!F41",
+        "formula": "SUM('P&L'!F12:H12)/SUM('P&L'!F16:H16)"
+      },
+      "y5": {
+        "value": 0.10835139314946664,
+        "cell": "DASHBOARD!G41",
+        "formula": "SUM('P&L'!G12:I12)/SUM('P&L'!G16:I16)"
+      }
+    },
+    "fpf_debt_to_asset": {
+      "row": 42,
+      "y0": {
+        "value": 0,
+        "cell": "DASHBOARD!B42",
+        "formula": "B31/B30"
+      },
+      "y1": {
+        "value": 0,
+        "cell": "DASHBOARD!C42",
+        "formula": "C31/C30"
+      },
+      "y2": {
+        "value": 0,
+        "cell": "DASHBOARD!D42",
+        "formula": "D31/D30"
+      },
+      "y3": {
+        "value": 0,
+        "cell": "DASHBOARD!E42",
+        "formula": "E31/E30"
+      },
+      "y4": {
+        "value": 0,
+        "cell": "DASHBOARD!F42",
+        "formula": "F31/F30"
+      },
+      "y5": {
+        "value": 0,
+        "cell": "DASHBOARD!G42",
+        "formula": "G31/G30"
+      }
+    },
+    "fpf_cash_flow_annual": {
+      "row": 43,
+      "y0": {
+        "value": -22380,
+        "cell": "DASHBOARD!B43",
+        "formula": "'P&L'!D304"
+      },
+      "y1": {
+        "value": 142125.3681094601,
+        "cell": "DASHBOARD!C43",
+        "formula": "'P&L'!E304"
+      },
+      "y2": {
+        "value": 910161.2248594617,
+        "cell": "DASHBOARD!D43",
+        "formula": "'P&L'!F304"
+      },
+      "y3": {
+        "value": 1550304.3679437896,
+        "cell": "DASHBOARD!E43",
+        "formula": "'P&L'!G304"
+      },
+      "y4": {
+        "value": 1648582.1890352946,
+        "cell": "DASHBOARD!F43",
+        "formula": "'P&L'!H304"
+      },
+      "y5": {
+        "value": 1960554.3194494743,
+        "cell": "DASHBOARD!G43",
+        "formula": "'P&L'!I304"
+      }
+    },
+    "fpf_3yr_cash_flow": {
+      "row": 44,
+      "y0": {
+        "value": -22380,
+        "cell": "DASHBOARD!B44",
+        "formula": "SUM($B43:B43)"
+      },
+      "y1": {
+        "value": 119745.3681094601,
+        "cell": "DASHBOARD!C44",
+        "formula": "SUM($B43:C43)"
+      },
+      "y2": {
+        "value": 1029906.5929689218,
+        "cell": "DASHBOARD!D44",
+        "formula": "SUM($B43:D43)"
+      },
+      "y3": {
+        "value": 2602590.960912711,
+        "cell": "DASHBOARD!E44",
+        "formula": "SUM(C43:E43)"
+      },
+      "y4": {
+        "value": 4109047.7818385456,
+        "cell": "DASHBOARD!F44",
+        "formula": "SUM(D43:F43)"
+      },
+      "y5": {
+        "value": 5159440.8764285585,
+        "cell": "DASHBOARD!G44",
+        "formula": "SUM(E43:G43)"
+      }
+    },
+    "fpf_enrollment_variance": {
+      "row": 48,
+      "y0": {
+        "value": null,
+        "cell": "DASHBOARD!B48",
+        "formula": "IFERROR(DASHBOARD!B49/ENROLLMENT!E36, \"NA\")"
+      },
+      "y1": {
+        "value": 1,
+        "cell": "DASHBOARD!C48",
+        "formula": "IFERROR(DASHBOARD!C49/ENROLLMENT!F36, \"NA\")"
+      },
+      "y2": {
+        "value": 1,
+        "cell": "DASHBOARD!D48",
+        "formula": "IFERROR(DASHBOARD!D49/ENROLLMENT!G36, \"NA\")"
+      },
+      "y3": {
+        "value": 1,
+        "cell": "DASHBOARD!E48",
+        "formula": "IFERROR(DASHBOARD!E49/ENROLLMENT!H36, \"NA\")"
+      },
+      "y4": {
+        "value": 1,
+        "cell": "DASHBOARD!F48",
+        "formula": "IFERROR(DASHBOARD!F49/ENROLLMENT!I36, \"NA\")"
+      },
+      "y5": {
+        "value": 1,
+        "cell": "DASHBOARD!G48",
+        "formula": "IFERROR(DASHBOARD!G49/ENROLLMENT!J36, \"NA\")"
+      }
+    },
+    "fpf_actual_enrollment": {
+      "row": 49,
+      "y0": {
+        "value": 0,
+        "cell": "DASHBOARD!B49",
+        "formula": "'P&L'!D57"
+      },
+      "y1": {
+        "value": 240,
+        "cell": "DASHBOARD!C49",
+        "formula": "'P&L'!E57"
+      },
+      "y2": {
+        "value": 480,
+        "cell": "DASHBOARD!D49",
+        "formula": "'P&L'!F57"
+      },
+      "y3": {
+        "value": 690,
+        "cell": "DASHBOARD!E49",
+        "formula": "'P&L'!G57"
+      },
+      "y4": {
+        "value": 780,
+        "cell": "DASHBOARD!F49",
+        "formula": "'P&L'!H57"
+      },
+      "y5": {
+        "value": 780,
+        "cell": "DASHBOARD!G49",
+        "formula": "'P&L'!I57"
+      }
+    }
+  },
+  "note": "v11_self_reported values come from V11 DASHBOARD!B36:G48. Recomputed scorecard uses identical math against V11 totals."
+}
