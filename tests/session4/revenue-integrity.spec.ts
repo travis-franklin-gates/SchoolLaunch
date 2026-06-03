@@ -17,25 +17,64 @@ import { DEFAULT_ASSUMPTIONS } from '../../src/lib/types'
  */
 
 test.describe('Revenue integrity — LAP High Poverty + SSE accounting', () => {
-  test('LAP High Poverty: 50% FRPL threshold gate + pctFrl factor', () => {
+  test('LAP High Poverty: 50% FRPL threshold gate + pctFrl factor (with FRPL history)', () => {
+    // R-REV-02: the HP supplement now requires a 3-year FRPL history (hasFrplHistory).
+    // These cases pass hasFrplHistory: true to keep exercising the R-REV-01 scaling formula.
+
     // Sub-threshold: pctFrl = 0 → 0 allocation
-    const revBelow = calcCommissionRevenue(300, 0, 12, 10, 5, DEFAULT_ASSUMPTIONS)
+    const revBelow = calcCommissionRevenue(300, 0, 12, 10, 5, DEFAULT_ASSUMPTIONS, 1, 0, true)
     expect(revBelow.lapHighPoverty).toBe(0)
 
     // Sub-threshold: pctFrl = 49 → still 0 (strictly below 50)
-    const revJustBelow = calcCommissionRevenue(300, 49, 12, 10, 5, DEFAULT_ASSUMPTIONS)
+    const revJustBelow = calcCommissionRevenue(300, 49, 12, 10, 5, DEFAULT_ASSUMPTIONS, 1, 0, true)
     expect(revJustBelow.lapHighPoverty).toBe(0)
 
     // At-threshold: pctFrl = 50 → allocation scales with FRL share (not flat per-student)
-    const revAt = calcCommissionRevenue(300, 50, 12, 10, 5, DEFAULT_ASSUMPTIONS)
+    const revAt = calcCommissionRevenue(300, 50, 12, 10, 5, DEFAULT_ASSUMPTIONS, 1, 0, true)
     const expectedAt = Math.round(300 * 0.5 * 374)
     expect(revAt.lapHighPoverty).toBe(expectedAt)
 
     // Above-threshold: higher FRL share → proportionally higher allocation
-    const revHigh = calcCommissionRevenue(300, 80, 12, 10, 5, DEFAULT_ASSUMPTIONS)
+    const revHigh = calcCommissionRevenue(300, 80, 12, 10, 5, DEFAULT_ASSUMPTIONS, 1, 0, true)
     const expectedHigh = Math.round(300 * 0.8 * 374)
     expect(revHigh.lapHighPoverty).toBe(expectedHigh)
     expect(revHigh.lapHighPoverty).toBeGreaterThan(revAt.lapHighPoverty)
+  })
+
+  test('LAP High Poverty: new applicant (no FRPL history) gets $0 even above 50% FRL', () => {
+    // R-REV-02: OSPI's LAP Guide gates the HP supplement on a 3-year rolling FRPL average
+    // (RCW 28A.165). New WA charter applicants have no 3-year history, so HP = 0 regardless of
+    // current FRL. hasFrplHistory defaults to false (new-applicant-by-definition planning tool).
+    const revAt50 = calcCommissionRevenue(300, 50, 12, 10, 5, DEFAULT_ASSUMPTIONS)
+    expect(revAt50.lapHighPoverty).toBe(0)
+
+    const revAt80 = calcCommissionRevenue(300, 80, 12, 10, 5, DEFAULT_ASSUMPTIONS)
+    expect(revAt80.lapHighPoverty).toBe(0)
+
+    // The LAP BASE line is NOT gated by history — it must remain populated above threshold.
+    expect(revAt80.lap).toBeGreaterThan(0)
+  })
+
+  test('R-REV-02: Cedar Grove (240 students, 60% FRL, new applicant) — LAP HP = $0, LAP base intact', () => {
+    // V11 reconciliation pin. Calls the pure function directly with Cedar Grove's inputs —
+    // does NOT read or mutate the cedar-grove-v11 DB row. pctIep/pctEll/pctHicap do not affect
+    // the LAP base or LAP HP lines, so representative values are used.
+    const rev = calcCommissionRevenue(240, 60, 12, 10, 5, DEFAULT_ASSUMPTIONS)
+
+    // New applicant: HP supplement suppressed (V11 shows $0; old behavior over-stated $53,856 Y1).
+    expect(rev.lapHighPoverty).toBe(0)
+
+    // LAP base stays at its statute-correct value: headcount × FRL share × LAP rate (816, COLA Y1).
+    const expectedLapBase = Math.round(240 * 0.6 * 816)
+    expect(rev.lap).toBe(expectedLapBase)
+    expect(rev.lap).toBeGreaterThan(0)
+
+    // Counterfactual: WITH a 3-year FRPL history, HP would have been the $53,856 R-REV-02 removes.
+    const revWithHistory = calcCommissionRevenue(240, 60, 12, 10, 5, DEFAULT_ASSUMPTIONS, 1, 0, true)
+    expect(revWithHistory.lapHighPoverty).toBe(Math.round(240 * 0.6 * 374))
+    expect(revWithHistory.lapHighPoverty).toBe(53856)
+    // LAP base is identical with or without history — proves only the supplement is gated.
+    expect(revWithHistory.lap).toBe(rev.lap)
   })
 
   test('rev.total includes SSE for sub-threshold K-1 school', () => {

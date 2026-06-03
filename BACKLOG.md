@@ -560,7 +560,7 @@ thread SSE through all remaining callers. Regression guardrail: `tests/session4/
 ---
 
 ### R-REV-02 · Investigate possible LAP / LAP High Poverty double-counting for new applicants
-**Status:** `INVESTIGATING` · **Opened:** 2026-05-22 · **Source:** V11 Cedar Grove validation, Session 1
+**Status:** `RESOLVED` · **Opened:** 2026-05-22 · **Resolved:** 2026-06-03 · **Source:** V11 Cedar Grove validation, Session 1
 
 Cedar Grove at 60% FRL × 240 students produces in SchoolLaunch:
 - LAP base: `240 × 0.60 × $816` = $117,504
@@ -590,6 +590,20 @@ project it at the FRL%-implied rate?
 
 **Reference:** `tests/audit/v11-cedar-grove/SESSION_1_GAPS.md` §5.C, OSPI LAP
 Guide 2025, RCW 28A.165.005
+
+**Resolution (2026-06-03):** Option A + (i). Gated the LAP High Poverty
+**supplement** in `calcCommissionRevenue` (`src/lib/calculations.ts`) behind a
+new optional `hasFrplHistory: boolean = false` parameter; the supplement is now
+$0 across the full Y1-Y5 horizon for new applicants (matching V11 / the
+Commission template), while the LAP **base** line is untouched. No schema change
+- the WA Charter pathway is a pre-opening planning tool, so every school is a
+new applicant by definition and there is no FRPL-history column to gate on. The
+Generic pathway is unaffected (it has no LAP High Poverty line). Diagnosis:
+`tests/audit/v11-cedar-grove/R-REV-02-diagnosis.md`. Regression coverage added
+to `tests/session4/revenue-integrity.spec.ts` (new-applicant $0 path, Cedar
+Grove pin, and the prior scaling-formula assertions retained via
+`hasFrplHistory: true`). The Y4 ramp (Option ii) was deliberately not taken;
+it remains open pending WSCSC interpretation.
 
 ---
 
@@ -723,6 +737,38 @@ verification against a real charter contract or WSCSC publication.
 
 **Reference:** `tests/audit/v11-cedar-grove/SESSION_1_GAPS.md` §5.B, V11 INPUTS R122,
 SchoolLaunch Product Spec v4.0 §9.7
+
+---
+
+### R-REV-08 · Settings grant-preview computes LAP High Poverty independently and divergently
+**Status:** `OPEN` · **Opened:** 2026-06-03 · **Source:** R-REV-02 diagnosis (D1)
+
+The Settings page renders a "grant preview" that recomputes LAP High Poverty
+inline instead of calling `calcCommissionRevenue`:
+
+```
+// src/app/(authenticated)/dashboard/settings/page.tsx:113
+lapHighPoverty: Math.round(enrollY1 * (fa.lap_high_poverty_per_pupil || 374)),
+```
+
+This parallel computation diverges from the canonical line in two ways and was
+already wrong **before** R-REV-02: it has **no 50% FRL threshold gate** and
+**no `pctFrl/100` scaling** (flat `enrollment x rate`). After R-REV-02 it also
+fails to reflect the new-applicant `hasFrplHistory` gate, so the Settings
+preview will show a non-zero LAP High Poverty figure where every projection
+surface now correctly shows $0. It is a rate-illustration widget, not a
+projection, so impact is cosmetic/advisory only - but it violates the
+single-source-of-truth principle and will confuse founders comparing Settings
+against Revenue / Multi-Year.
+
+**Proposed fix:** drive the Settings preview from `calcCommissionRevenue`
+(or `calcAllGrants` once that dead helper is either removed or aligned) so all
+grant figures share one computation. Out of scope for R-REV-02 (no-driveby);
+logged here for a future Revenue-engine consolidation pass. Note: `calcAllGrants`
+(`src/lib/calculations.ts:82`) is dead code carrying its own duplicate HP gate
+and should be removed or aligned in the same pass.
+
+**Reference:** `tests/audit/v11-cedar-grove/R-REV-02-diagnosis.md` §D1
 
 ---
 

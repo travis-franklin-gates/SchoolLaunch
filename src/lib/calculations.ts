@@ -116,6 +116,7 @@ export function calcCommissionRevenue(
   assumptions: FinancialAssumptions,
   colaYear: number = 1,
   sse: number = 0,
+  hasFrplHistory: boolean = false,
 ): CommissionRevenue {
   const colaMult = Math.pow(1 + assumptions.revenue_cola_pct / 100, colaYear - 1)
   const regionFactor = assumptions.regionalization_factor || 1.0
@@ -144,9 +145,16 @@ export function calcCommissionRevenue(
   const tbipRate = Math.round((assumptions.tbip_per_pupil || 1600) * colaMult)
   const hicapRate = Math.round((assumptions.hicap_per_pupil || 730) * colaMult)
   const lap = Math.round(headcount * (pctFrl / 100) * lapRate)
-  // LAP High Poverty: OSPI gates allocation at 50% FRPL (three-year rolling average);
-  // amount scales with FRPL share of enrollment, not flat per-student.
-  const lapHighPoverty = pctFrl >= 50 ? Math.round(headcount * (pctFrl / 100) * lapHighPovertyRate) : 0
+  // LAP High Poverty supplement (R-REV-02): OSPI's LAP Guide gates this supplement on a
+  // THREE-YEAR ROLLING FRPL average >= 50% (RCW 28A.165), not a single current-year snapshot.
+  // New WA charter applicants have no 3-year FRPL history, so they do not qualify in their
+  // early projection years. hasFrplHistory defaults to false because the WA Charter pathway is
+  // a pre-opening planning tool: every school modeled in it is a new applicant by definition.
+  // When hasFrplHistory is true, the supplement scales with FRPL share of enrollment (not a
+  // flat per-student amount). The LAP BASE line above is NOT gated this way and is unaffected.
+  const lapHighPoverty = (hasFrplHistory && pctFrl >= 50)
+    ? Math.round(headcount * (pctFrl / 100) * lapHighPovertyRate)
+    : 0
   const tbip = Math.round(headcount * (pctEll / 100) * tbipRate)
   const hicap = Math.round(headcount * (pctHicap / 100) * hicapRate)
 
