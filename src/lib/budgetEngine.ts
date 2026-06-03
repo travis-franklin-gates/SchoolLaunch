@@ -1,3 +1,4 @@
+import { readCustomLines, customLineYearAmount } from './customLines'
 import {
   calcRevenue,
   calcLevyEquity,
@@ -441,6 +442,8 @@ export interface MultiYearDetailedRow {
     total: number
     // Legacy aliases
     apportionment: number
+    // R-REV-03: per-line custom revenue breakdown (engine emits; Commission export reads)
+    customRevenue?: { id: string; name: string; group: string; amount: number }[]
   }
   personnel: {
     certificated: number
@@ -531,6 +534,11 @@ export function computeMultiYearDetailed(
   let cumulativeNet = preOpeningNet
   const rows: MultiYearDetailedRow[] = []
 
+  // R-REV-03: custom revenue lines (WA pathway). Tolerates the legacy generic flat
+  // shape; the Generic engine (computeGenericProjections) is untouched.
+  const customRevenueLines = readCustomLines((profile as unknown as Record<string, unknown>).custom_revenue_lines)
+  const fteY1 = positions.reduce((s, p) => s + (p.fte || 0), 0)
+
   const interestRate = assumptions.interest_rate_on_cash / 100
 
   for (let y = 1; y <= 5; y++) {
@@ -556,8 +564,8 @@ export function computeMultiYearDetailed(
     // totalRevenue is the sum of everything; downstream ratios that need the operating-only
     // denominator (Personnel %, Facility %, FPF Total Margin) read operatingRevenue.
     // Downstream ratios that need everything-in (e.g., Year 1 trajectory headline) read total.
-    const operatingRevenue = rev.total
-    const totalRevenue = operatingRevenue + interestIncome + yearGrantRevenue
+    let operatingRevenue = rev.total
+    let totalRevenue = operatingRevenue + interestIncome + yearGrantRevenue
     // State apportionment (canonical — see stateApportionmentBase). Used for authorizer fee + OSPI cash flow.
     const stateApport = stateApportionmentBase(rev, smallSchoolEnhancement)
 
@@ -660,6 +668,33 @@ export function computeMultiYearDetailed(
     const totalOperations = facilities + supplies + contracted + technology + authorizerFee + insurance + foodService + transportation + curriculum + profDev + marketing + fundraising + contingency
 
     const totalExpenses = totalPersonnel + totalOperations
+
+    // R-REV-03: fold custom revenue into the year totals BEFORE net so it flows to
+    // FPF (which reads operatingRevenue / totalExpenses / net off the row). Recurring
+    // -> operatingRevenue (the Total Margin denominator); one-time -> non-operating only.
+    const fteForYear = positionsForYear.reduce((s, p) => s + (p.fte || 0), 0)
+    const revColaMult = Math.pow(1 + assumptions.revenue_cola_pct / 100, y - 1)
+    const customRevenueDetail = customRevenueLines.map((line) => ({
+      id: line.id,
+      name: line.name,
+      group: line.group,
+      amount: customLineYearAmount(line, y, {
+        enrollment: enr,
+        enrollmentY1: enrollments[0] || 0,
+        fte: fteForYear,
+        fteY1,
+        escalatorMult: revColaMult,
+      }),
+    }))
+    let customRecurringTotal = 0
+    let customOneTimeTotal = 0
+    customRevenueLines.forEach((line, i) => {
+      if (line.recurring) customRecurringTotal += customRevenueDetail[i].amount
+      else customOneTimeTotal += customRevenueDetail[i].amount
+    })
+    operatingRevenue += customRecurringTotal
+    totalRevenue += customRecurringTotal + customOneTimeTotal
+
     const net = totalRevenue - totalExpenses
     cumulativeNet += net
     const dailyExpense = totalExpenses / 365
@@ -694,6 +729,7 @@ export function computeMultiYearDetailed(
         operatingRevenue,
         total: totalRevenue,
         apportionment: stateApportionmentBase(rev, smallSchoolEnhancement),
+        customRevenue: customRevenueDetail,
       },
       personnel: {
         certificated: certCost,

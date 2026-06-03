@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useMemo, type ReactNode } from 'react'
+import { useState, useMemo, useEffect, type ReactNode } from 'react'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useScenario } from '@/lib/ScenarioContext'
 import { calcCommissionRevenue, calcAAFTE, calcSmallSchoolEnhancement, calcSmallSchoolEnhancementFromGrades, SMALL_SCHOOL_THRESHOLDS } from '@/lib/calculations'
 import { getGrantAllocationsForYear } from '@/lib/budgetEngine'
 import { createClient } from '@/lib/supabase/client'
 import type { StartupFundingSource } from '@/lib/types'
+import { CUSTOM_REVENUE_PRESETS, type CustomLine, type CustomLineDriver } from '@/lib/customLines'
 import { useStateConfig } from '@/contexts/StateConfigContext'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import GenericRevenueView from '@/components/dashboard/GenericRevenueView'
@@ -56,6 +57,66 @@ export default function RevenuePage() {
       : DEFAULT_SOURCES
   )
   const [savingFunding, setSavingFunding] = useState(false)
+
+  // P-UX-17: editors must not be saveable until the profile has hydrated. On a cold
+  // direct-load/refresh, the useState initializers above run during the loading-skeleton
+  // render (before the async profile arrives), so they capture empty/default state.
+  // Saving that would overwrite real data (e.g. the funding editor's actual grant with
+  // DEFAULT_SOURCES). The effect below re-initializes both editors once the profile loads.
+  const [hydrated, setHydrated] = useState(false)
+
+  // R-REV-03 custom revenue lines (WA Charter). Reuses the existing column; the
+  // Generic pathway's reader/writer are untouched.
+  const [customRevLines, setCustomRevLines] = useState<CustomLine[]>(
+    Array.isArray((profile as unknown as Record<string, unknown>).custom_revenue_lines)
+      ? ((profile as unknown as Record<string, unknown>).custom_revenue_lines as CustomLine[])
+      : []
+  )
+  const [savingCustomRev, setSavingCustomRev] = useState(false)
+  const [presetPick, setPresetPick] = useState('')
+
+  function newLineId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+    return `cl-${Date.now()}`
+  }
+  function addCustomRevPreset() {
+    const p = CUSTOM_REVENUE_PRESETS.find((x) => x.name === presetPick)
+    setCustomRevLines((prev) => [...prev, {
+      id: newLineId(),
+      name: p?.name ?? 'New Revenue Line',
+      group: p?.group ?? 'Other',
+      driver: p?.driver ?? 'flat',
+      amountY1: 0,
+      recurring: true,
+    }])
+    setPresetPick('')
+  }
+  function updateCustomRev(idx: number, field: keyof CustomLine, value: string | number | boolean) {
+    setCustomRevLines((prev) => prev.map((l, i) => (i === idx ? { ...l, [field]: value } : l)))
+  }
+  function removeCustomRev(idx: number) {
+    setCustomRevLines((prev) => prev.filter((_, i) => i !== idx))
+  }
+  async function saveCustomRevenue() {
+    if (!schoolId) return
+    setSavingCustomRev(true)
+    await supabase.from('school_profiles').update({ custom_revenue_lines: customRevLines }).eq('school_id', schoolId)
+    setSavingCustomRev(false)
+    await reload()
+  }
+  const customRevY1Total = customRevLines.reduce((s, l) => s + (Number(l.amountY1 ?? l.amount) || 0), 0)
+
+  // P-UX-17: hydrate both editors from the profile exactly once, after it loads.
+  // Warm nav (profile already loaded at mount) hydrates on the first effect tick, so
+  // behavior is unchanged; cold load hydrates once `loading` flips false. Guarded by
+  // `hydrated` so later profile reloads (e.g. after Save) don't clobber local edits.
+  useEffect(() => {
+    if (loading || hydrated) return
+    const cr = (profile as unknown as Record<string, unknown>).custom_revenue_lines
+    setCustomRevLines(Array.isArray(cr) ? (cr as CustomLine[]) : [])
+    setFundingSources(profile.startup_funding && profile.startup_funding.length > 0 ? profile.startup_funding : DEFAULT_SOURCES)
+    setHydrated(true)
+  }, [loading, hydrated, profile])
 
   const totalFunding = fundingSources.reduce((s, f) => s + f.amount, 0)
   const securedFunding = fundingSources
@@ -505,6 +566,132 @@ export default function RevenuePage() {
         )
       })()}
 
+      {/* R-REV-03: Custom Revenue Lines editor (WA Charter). Flows into Multi-Year,
+          the Commission Scorecard, and the Commission export via computeMultiYearDetailed. */}
+      <div id="custom-revenue" className="bg-white border border-slate-200 rounded-xl shadow-sm mt-4 px-6 py-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-700">Custom Revenue Lines</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Itemize additional WA Charter revenue (Title II/III, state food and transportation, OSPI grants). These flow into Multi-Year, the Commission Scorecard, and the Commission export.</p>
+          </div>
+          {canEdit && (
+            <div className="flex gap-2 items-center">
+              <select
+                value={presetPick}
+                onChange={(e) => setPresetPick(e.target.value)}
+                disabled={!hydrated}
+                className="px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white disabled:opacity-50"
+              >
+                <option value="">Add common line...</option>
+                {CUSTOM_REVENUE_PRESETS.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
+              </select>
+              <button
+                onClick={addCustomRevPreset}
+                disabled={!hydrated}
+                className="px-3 py-1.5 text-xs font-medium text-teal-600 border border-teal-200 rounded-lg hover:bg-teal-50 transition-colors disabled:opacity-50"
+              >
+                + Add
+              </button>
+              <button
+                onClick={saveCustomRevenue}
+                disabled={savingCustomRev || !hydrated}
+                className="px-3 py-1.5 text-xs font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+              >
+                {savingCustomRev ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {customRevLines.length === 0 ? (
+          <p className="text-xs text-slate-400 italic">No custom revenue lines yet. Use &quot;Add common line&quot; to pre-fill a WA Charter line, or add your own.</p>
+        ) : (
+          <div className="overflow-x-auto sl-scroll">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-white border-b border-slate-200">
+                  <th className="text-left px-3 py-2 font-semibold text-slate-600 text-xs">Line Name</th>
+                  <th className="text-left px-3 py-2 font-semibold text-slate-600 text-xs w-40">Group</th>
+                  <th className="text-left px-3 py-2 font-semibold text-slate-600 text-xs w-36">Driver</th>
+                  <th className="text-right px-3 py-2 font-semibold text-slate-600 text-xs w-32">Year 1 Amount</th>
+                  <th className="text-center px-3 py-2 font-semibold text-slate-600 text-xs w-24">Recurring</th>
+                  <th className="px-3 py-2 w-8"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {customRevLines.map((l, idx) => (
+                  <tr key={l.id ?? idx} className="border-b border-slate-100 bg-white">
+                    <td className="px-3 py-2">
+                      <input
+                        type="text"
+                        value={l.name ?? l.label ?? ''}
+                        onChange={(e) => updateCustomRev(idx, 'name', e.target.value)}
+                        placeholder="Revenue line name..."
+                        disabled={!canEdit}
+                        className="w-full border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <select
+                        value={l.group ?? 'Other'}
+                        onChange={(e) => updateCustomRev(idx, 'group', e.target.value)}
+                        disabled={!canEdit}
+                        className="w-full border border-slate-200 rounded px-2 py-1 text-sm bg-white disabled:bg-slate-50"
+                      >
+                        {['State & Local', 'Federal', 'State Categorical', 'Program Revenue', 'Other'].map((g) => <option key={g} value={g}>{g}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-3 py-2">
+                      <select
+                        value={l.driver ?? 'flat'}
+                        onChange={(e) => updateCustomRev(idx, 'driver', e.target.value as CustomLineDriver)}
+                        disabled={!canEdit}
+                        className="w-full border border-slate-200 rounded px-2 py-1 text-sm bg-white disabled:bg-slate-50"
+                      >
+                        <option value="per_pupil">Per Pupil</option>
+                        <option value="per_fte">Per FTE</option>
+                        <option value="flat">Flat</option>
+                        <option value="inflation">Inflation-escalated</option>
+                      </select>
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="number"
+                        step={1000}
+                        value={l.amountY1 ?? l.amount ?? 0}
+                        onChange={(e) => updateCustomRev(idx, 'amountY1', Number(e.target.value))}
+                        disabled={!canEdit}
+                        className="w-28 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50"
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      <input
+                        type="checkbox"
+                        checked={l.recurring !== false}
+                        onChange={(e) => updateCustomRev(idx, 'recurring', e.target.checked)}
+                        disabled={!canEdit}
+                        className="h-4 w-4 accent-teal-600"
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {canEdit && (
+                        <button onClick={() => removeCustomRev(idx)} className="text-red-400 hover:text-red-600 text-lg leading-none" aria-label="Remove line">&times;</button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                <tr className="bg-slate-50">
+                  <td className="px-3 py-2 text-xs font-semibold text-slate-600" colSpan={3}>Custom Revenue Subtotal (Year 1)</td>
+                  <td className="px-3 py-2 text-right text-xs font-semibold text-slate-700">{fmt(customRevY1Total)}</td>
+                  <td colSpan={2}></td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="text-xs text-slate-400 mt-2 italic">Recurring lines count toward Operating Revenue and the Total Margin metric; one-time lines are non-operating. Per-year values scale by the selected driver (revenue COLA {assumptions.revenue_cola_pct}%/yr).</p>
+          </div>
+        )}
+      </div>
+
       {/* Funding Sources management — lifted out of the revenue table for Phase 2's
           DataTable consistency. Logically separate from the breakdown above. */}
       <div id="startup-grants" data-tour="startup-grants" className="bg-white border border-slate-200 rounded-xl shadow-sm mt-4 px-6 py-4 scroll-mt-6">
@@ -517,13 +704,14 @@ export default function RevenuePage() {
             <div className="flex gap-2">
               <button
                 onClick={addSource}
-                className="px-3 py-1.5 text-xs font-medium text-teal-600 border border-teal-200 rounded-lg hover:bg-teal-50 transition-colors"
+                disabled={!hydrated}
+                className="px-3 py-1.5 text-xs font-medium text-teal-600 border border-teal-200 rounded-lg hover:bg-teal-50 transition-colors disabled:opacity-50"
               >
                 + Add Source
               </button>
               <button
                 onClick={saveFunding}
-                disabled={savingFunding}
+                disabled={savingFunding || !hydrated}
                 className="px-3 py-1.5 text-xs font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
               >
                 {savingFunding ? 'Saving...' : 'Save'}

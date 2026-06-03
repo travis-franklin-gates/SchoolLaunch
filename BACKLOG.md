@@ -470,6 +470,33 @@ advisory-hash byte-identical guard before shipping.
 
 ---
 
+### P-UX-17 · Cold-load editor hydration / Save data-loss guard (Revenue tab)
+**Status:** `RESOLVED` · **Opened:** 2026-06-03 · **Resolved:** 2026-06-03 · **Source:** R-REV-03 build (integration)
+
+The Revenue-tab editors (Startup Funding, and the new R-REV-03 Custom Revenue
+Lines) initialized their `useState` from `profile`. On a COLD direct-load or
+refresh of `/dashboard/revenue`, those initializers run during the loading-skeleton
+render - before the async profile hydrates - so they captured empty / DEFAULT_SOURCES
+state. Clicking Save then persisted that, overwriting real data: confirmed live that
+the funding editor showed DEFAULT_SOURCES ($150k/$50k) instead of the school's actual
+$350k CSP grant, so a cold-load Save was an active corruption bug. The warm path
+(Overview -> Revenue via SPA nav) was unaffected because the profile was already loaded
+at mount.
+
+**Fix (this commit):** a single `hydrated` flag gates BOTH editors - Save/Add are
+disabled until the profile loads - and one `useEffect` re-initializes both editors
+from the loaded profile once `loading` flips false (guarded so post-Save reloads do
+not clobber local edits). Warm-path behavior unchanged (hydrates on the first effect
+tick at mount); cold load no longer presents a saveable empty/default state.
+
+**Verification:** Playwright against test-columbia - warm nav renders the seeded
+custom lines as before; a cold direct-load then Save no longer wipes the seeded
+custom_revenue_lines or the real startup_funding grant.
+
+**Reference:** `src/app/(authenticated)/dashboard/revenue/page.tsx`
+
+---
+
 ## Test Infrastructure
 
 ### T-INFRA-01 · No isolated Supabase test environment

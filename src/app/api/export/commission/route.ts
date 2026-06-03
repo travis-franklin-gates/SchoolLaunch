@@ -26,6 +26,7 @@ interface MultiYearRow {
     operatingRevenue: number
     total: number
     apportionment: number
+    customRevenue?: { id: string; name: string; group: string; amount: number }[]
   }
   personnel: {
     certificated: number
@@ -238,9 +239,31 @@ export async function POST(request: NextRequest) {
     ['11.0', 'Program Revenue', 'Food Service (NSLP)', 'Per Pupil', 0, ...multiYear.map((r) => r.revenue.foodServiceRev)],
     ['11.1', 'Program Revenue', 'Transportation (State)', 'Per Pupil', 0, ...multiYear.map((r) => r.revenue.transportationRev)],
     ['12.0', 'Other', 'Interest & Other Income', 'Cash Balance', 0, ...multiYear.map((r) => r.revenue.interestIncome)],
-    [],
-    ['', '', 'Total Revenue', '', 0, ...multiYear.map((r) => r.revenue.total)],
   ]
+
+  // R-REV-03: itemized custom revenue lines, threaded as rows under their group.
+  // Pure reader - amounts come from the engine's row.revenue.customRevenue.
+  const customRevIds: string[] = []
+  const customRevMeta = new Map<string, { name: string; group: string }>()
+  for (const r of multiYear) {
+    for (const c of (r.revenue.customRevenue || [])) {
+      if (!customRevMeta.has(c.id)) { customRevIds.push(c.id); customRevMeta.set(c.id, { name: c.name, group: c.group }) }
+    }
+  }
+  customRevIds.forEach((id, i) => {
+    const meta = customRevMeta.get(id)!
+    revRows.push([
+      `13.${i + 1}`,
+      meta.group || 'Custom Revenue',
+      meta.name,
+      'Custom',
+      0,
+      ...multiYear.map((r) => (r.revenue.customRevenue || []).find((c) => c.id === id)?.amount ?? 0),
+    ])
+  })
+
+  revRows.push([])
+  revRows.push(['', '', 'Total Revenue', '', 0, ...multiYear.map((r) => r.revenue.total)])
 
   const revSheet = XLSX.utils.aoa_to_sheet(revRows)
   XLSX.utils.book_append_sheet(wb, revSheet, 'REVENUE')
