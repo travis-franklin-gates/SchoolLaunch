@@ -7,6 +7,7 @@ import type { Pathway } from '@/lib/stateConfig'
 import { getStateConfig } from '@/lib/stateConfig'
 import Tooltip from '@/components/ui/Tooltip'
 import { CurrencyInput } from '@/components/ui/CurrencyInput'
+import { waSeedSalary, SALARY_SOURCE_NOTE } from '@/lib/staffingDefaults'
 
 interface LocalPosition {
   key: string
@@ -59,7 +60,7 @@ export function buildDefaultPositions(enrollment: number, maxClassSize: number, 
     title: 'CEO/Executive Director',
     category: 'admin',
     fte: 1,
-    salary: 120000,
+    salary: waSeedSalary('ceo_director'),
     positionType: 'ceo_director',
     classification: 'Administrative',
     driver: 'fixed',
@@ -70,7 +71,7 @@ export function buildDefaultPositions(enrollment: number, maxClassSize: number, 
     title: 'Principal/Head of School',
     category: 'admin',
     fte: 1,
-    salary: 95000,
+    salary: waSeedSalary('principal'),
     positionType: 'principal',
     classification: 'Administrative',
     driver: 'fixed',
@@ -82,7 +83,7 @@ export function buildDefaultPositions(enrollment: number, maxClassSize: number, 
     title: isSecondary ? 'Classroom Teacher - Middle School' : 'Classroom Teacher - Elementary',
     category: 'certificated',
     fte: sections,
-    salary: isSecondary ? 62000 : 58000,
+    salary: waSeedSalary(isSecondary ? 'teacher_ms' : 'teacher_elem'),
     positionType: isSecondary ? 'teacher_ms' : 'teacher_elem',
     classification: 'Certificated',
     driver: 'per_pupil',
@@ -93,7 +94,7 @@ export function buildDefaultPositions(enrollment: number, maxClassSize: number, 
     title: 'Special Education (SPED) Teacher',
     category: 'certificated',
     fte: 1,
-    salary: 62000,
+    salary: waSeedSalary('sped_teacher'),
     positionType: 'sped_teacher',
     classification: 'Certificated',
     driver: 'fixed',
@@ -105,7 +106,7 @@ export function buildDefaultPositions(enrollment: number, maxClassSize: number, 
     title: 'Administrative Assistant/Office Manager',
     category: 'classified',
     fte: 1,
-    salary: 52000,
+    salary: waSeedSalary('office_mgr'),
     positionType: 'office_mgr',
     classification: 'Classified',
     driver: 'fixed',
@@ -116,7 +117,7 @@ export function buildDefaultPositions(enrollment: number, maxClassSize: number, 
     title: 'Instructional Aides/Paraeducators',
     category: 'classified',
     fte: paras,
-    salary: 38000,
+    salary: waSeedSalary('paraeducator'),
     positionType: 'paraeducator',
     classification: 'Classified',
     driver: 'per_pupil',
@@ -336,7 +337,11 @@ export default function StepStaffing({ enrollment, maxClassSize, sectionsY1, gra
               <th className="text-left py-2 pr-3 font-medium text-slate-600">Position Title</th>
               <th className="text-left py-2 pr-3 font-medium text-slate-600">Category</th>
               <th className="text-right py-2 pr-3 font-medium text-slate-600">FTE</th>
-              <th className="text-right py-2 pr-3 font-medium text-slate-600">Annual Salary</th>
+              <th className="text-right py-2 pr-3 font-medium text-slate-600">
+                <Tooltip content={SALARY_SOURCE_NOTE} position="top" multiline>
+                  <span tabIndex={0} className="cursor-help border-b border-dotted border-slate-400">Annual Salary</span>
+                </Tooltip>
+              </th>
               <th className="text-right py-2 pr-3 font-medium text-slate-600">Benefits ({Math.round(benefitsRate * 100)}%)</th>
               <th className="text-right py-2 pr-3 font-medium text-slate-600">Total Cost</th>
               <th className="py-2 w-10"></th>

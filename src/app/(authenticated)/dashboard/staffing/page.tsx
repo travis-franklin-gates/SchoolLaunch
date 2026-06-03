@@ -6,6 +6,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { calcBenefits } from '@/lib/calculations'
 import { createClient } from '@/lib/supabase/client'
 import { COMMISSION_POSITIONS, getCommissionPosition } from '@/lib/types'
+import { SALARY_SOURCE_NOTE } from '@/lib/staffingDefaults'
 import { expansionToEnrollmentArray, getRetentionRate } from '@/lib/gradeExpansion'
 import { evaluatePersonnelPctHealth } from '@/lib/healthThresholds'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -822,7 +823,11 @@ export default function StaffingPage() {
                 <th className="py-3 w-6"></th>
                 <th className="text-left px-3 py-3 min-w-[220px]">Position</th>
                 <th data-tour="driver-column" className="text-left px-2 py-3 w-[80px]">Driver</th>
-                <th data-tour="bm-column" className="text-right px-2 py-3 w-[100px]">Salary (Y1)</th>
+                <th data-tour="bm-column" className="text-right px-2 py-3 w-[100px]">
+                  <Tooltip content={SALARY_SOURCE_NOTE} position="top" multiline>
+                    <span tabIndex={0} className="cursor-help border-b border-dotted border-slate-400">Salary (Y1)</span>
+                  </Tooltip>
+                </th>
                 {[1, 2, 3, 4, 5].map((y) => (
                   <th key={y} data-year={y} {...(y === 1 ? { 'data-tour': 'year-columns' } : {})} className="text-right px-2 py-3 w-[70px]">Y{y} FTE</th>
                 ))}

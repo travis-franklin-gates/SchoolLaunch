@@ -772,6 +772,33 @@ and should be removed or aligned in the same pass.
 
 ---
 
+### R-REV-09 · Dead parallel WA Charter salary catalog in stateConfig.ts
+**Status:** `OPEN` · **Opened:** 2026-06-03 · **Source:** R-REV-05
+
+After the R-REV-05 consolidation, `WA_CHARTER_POSITIONS` in `src/lib/stateConfig.ts`
+is a dead parallel 27-position salary catalog. Its comment claims "Exact match to
+COMMISSION_POSITIONS in types.ts", but it is NOT consumed by WA Charter onboarding:
+`StepStaffing.getDefaults()` routes the `wa_charter` pathway to
+`buildDefaultPositions` (which now reads salaries from `COMMISSION_POSITIONS` via
+`waSeedSalary`), and only non-WA pathways call `buildDefaultPositionsFromConfig`,
+which is the only reader of stateConfig position salaries. So `WA_CHARTER_POSITIONS`
+carries `default_salary` numbers that nothing in the WA path uses, and which can
+silently drift from the single source of truth.
+
+**Proposed fix:** either delete `WA_CHARTER_POSITIONS` (if no WA path needs a
+stateConfig-shaped position list) or derive it from `COMMISSION_POSITIONS` so there
+is exactly one place salaries live. Confirm no remaining reader before deleting.
+
+**Sub-note:** `tests/session4/revenue-classification.spec.ts:75-80` carries stale
+inline salary literals (the old below-market onboarding defaults: 120000 / 95000 /
+58000 / 62000 / 52000 / 38000). They do not break the test (inline fixture data,
+not catalog reads) but should be refreshed to the current benchmark values in the
+same pass for realism.
+
+**Reference:** `tests/audit/v11-cedar-grove/R-REV-05-diagnosis.md` §D1
+
+---
+
 ## Session 4 audit — deferred items
 
 These came out of the Session 4 audit and weren't addressed in that
