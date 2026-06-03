@@ -441,6 +441,35 @@ less-conservative template. Documentation is the right fix.
 
 ---
 
+### P-UX-16 · Diagnose projSlice for the same canonicalizer brittleness P-UX-11 fixed
+**Status:** `OPEN` · **Opened:** 2026-06-03 · **Source:** P-UX-11
+
+P-UX-11 hardened the fundingSlice pipeline in `canonicalizeProjectionInputs`
+(`src/lib/buildSchoolContext.ts`) against non-canonical startup_funding shapes.
+The sibling projSlice (same function, lines ~60-73) has a latent version of the
+same bug: it sorts on `a.cat.localeCompare(b.cat)` / `a.sub.localeCompare(b.sub)`
+where `cat: r.category` and `sub: r.subcategory` carry NO `?? ''` default (unlike
+posSlice / gepSlice, which default their sort keys). A budget_projections row
+with a missing/null category or subcategory would throw the same TypeError and
+crash the same dashboard surfaces (Overview, Advisory, Scenarios).
+
+Not fixed under P-UX-11 by decision: scope was held to the diagnosed
+startup_funding vector, and projSlice uses a COMPOUND sort key
+(`y -> rev -> cat -> sub`), not fundingSlice's single-key string sort, so the
+P-UX-11 `coerceSource` helper does not transfer as a provably byte-identical
+shared guard. budget_projections is editor/DB-controlled (category/subcategory
+effectively always present today), so the risk is currently low.
+
+**Proposed next step:** diagnose whether any seeding/import path (e.g. the
+R-REV-03 OSPI line-item work) can write projection rows without category /
+subcategory. If so, harden cat/sub with the same `?? ''` pattern posSlice/gepSlice
+already use (a pure superset, byte-identical for valid input). Confirm against the
+advisory-hash byte-identical guard before shipping.
+
+**Reference:** `tests/audit/v11-cedar-grove/P-UX-11-diagnosis.md` §D3
+
+---
+
 ## Test Infrastructure
 
 ### T-INFRA-01 · No isolated Supabase test environment
