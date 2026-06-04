@@ -528,20 +528,50 @@ scenario 7b now passes (51/51).
 ---
 
 ### P-UX-19 · computeCarryForward crashes on null pre_opening_transactions / pre_opening_expenses entries
-**Status:** `OPEN` (candidate) · **Opened:** 2026-06-04 · **Source:** P-UX-18 diagnosis (D3)
+**Status:** `RESOLVED` · **Opened:** 2026-06-04 · **Resolved:** 2026-06-04 · **Source:** P-UX-18 diagnosis (D3)
 
 Same null-entry crash class as P-UX-18, different fields. In `computeCarryForward`
-(`budgetEngine.ts:120-121`): `pre_opening_transactions.reduce((s, tx) => s + tx.amount, 0)`
+(`budgetEngine.ts:129-130`): `pre_opening_transactions.reduce((s, tx) => s + tx.amount, 0)`
 and `pre_opening_expenses.reduce((s, e) => s + e.budgeted, 0)` read `.amount` / `.budgeted`
 with no per-entry guard. A null entry (direct DB seed / import / backfill) throws
-`Cannot read properties of null (reading 'amount')` and crashes the same engine-backed
-surfaces. Reproduced during P-UX-18 Phase 0. Kept OUT of P-UX-18 scope (no drive-by; that
-pass was held to `startup_funding`).
+`Cannot read properties of null (reading 'amount')`; a non-finite numeric (e.g. `{amount:'x'}`)
+silently string-concatenates to a masked NaN that wrongly triggers the budget fallback path.
 
-**Proposed fix:** filter null/non-object entries (and coerce `amount`/`budgeted` to finite)
-at these two reducers — ideally a small shared `coerceTransactions`/`coerceExpenses` mirroring
-P-UX-18's value-preserving, byte-identical approach. Family link: P-UX-11 (advisory funding),
-P-UX-16 (advisory projSlice), P-UX-18 (engine funding).
+**Fix (this commit):** two distinct value-preserving canonicalizers in `src/lib/preOpening.ts`
+(`canonicalizePreOpeningTransactions`, `canonicalizePreOpeningExpenses` — NOT
+`canonicalizeStartupFunding`; the shapes differ). Semantics: DROP entries that are
+null/non-object/non-finite-numeric (no zero-coercion — a fabricated $0 line is its own
+corruption); well-formed entries pass through byte-identical; idempotent. Both
+`computeCarryForward` reads routed through them at the boundary. Advisory path NOT touched
+(these fields are not in `computeAdvisoryHash`). Scope held to the engine reader per decision.
+
+**Verification:** `tests/session4/pre-opening-engine-canonicalizer.spec.ts` (7 tests): malformed
+inputs assert the actual carry-forward VALUE (null-throw -> 300000; masked-NaN -> 300000, was
+wrongly 340001); no-op + idempotent; byte-identical pins (carry-forward WA 350000 / Generic
+120000, `computeMultiYearDetailed` unchanged, `computeAdvisoryHash` unchanged). Full pure
+session4 suite green; tsc clean; `npm run build` exit 0.
+
+**Reference:** `tests/audit/v11-cedar-grove/P-UX-19-diagnosis.md`
+
+---
+
+### P-UX-20 · Remove parallel carry-forward / preOpenCash derivations; route all through computeCarryForward
+**Status:** `OPEN` · **Opened:** 2026-06-04 · **Source:** P-UX-19 (scope decision)
+
+The `multiyear/page.tsx` inline reader (~50-51) re-implements pre-opening carry-forward instead
+of calling `computeCarryForward` — a single-source violation and, until rerouted, a null-entry
+crash vector on malformed `pre_opening_transactions`/`pre_opening_expenses`. Fix: delete the
+re-implementation, read from the canonical engine (made crash-safe by P-UX-19); the multiyear
+crash closes as a consequence.
+
+Diagnosis MUST grep for every site that derives carry-forward or preOpenCash WITHOUT calling
+`computeCarryForward` (multiyear page, scorecard/advisory preOpenCash path, exports, anywhere).
+This likely also explains overnight Divergence #2 (84-vs-88 DCOH gap between the cached advisory
+and the `computeCarryForward`-derived preOpenCash); if the inventory finds a second preOpenCash
+source feeding the scorecard, that resolves Divergence #2 directly. The cashflow editor read is
+flagged here as a WRITER (editor path, outside the import/seed threat model) — confirm
+read-vs-write in diagnosis; canonicalize only if it reads raw. Must land before R-REV-04 CSP
+fixtures. Byte-identical proof required on multiyear displayed values across all four pathways.
 
 **Reference:** `tests/audit/v11-cedar-grove/P-UX-18-diagnosis.md` (sibling crash classes)
 

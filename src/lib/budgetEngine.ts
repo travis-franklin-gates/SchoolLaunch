@@ -1,6 +1,7 @@
 import { readCustomLines, customLineYearAmount } from './customLines'
 import { readFacilityFinancing, annualDepreciation, annualInterest } from './facilityFinancing'
 import { canonicalizeStartupFunding } from './startupFunding'
+import { canonicalizePreOpeningTransactions, canonicalizePreOpeningExpenses } from './preOpening'
 import {
   calcRevenue,
   calcLevyEquity,
@@ -110,8 +111,7 @@ import { expansionToEnrollmentArray, computeExpansionEnrollments, teachersPerNew
  */
 export function computeCarryForward(profile: SchoolProfile): number {
   // P-UX-18: canonicalize raw startup_funding (the actual first crash site, :107) before
-  // iterating. No-op on canonical input. NOTE: pre_opening_transactions / pre_opening_expenses
-  // below share the same null-entry crash class (logged as a backlog candidate, not in scope).
+  // iterating. No-op on canonical input. P-UX-19 does the same for the pre_opening_* reads below.
   const sources: StartupFundingSource[] = canonicalizeStartupFunding(profile.startup_funding)
   const totalFunding = sources.reduce((s, f) => s + f.amount, 0)
 
@@ -125,9 +125,11 @@ export function computeCarryForward(profile: SchoolProfile): number {
   }
   if (year0Total === 0) year0Total = totalFunding
 
-  const preOpenTransactions: { amount: number }[] = profile.pre_opening_transactions || []
+  // P-UX-19: canonicalize at the reader boundary (drops null/non-object/non-finite entries;
+  // no-op on canonical input). Closes the sibling null-entry crash flagged by P-UX-18.
+  const preOpenTransactions = canonicalizePreOpeningTransactions(profile.pre_opening_transactions)
   const preOpenActualSpend = preOpenTransactions.reduce((s, tx) => s + tx.amount, 0)
-  const preOpenBudget = (profile.pre_opening_expenses || []).reduce((s, e: { budgeted: number }) => s + e.budgeted, 0)
+  const preOpenBudget = canonicalizePreOpeningExpenses(profile.pre_opening_expenses).reduce((s, e) => s + e.budgeted, 0)
   const preOpenExpenses = preOpenActualSpend > 0 ? preOpenActualSpend : preOpenBudget
 
   return year0Total - preOpenExpenses
