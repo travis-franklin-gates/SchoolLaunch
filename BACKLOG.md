@@ -588,7 +588,20 @@ test-columbia's stale cache cleared. Reference: `tests/audit/v11-cedar-grove/P-U
 ---
 
 ### P-UX-21 · Advisory cache must invalidate on engine-code changes (not just inputs + PROMPT_VERSION)
-**Status:** `OPEN` · **Opened:** 2026-06-04 · **Source:** P-UX-20 (Divergence #2 root cause)
+**Status:** `RESOLVED` · **Opened:** 2026-06-04 · **Resolved:** 2026-06-04 · **Source:** P-UX-20 (Divergence #2 root cause)
+
+**Resolution (P-UX-21 commit):** Mechanism #2 (build-time engine content-hash). `scripts/gen-engine-version.cjs`
+(npm `prebuild`, plain Node, LF-normalized sha256 of the 9 number-engine files) writes the committed
+`src/lib/engineVersion.ts` (`ENGINE_VERSION`); `computeAdvisoryHash` now returns
+`PROMPT_VERSION|ENGINE_VERSION|djb2|len`, so engine-math changes invalidate advisory caches AND
+`scenarios.base_data_hash` (same function). Split: engine math = auto content-hash; prose/context =
+PROMPT_VERSION (buildSchoolContext deliberately EXCLUDED from the hashed set). File list documented as
+`ENGINE_HASH_FILES` in buildSchoolContext.ts; a test asserts parity with the gen script's list. Mismatch
+behavior preserved (serve cached + Model-Changed banner; auto-generate only on no-cache) — no auto-recompute,
+no API storm. One-time ship: the 7 existing v3 caches become 3-segment mismatches and flag stale on first
+access (self-heal). Engine untouched (computeMultiYearDetailed/computeGenericProjections 0 diff lines).
+Rejected #1 manual constant (forgettable — the original bug) and #3 git-SHA (busts every deploy).
+Reference: `tests/audit/v11-cedar-grove/P-UX-21-diagnosis.md`.
 
 `computeAdvisoryHash` (`src/lib/buildSchoolContext.ts`) hashes inputs + `PROMPT_VERSION` only. It does
 NOT capture the engine-code version, so when engine math changes (e.g. the Jun-3 P-FIN-01/02 DCOH

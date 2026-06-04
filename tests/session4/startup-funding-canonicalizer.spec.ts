@@ -66,7 +66,9 @@ test.describe('P-UX-11 - startup_funding canonicalizer hardening', () => {
     const h1 = hashWithFunding([{ source: 'CSP Grant', amount: 250000, type: 'grant', status: 'pledged' }])
     const h2 = hashWithFunding([{ source: 'CSP Grant', amount: 250000, type: 'grant', status: 'pledged' }])
     expect(h1).toBe(h2)
-    expect(h1).toBe('v3-2026-05|3f75469f|1535')
+    // P-UX-21: prefix now carries PROMPT_VERSION + ENGINE_VERSION; pin the canonical
+    // djb2|len discriminator via endsWith so drift in serialization still trips here.
+    expect(h1.endsWith('|3f75469f|1535')).toBe(true)
   })
 
   test('vector 1: non-array top level does not throw and equals empty funding', () => {
