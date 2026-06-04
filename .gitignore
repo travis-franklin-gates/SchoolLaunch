@@ -80,3 +80,10 @@ test-results/
 DIAGNOSTIC_*.md
 
 tests/audit/v11-cedar-grove/session2/scripts/out/
+
+# overnight e2e run artifacts (regenerated each run)
+tests/e2e-overnight/_artifacts/
+tests/e2e-overnight/run.log
+tests/e2e-overnight/_divergences.json
+tests/e2e-overnight/_surface-results.json
+test-results/
