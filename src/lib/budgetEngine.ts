@@ -104,14 +104,24 @@ import { expansionToEnrollmentArray, computeExpansionEnrollments, teachersPerNew
 
 // --- Year 0 Carry-Forward ---
 
-/** Compute carry-forward from Year 0 into Year 1, matching the Multi-Year tab logic.
+/** Year-0 carry-forward sub-components. P-UX-20: single source for the multiyear page's
+ *  component displays (year0Total + preOpenExpenses), so no surface re-derives them inline. */
+export interface CarryForwardBreakdown {
+  year0Total: number
+  preOpenActualSpend: number
+  preOpenBudget: number
+  preOpenExpenses: number
+  carryForward: number
+}
+
+/** Carry-forward from Year 0 into Year 1, with its sub-components (Multi-Year tab logic).
  *  Year 0 total = sum of Y0 allocations (or full amount for sources with no year selection).
  *  Pre-opening spend = actual transactions if any, else budgeted amounts.
  *  Carry-forward = year0Total - preOpeningSpend.
  */
-export function computeCarryForward(profile: SchoolProfile): number {
-  // P-UX-18: canonicalize raw startup_funding (the actual first crash site, :107) before
-  // iterating. No-op on canonical input. P-UX-19 does the same for the pre_opening_* reads below.
+export function computeCarryForwardBreakdown(profile: SchoolProfile): CarryForwardBreakdown {
+  // P-UX-18: canonicalize raw startup_funding (the actual first crash site) before iterating.
+  // No-op on canonical input. P-UX-19 does the same for the pre_opening_* reads below.
   const sources: StartupFundingSource[] = canonicalizeStartupFunding(profile.startup_funding)
   const totalFunding = sources.reduce((s, f) => s + f.amount, 0)
 
@@ -127,12 +137,16 @@ export function computeCarryForward(profile: SchoolProfile): number {
 
   // P-UX-19: canonicalize at the reader boundary (drops null/non-object/non-finite entries;
   // no-op on canonical input). Closes the sibling null-entry crash flagged by P-UX-18.
-  const preOpenTransactions = canonicalizePreOpeningTransactions(profile.pre_opening_transactions)
-  const preOpenActualSpend = preOpenTransactions.reduce((s, tx) => s + tx.amount, 0)
+  const preOpenActualSpend = canonicalizePreOpeningTransactions(profile.pre_opening_transactions).reduce((s, tx) => s + tx.amount, 0)
   const preOpenBudget = canonicalizePreOpeningExpenses(profile.pre_opening_expenses).reduce((s, e) => s + e.budgeted, 0)
   const preOpenExpenses = preOpenActualSpend > 0 ? preOpenActualSpend : preOpenBudget
 
-  return year0Total - preOpenExpenses
+  return { year0Total, preOpenActualSpend, preOpenBudget, preOpenExpenses, carryForward: year0Total - preOpenExpenses }
+}
+
+/** Carry-forward scalar — delegates to computeCarryForwardBreakdown (single source). */
+export function computeCarryForward(profile: SchoolProfile): number {
+  return computeCarryForwardBreakdown(profile).carryForward
 }
 
 export interface BudgetSummary {

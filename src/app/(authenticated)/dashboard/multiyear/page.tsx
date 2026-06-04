@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
-import { computeMultiYearDetailed, getGrantRevenueForYear, computeCarryForward, computeGenericProjections } from '@/lib/budgetEngine'
-import type { StartupFundingSource, PreOpeningTransaction } from '@/lib/types'
+import { computeMultiYearDetailed, getGrantRevenueForYear, computeCarryForwardBreakdown, computeGenericProjections } from '@/lib/budgetEngine'
+import type { StartupFundingSource } from '@/lib/types'
 import Link from 'next/link'
 import { useStateConfig } from '@/contexts/StateConfigContext'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
@@ -31,25 +31,13 @@ export default function MultiYearPage() {
     .filter((f) => f.status === 'received' || f.status === 'pledged')
     .reduce((s, f) => s + f.amount, 0)
 
-  // Year 0 carry-forward — shared computation with Overview
-  const carryForward = useMemo(() => computeCarryForward(profile), [profile])
-
-  // Year 0 display values (for the funding sources summary)
-  const year0Total = useMemo(() => {
-    let y0 = 0
-    for (const src of fundingSources) {
-      if (src.selectedYears?.includes(0) && src.yearAllocations?.[0]) {
-        y0 += src.yearAllocations[0]
-      } else if (!src.selectedYears || src.selectedYears.length === 0) {
-        y0 += src.amount
-      }
-    }
-    return y0 || totalFunding
-  }, [fundingSources, totalFunding])
-  const preOpenTransactions: PreOpeningTransaction[] = profile.pre_opening_transactions || []
-  const preOpenActualSpend = preOpenTransactions.reduce((s, tx) => s + tx.amount, 0)
-  const preOpenBudget = (profile.pre_opening_expenses || []).reduce((s, e) => s + e.budgeted, 0)
-  const preOpenExpenses = preOpenActualSpend > 0 ? preOpenActualSpend : preOpenBudget
+  // Year 0 carry-forward + its display components — single source via the engine (P-UX-20).
+  // No raw pre_opening_* reads here; the breakdown canonicalizes (inherits P-UX-19 crash-safety).
+  const cf = useMemo(() => computeCarryForwardBreakdown(profile), [profile])
+  const carryForward = cf.carryForward
+  const year0Total = cf.year0Total
+  const preOpenActualSpend = cf.preOpenActualSpend
+  const preOpenExpenses = cf.preOpenExpenses
 
   const yearsWithStartup = useMemo(
     () => pathwayConfig.pathway !== 'wa_charter'

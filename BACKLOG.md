@@ -556,7 +556,7 @@ session4 suite green; tsc clean; `npm run build` exit 0.
 ---
 
 ### P-UX-20 · Remove parallel carry-forward / preOpenCash derivations; route all through computeCarryForward
-**Status:** `OPEN` · **Opened:** 2026-06-04 · **Source:** P-UX-19 (scope decision)
+**Status:** `RESOLVED` · **Opened:** 2026-06-04 · **Resolved:** 2026-06-04 · **Source:** P-UX-19 (scope decision)
 
 The `multiyear/page.tsx` inline reader (~50-51) re-implements pre-opening carry-forward instead
 of calling `computeCarryForward` — a single-source violation and, until rerouted, a null-entry
@@ -574,6 +574,36 @@ read-vs-write in diagnosis; canonicalize only if it reads raw. Must land before 
 fixtures. Byte-identical proof required on multiyear displayed values across all four pathways.
 
 **Reference:** `tests/audit/v11-cedar-grove/P-UX-18-diagnosis.md` (sibling crash classes)
+
+**Resolution (P-UX-20 commit):** Inventory found the multiyear page already used `computeCarryForward`
+for the total; only its *component* displays (year0Total, preOpenExpenses) were re-derived (with raw
+`pre_opening_*` reads). The real independent formula was on `alignment/page.tsx` (`preOpeningNet=0` +
+`Math.round(startupFunding*0.6)`). Fix: added `computeCarryForwardBreakdown()` (computeCarryForward
+delegates to it; byte-identical), rerouted the multiyear components to read it (zero raw reads), and
+rerouted alignment to `computeCarryForward` for both projections and scorecard. Alignment Review DCOH
+Y1 corrected **44 → 88** (now matches Overview/scorecard). Cashflow editor confirmed writer/live-preview
+(out of scope). **Divergence #2 = stale cache (iii)**, not a second source — explained in the diagnosis;
+test-columbia's stale cache cleared. Reference: `tests/audit/v11-cedar-grove/P-UX-20-diagnosis.md`.
+
+---
+
+### P-UX-21 · Advisory cache must invalidate on engine-code changes (not just inputs + PROMPT_VERSION)
+**Status:** `OPEN` · **Opened:** 2026-06-04 · **Source:** P-UX-20 (Divergence #2 root cause)
+
+`computeAdvisoryHash` (`src/lib/buildSchoolContext.ts`) hashes inputs + `PROMPT_VERSION` only. It does
+NOT capture the engine-code version, so when engine math changes (e.g. the Jun-3 P-FIN-01/02 DCOH
+rework + R-REV revenue changes moved test-columbia DCOH from 84 to 88), advisory caches with unchanged
+inputs never invalidate and serve stale computed figures. This is the confirmed root cause of overnight
+Divergence #2 (the May-12 cache served 84 while the live engine produced 88).
+
+**Fix:** incorporate an engine-version token into `computeAdvisoryHash`. **Decision deferred to P-UX-21
+diagnosis:** a manual `ENGINE_VERSION` constant (simple but fragile — easy to forget bumping) vs a
+content-hash of the engine modules (`budgetEngine.ts` + deps; robust but needs a build-time/precomputed
+hash since the hash runs in-browser). Must keep byte-identical hashing for a given engine version so
+caches aren't needlessly busted within a release. Pairs with scenario staleness (`base_data_hash` uses
+the same `computeAdvisoryHash`).
+
+**Reference:** `tests/audit/v11-cedar-grove/P-UX-20-diagnosis.md` §Q3
 
 ---
 

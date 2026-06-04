@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useScenario } from '@/lib/ScenarioContext'
 import { buildSchoolContextString } from '@/lib/buildSchoolContext'
-import { computeMultiYearDetailed, computeFPFScorecard } from '@/lib/budgetEngine'
+import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward } from '@/lib/budgetEngine'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -73,12 +73,13 @@ export default function AlignmentPage() {
   const { canEdit } = usePermissions()
   useDocumentTitle('Alignment Review', schoolName)
 
+  // P-UX-20: single source of truth — preOpenCash from computeCarryForward, used for BOTH the
+  // projections and the scorecard (was preOpeningNet=0 + a divergent 0.6*funding heuristic).
+  const preOpenCash = useMemo(() => computeCarryForward(profile), [profile])
   const multiYear = useMemo(
-    () => computeMultiYearDetailed(profile, positions, projections, assumptions, 0, gradeExpansionPlan, allPositions, profile.startup_funding),
-    [profile, positions, allPositions, projections, assumptions, gradeExpansionPlan]
+    () => computeMultiYearDetailed(profile, positions, projections, assumptions, preOpenCash, gradeExpansionPlan, allPositions, profile.startup_funding),
+    [profile, positions, allPositions, projections, assumptions, preOpenCash, gradeExpansionPlan]
   )
-  const startupFunding = profile.startup_funding?.reduce((s: number, f: { amount: number }) => s + f.amount, 0) || 0
-  const preOpenCash = Math.round(startupFunding * 0.6)
   const scorecard = useMemo(
     () => computeFPFScorecard(multiYear, preOpenCash, conservativeMode),
     [multiYear, preOpenCash, conservativeMode]
