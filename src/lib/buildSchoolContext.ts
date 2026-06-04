@@ -3,6 +3,7 @@ import { getAssumptions, DEFAULT_ASSUMPTIONS } from './types'
 import { calcCommissionRevenue, calcAAFTE, calcBenefits, calcSmallSchoolEnhancement, calcSmallSchoolEnhancementFromGrades } from './calculations'
 import { computeExpansionEnrollments, expansionToEnrollmentArray, getRetentionRate } from './gradeExpansion'
 import type { MultiYearDetailedRow, FPFScorecard } from './budgetEngine'
+import { canonicalizeStartupFunding } from './startupFunding'
 
 /**
  * Bumped whenever the advisory/briefing/agent prompt contracts change in a way
@@ -28,19 +29,6 @@ export interface ProjectionHashInputs {
  * identical string. Extending this function is how you tell the advisory and
  * scenario-staleness caches "this changed — invalidate."
  */
-/**
- * Coerce an arbitrary startup_funding `source` value to a stable string for
- * sorting and serialization. P-UX-11: source may be missing/null/numeric when
- * startup_funding was built outside the Revenue editor. A string source is
- * returned unchanged so canonical input stays byte-identical; a numeric source
- * is stringified to preserve its label; null/undefined fails safe to ''.
- */
-function coerceSource(source: unknown): string {
-  if (typeof source === 'string') return source
-  if (source == null) return ''
-  return String(source)
-}
-
 function canonicalizeProjectionInputs(input: ProjectionHashInputs): string {
   const { profile, positions, projections, gradeExpansionPlan } = input
   const fa = getAssumptions(profile.financial_assumptions)
@@ -95,19 +83,16 @@ function canonicalizeProjectionInputs(input: ProjectionHashInputs): string {
     }))
     .sort((a, b) => a.y - b.y || a.gl.localeCompare(b.gl))
 
-  // P-UX-11: startup_funding can be built outside the Revenue editor (direct DB
-  // seeding, imports, backfills, manual MCP edits), so normalize defensively here
-  // - the one place shape normalization lives. Pure superset: a canonical
-  // StartupFundingSource[] with string `source` serializes byte-identically.
-  // Three throw vectors are neutralized: (1) non-array top level (Array.isArray
-  // guard), (2) null / non-object entries (filter), (3) missing/non-string
-  // `source` (coerceSource) - without discarding real data on good sibling entries.
-  const rawFunding = Array.isArray(profile.startup_funding) ? profile.startup_funding : []
-  const fundingSlice = rawFunding
-    .filter((f): f is StartupFundingSource => f != null && typeof f === 'object')
+  // P-UX-18: shape normalization now lives in the shared canonicalizeStartupFunding
+  // (one definition for the engine + this hash projection, so the two readers cannot
+  // drift). It already drops null/non-object entries and coerces source/amount, so the
+  // hash-specific projection below is just sorting + field selection on clean data.
+  // Byte-identical for canonical input: canonicalization is a no-op, so the slice and the
+  // resulting advisory hash are unchanged for the existing cached rows.
+  const fundingSlice = canonicalizeStartupFunding(profile.startup_funding)
     .map(f => ({
-      src: coerceSource(f.source),
-      amt: Math.round(f.amount ?? 0),
+      src: f.source,
+      amt: Math.round(f.amount),
       t: f.type,
       s: f.status,
       yrs: Array.isArray(f.selectedYears) ? [...f.selectedYears].sort() : null,

@@ -1,5 +1,6 @@
 import { readCustomLines, customLineYearAmount } from './customLines'
 import { readFacilityFinancing, annualDepreciation, annualInterest } from './facilityFinancing'
+import { canonicalizeStartupFunding } from './startupFunding'
 import {
   calcRevenue,
   calcLevyEquity,
@@ -56,9 +57,12 @@ export function getGrantRevenueForYear(
   sources: StartupFundingSource[] | null | undefined,
   year: number,
 ): number {
-  if (!sources || sources.length === 0) return 0
+  // P-UX-18: canonicalize raw startup_funding at the reader boundary (drops null/garbage
+  // entries, coerces amount) before iterating. No-op on canonical input.
+  const clean = canonicalizeStartupFunding(sources)
+  if (clean.length === 0) return 0
   let total = 0
-  for (const src of sources) {
+  for (const src of clean) {
     // If explicit year allocations exist for this source, use them (even if 0)
     if (src.yearAllocations && year in src.yearAllocations) {
       total += src.yearAllocations[year] || 0
@@ -79,8 +83,10 @@ export function getGrantAllocationsForYear(
   sources: StartupFundingSource[] | null | undefined,
   year: number,
 ): { source: string; amount: number; type: StartupFundingSource['type'] }[] {
-  if (!sources || sources.length === 0) return []
-  return sources.map((src) => {
+  // P-UX-18: canonicalize at the reader boundary. No-op on canonical input.
+  const clean = canonicalizeStartupFunding(sources)
+  if (clean.length === 0) return []
+  return clean.map((src) => {
     let amount = 0
     if (src.yearAllocations && year in src.yearAllocations) {
       amount = src.yearAllocations[year] || 0
@@ -103,7 +109,10 @@ import { expansionToEnrollmentArray, computeExpansionEnrollments, teachersPerNew
  *  Carry-forward = year0Total - preOpeningSpend.
  */
 export function computeCarryForward(profile: SchoolProfile): number {
-  const sources: StartupFundingSource[] = profile.startup_funding || []
+  // P-UX-18: canonicalize raw startup_funding (the actual first crash site, :107) before
+  // iterating. No-op on canonical input. NOTE: pre_opening_transactions / pre_opening_expenses
+  // below share the same null-entry crash class (logged as a backlog candidate, not in scope).
+  const sources: StartupFundingSource[] = canonicalizeStartupFunding(profile.startup_funding)
   const totalFunding = sources.reduce((s, f) => s + f.amount, 0)
 
   let year0Total = 0

@@ -497,6 +497,56 @@ custom_revenue_lines or the real startup_funding grant.
 
 ---
 
+### P-UX-18 · Engine crashes on malformed startup_funding (raw reader, sibling of P-UX-11)
+**Status:** `RESOLVED` · **Opened:** 2026-06-04 · **Resolved:** 2026-06-04 · **Source:** overnight E2E Divergence #1
+
+P-UX-11 hardened the advisory-hash canonicalizer, but the ENGINE reads RAW
+`profile.startup_funding` and was never guarded. Three readers in `budgetEngine.ts`
+iterate entries unguarded and throw on a null/non-object entry (direct DB seed / import /
+backfill — the same threat model as P-UX-11): `computeCarryForward:107` (the actual first
+crash site, `f.amount` on null — `Cannot read properties of null (reading 'amount')`),
+`getGrantRevenueForYear:63`, and `getGrantAllocationsForYear:85`. Blast radius: every
+engine-backed surface (Revenue, Overview, Multi-Year, FPF) crashes for that profile.
+
+**Fix (this commit):** one shared, value-preserving `canonicalizeStartupFunding(raw):
+StartupFundingSource[]` in `src/lib/startupFunding.ts` (drops null/non-object entries,
+coerces `source`->string and `amount`->finite number, keeps `yearAllocations` only when a
+plain object; strict no-op on canonical input). Called inside all three engine readers; the
+advisory `fundingSlice` was refactored to layer its hash projection ON TOP of the same
+function, so the two readers share ONE definition and `coerceSource` now lives there too.
+
+**Verification:** new spec `tests/session4/startup-funding-engine-canonicalizer.spec.ts`
+(8 tests): no-crash + finite + valid-grant-correct on malformed input; canonicalizer no-op +
+idempotent + garbage-cleaning; BYTE-IDENTICAL guards pinned to pre-change baselines —
+`computeCarryForward` (350000 / 120000), full `computeMultiYearDetailed` deep-equal, and
+`computeAdvisoryHash` UNCHANGED (`ff272d0d|1599` WA, `85dcf73f|1561` Generic — cached
+advisories not invalidated). Full pure session4 suite 148 green; tsc clean; overnight Half A
+scenario 7b now passes (51/51).
+
+**Reference:** `tests/audit/v11-cedar-grove/P-UX-18-diagnosis.md`
+
+---
+
+### P-UX-19 · computeCarryForward crashes on null pre_opening_transactions / pre_opening_expenses entries
+**Status:** `OPEN` (candidate) · **Opened:** 2026-06-04 · **Source:** P-UX-18 diagnosis (D3)
+
+Same null-entry crash class as P-UX-18, different fields. In `computeCarryForward`
+(`budgetEngine.ts:120-121`): `pre_opening_transactions.reduce((s, tx) => s + tx.amount, 0)`
+and `pre_opening_expenses.reduce((s, e) => s + e.budgeted, 0)` read `.amount` / `.budgeted`
+with no per-entry guard. A null entry (direct DB seed / import / backfill) throws
+`Cannot read properties of null (reading 'amount')` and crashes the same engine-backed
+surfaces. Reproduced during P-UX-18 Phase 0. Kept OUT of P-UX-18 scope (no drive-by; that
+pass was held to `startup_funding`).
+
+**Proposed fix:** filter null/non-object entries (and coerce `amount`/`budgeted` to finite)
+at these two reducers — ideally a small shared `coerceTransactions`/`coerceExpenses` mirroring
+P-UX-18's value-preserving, byte-identical approach. Family link: P-UX-11 (advisory funding),
+P-UX-16 (advisory projSlice), P-UX-18 (engine funding).
+
+**Reference:** `tests/audit/v11-cedar-grove/P-UX-18-diagnosis.md` (sibling crash classes)
+
+---
+
 ## Test Infrastructure
 
 ### T-INFRA-01 · No isolated Supabase test environment

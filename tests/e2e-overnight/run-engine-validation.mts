@@ -8,9 +8,9 @@
  */
 import { readFileSync, writeFileSync, appendFileSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
-import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward } from '../../src/lib/budgetEngine.ts'
-import { calcCommissionRevenue } from '../../src/lib/calculations.ts'
-import { DEFAULT_ASSUMPTIONS } from '../../src/lib/types.ts'
+import { computeMultiYearDetailed, computeFPFScorecard, computeCarryForward } from '../../src/lib/budgetEngine'
+import { calcCommissionRevenue } from '../../src/lib/calculations'
+import { DEFAULT_ASSUMPTIONS } from '../../src/lib/types'
 
 const SID = '64b84ff8-2824-4ca4-9814-57fa39b23c26'                  // test-columbia (MUTABLE)
 const PROTECTED = new Set([
