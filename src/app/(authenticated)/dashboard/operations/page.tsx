@@ -7,6 +7,7 @@ import { usePermissions } from '@/hooks/usePermissions'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { useStateConfig } from '@/contexts/StateConfigContext'
 import type { FinancialAssumptions } from '@/lib/types'
+import { CUSTOM_EXPENSE_PRESETS, CUSTOM_EXPENSE_GROUPS, type CustomLine, type CustomLineDriver } from '@/lib/customLines'
 import { DataTable, type DataTableColumn, type DataTableRow } from '@/components/ui/DataTable'
 import { formatCurrency } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -89,6 +90,54 @@ export default function OperationsPage() {
   // Local overrides for per-pupil rates (synced to settings on save)
   const [rateOverrides, setRateOverrides] = useState<Partial<Record<keyof FinancialAssumptions, number>>>({})
   const supabase = createClient()
+
+  // R-REV-07 custom expense lines (WA Charter). New custom_expense_lines column.
+  const [customExpLines, setCustomExpLines] = useState<CustomLine[]>([])
+  const [savingCustomExp, setSavingCustomExp] = useState(false)
+  const [expPresetPick, setExpPresetPick] = useState('')
+  // P-UX-17: this editor is on a different page than the Revenue tab, so it needs its
+  // own cold-load hydration guard. Save/Add stay disabled until the profile loads; the
+  // effect then initializes from the loaded profile (cold direct-load would otherwise
+  // let Save overwrite real custom_expense_lines with the unhydrated empty state).
+  const [hydrated, setHydrated] = useState(false)
+  useEffect(() => {
+    if (loading || hydrated) return
+    const ce = (profile as unknown as Record<string, unknown>).custom_expense_lines
+    setCustomExpLines(Array.isArray(ce) ? (ce as CustomLine[]) : [])
+    setHydrated(true)
+  }, [loading, hydrated, profile])
+
+  function newExpLineId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+    return `ce-${Date.now()}`
+  }
+  function addCustomExpPreset() {
+    const p = CUSTOM_EXPENSE_PRESETS.find((x) => x.name === expPresetPick)
+    setCustomExpLines((prev) => [...prev, {
+      id: newExpLineId(),
+      name: p?.name ?? 'New Expense Line',
+      group: p?.group ?? 'School Operations',
+      driver: p?.driver ?? 'flat',
+      amountY1: 0,
+      rate: 0,
+    }])
+    setExpPresetPick('')
+  }
+  function updateCustomExp(idx: number, field: keyof CustomLine, value: string | number) {
+    setCustomExpLines((prev) => prev.map((l, i) => (i === idx ? { ...l, [field]: value } : l)))
+  }
+  function removeCustomExp(idx: number) {
+    setCustomExpLines((prev) => prev.filter((_, i) => i !== idx))
+  }
+  async function saveCustomExpense() {
+    if (!schoolId) return
+    setSavingCustomExp(true)
+    await supabase.from('school_profiles').update({ custom_expense_lines: customExpLines }).eq('school_id', schoolId)
+    setSavingCustomExp(false)
+    await reload()
+  }
+  // Y1 subtotal excludes pct_revenue lines (their amount depends on revenue, computed in projections).
+  const customExpY1Total = customExpLines.reduce((s, l) => s + (l.driver === 'pct_revenue' ? 0 : (Number(l.amountY1 ?? l.amount) || 0)), 0)
 
   const enrollment = profile.target_enrollment_y1
   const totalFte = positions.reduce((s, p) => s + p.fte, 0)
@@ -497,6 +546,137 @@ export default function OperationsPage() {
           </div>
         )
       })()}
+
+      {/* R-REV-07: Custom Expense Lines editor (WA Charter). Flows into Multi-Year,
+          the Commission Scorecard, and the Commission export via computeMultiYearDetailed. */}
+      <div id="custom-expense" className="bg-white border border-slate-200 rounded-xl shadow-sm mb-4 px-6 py-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-700">Custom Expense Lines</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Itemize non-personnel expenses (Contracted Services, School Operations, Facility O&amp;M) the way the Commission template does. These flow into Multi-Year, the Scorecard, and the Commission export.</p>
+          </div>
+          {canEdit && (
+            <div className="flex gap-2 items-center">
+              <select
+                value={expPresetPick}
+                onChange={(e) => setExpPresetPick(e.target.value)}
+                disabled={!hydrated}
+                className="px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white disabled:opacity-50 max-w-[220px]"
+              >
+                <option value="">Add common line...</option>
+                {CUSTOM_EXPENSE_PRESETS.map((p) => <option key={p.name} value={p.name}>{p.group}: {p.name}</option>)}
+              </select>
+              <button
+                onClick={addCustomExpPreset}
+                disabled={!hydrated}
+                className="px-3 py-1.5 text-xs font-medium text-teal-600 border border-teal-200 rounded-lg hover:bg-teal-50 transition-colors disabled:opacity-50"
+              >
+                + Add
+              </button>
+              <button
+                onClick={saveCustomExpense}
+                disabled={savingCustomExp || !hydrated}
+                className="px-3 py-1.5 text-xs font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+              >
+                {savingCustomExp ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {customExpLines.length === 0 ? (
+          <p className="text-xs text-slate-400 italic">No custom expense lines yet. Use &quot;Add common line&quot; to pre-fill a V11 sub-line, or add your own. (Lines that duplicate a built-in category above are intentionally not in the picklist.)</p>
+        ) : (
+          <div className="overflow-x-auto sl-scroll">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-white border-b border-slate-200">
+                  <th className="text-left px-3 py-2 font-semibold text-slate-600 text-xs">Line Name</th>
+                  <th className="text-left px-3 py-2 font-semibold text-slate-600 text-xs w-44">Group</th>
+                  <th className="text-left px-3 py-2 font-semibold text-slate-600 text-xs w-40">Driver</th>
+                  <th className="text-right px-3 py-2 font-semibold text-slate-600 text-xs w-36">Y1 Amount / Rate</th>
+                  <th className="px-3 py-2 w-8"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {customExpLines.map((l, idx) => (
+                  <tr key={l.id ?? idx} className="border-b border-slate-100 bg-white">
+                    <td className="px-3 py-2">
+                      <input
+                        type="text"
+                        value={l.name ?? l.label ?? ''}
+                        onChange={(e) => updateCustomExp(idx, 'name', e.target.value)}
+                        placeholder="Expense line name..."
+                        disabled={!canEdit}
+                        className="w-full border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <select
+                        value={l.group ?? 'School Operations'}
+                        onChange={(e) => updateCustomExp(idx, 'group', e.target.value)}
+                        disabled={!canEdit}
+                        className="w-full border border-slate-200 rounded px-2 py-1 text-sm bg-white disabled:bg-slate-50"
+                      >
+                        {CUSTOM_EXPENSE_GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-3 py-2">
+                      <select
+                        value={l.driver ?? 'flat'}
+                        onChange={(e) => updateCustomExp(idx, 'driver', e.target.value as CustomLineDriver)}
+                        disabled={!canEdit}
+                        className="w-full border border-slate-200 rounded px-2 py-1 text-sm bg-white disabled:bg-slate-50"
+                      >
+                        <option value="per_pupil">Per Pupil</option>
+                        <option value="per_fte">Per FTE</option>
+                        <option value="flat">Flat</option>
+                        <option value="inflation">Inflation-escalated</option>
+                        <option value="pct_revenue">% of Revenue</option>
+                      </select>
+                    </td>
+                    <td className="px-3 py-2">
+                      {l.driver === 'pct_revenue' ? (
+                        <div className="flex items-center justify-end gap-1">
+                          <input
+                            type="number"
+                            step={0.5}
+                            value={l.rate ?? 0}
+                            onChange={(e) => updateCustomExp(idx, 'rate', Number(e.target.value))}
+                            disabled={!canEdit}
+                            className="w-20 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50"
+                          />
+                          <span className="text-slate-400 text-xs">% of rev</span>
+                        </div>
+                      ) : (
+                        <input
+                          type="number"
+                          step={1000}
+                          value={l.amountY1 ?? l.amount ?? 0}
+                          onChange={(e) => updateCustomExp(idx, 'amountY1', Number(e.target.value))}
+                          disabled={!canEdit}
+                          className="w-28 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50"
+                        />
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {canEdit && (
+                        <button onClick={() => removeCustomExp(idx)} className="text-red-400 hover:text-red-600 text-lg leading-none" aria-label="Remove line">&times;</button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                <tr className="bg-slate-50">
+                  <td className="px-3 py-2 text-xs font-semibold text-slate-600" colSpan={3}>Custom Expense Subtotal (Year 1, excl. % of revenue)</td>
+                  <td className="px-3 py-2 text-right text-xs font-semibold text-slate-700">{fmt(customExpY1Total)}</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="text-xs text-slate-400 mt-2 italic">Ratio drivers escalate by operations inflation ({assumptions.ops_escalator_pct}%/yr). &quot;% of Revenue&quot; (e.g. Management Company Fee) is computed against recurring operating revenue after revenue is finalized.</p>
+          </div>
+        )}
+      </div>
 
       {canEdit && (
         <div

@@ -468,6 +468,8 @@ export interface MultiYearDetailedRow {
     fundraising: number
     contingency: number
     total: number
+    // R-REV-07: per-line custom expense breakdown (engine emits; Commission export reads)
+    customExpense?: { id: string; name: string; group: string; amount: number }[]
   }
   totalExpenses: number
   net: number
@@ -534,9 +536,10 @@ export function computeMultiYearDetailed(
   let cumulativeNet = preOpeningNet
   const rows: MultiYearDetailedRow[] = []
 
-  // R-REV-03: custom revenue lines (WA pathway). Tolerates the legacy generic flat
-  // shape; the Generic engine (computeGenericProjections) is untouched.
+  // R-REV-03/07: custom revenue + expense lines (WA pathway). Tolerates the legacy
+  // generic flat shape; the Generic engine (computeGenericProjections) is untouched.
   const customRevenueLines = readCustomLines((profile as unknown as Record<string, unknown>).custom_revenue_lines)
+  const customExpenseLines = readCustomLines((profile as unknown as Record<string, unknown>).custom_expense_lines)
   const fteY1 = positions.reduce((s, p) => s + (p.fte || 0), 0)
 
   const interestRate = assumptions.interest_rate_on_cash / 100
@@ -648,30 +651,9 @@ export function computeMultiYearDetailed(
     }
     const totalPersonnel = certCost + classCost + adminCost + benefitsCost
 
-    // Operations — all categories scaled appropriately
-    const opsScale = Math.pow(opsEscalator, y - 1)
-    const enrRatio = enrollments[0] > 0 ? enr / enrollments[0] : 1
-    const facilities = Math.round(y1Facilities * opsScale)
-    const supplies = Math.round(y1Supplies * enrRatio * opsScale)
-    const contracted = Math.round(y1Contracted * enrRatio * opsScale)
-    const technology = Math.round(y1Technology * enrRatio * opsScale)
-    const authorizerFee = calcAuthorizerFeeCommission(stateApport, feeRate)
-    const insurance = Math.round(y1Insurance * opsScale)
-    const foodService = Math.round(y1FoodService * enrRatio * opsScale)
-    const transportation = Math.round(y1Transportation * enrRatio * opsScale)
-    const curriculum = Math.round(y1Curriculum * enrRatio * opsScale)
-    const profDev = Math.round(y1ProfDev * opsScale) // scales with inflation, not enrollment
-    const marketing = Math.round(y1Marketing * opsScale) // scales with inflation only
-    const fundraising = Math.round(y1Fundraising * opsScale)
-    const contingencyBase = totalPersonnel + facilities + supplies + contracted + technology + authorizerFee + insurance + foodService + transportation + curriculum + profDev + marketing + fundraising
-    const contingency = Math.round(contingencyBase * (assumptions.contingency_pct / 100))
-    const totalOperations = facilities + supplies + contracted + technology + authorizerFee + insurance + foodService + transportation + curriculum + profDev + marketing + fundraising + contingency
-
-    const totalExpenses = totalPersonnel + totalOperations
-
-    // R-REV-03: fold custom revenue into the year totals BEFORE net so it flows to
-    // FPF (which reads operatingRevenue / totalExpenses / net off the row). Recurring
-    // -> operatingRevenue (the Total Margin denominator); one-time -> non-operating only.
+    // R-REV-03/07: custom REVENUE fold. Done BEFORE the expense block so operatingRevenue
+    // (the recurring operating-revenue base) is finalized for any pct_revenue expense line.
+    // Recurring -> operatingRevenue (Total Margin denominator); one-time -> non-operating only.
     const fteForYear = positionsForYear.reduce((s, p) => s + (p.fte || 0), 0)
     const revColaMult = Math.pow(1 + assumptions.revenue_cola_pct / 100, y - 1)
     const customRevenueDetail = customRevenueLines.map((line) => ({
@@ -694,6 +676,47 @@ export function computeMultiYearDetailed(
     })
     operatingRevenue += customRecurringTotal
     totalRevenue += customRecurringTotal + customOneTimeTotal
+
+    // Operations — all categories scaled appropriately
+    const opsScale = Math.pow(opsEscalator, y - 1)
+    const enrRatio = enrollments[0] > 0 ? enr / enrollments[0] : 1
+    const facilities = Math.round(y1Facilities * opsScale)
+    const supplies = Math.round(y1Supplies * enrRatio * opsScale)
+    const contracted = Math.round(y1Contracted * enrRatio * opsScale)
+    const technology = Math.round(y1Technology * enrRatio * opsScale)
+    const authorizerFee = calcAuthorizerFeeCommission(stateApport, feeRate)
+    const insurance = Math.round(y1Insurance * opsScale)
+    const foodService = Math.round(y1FoodService * enrRatio * opsScale)
+    const transportation = Math.round(y1Transportation * enrRatio * opsScale)
+    const curriculum = Math.round(y1Curriculum * enrRatio * opsScale)
+    const profDev = Math.round(y1ProfDev * opsScale) // scales with inflation, not enrollment
+    const marketing = Math.round(y1Marketing * opsScale) // scales with inflation only
+    const fundraising = Math.round(y1Fundraising * opsScale)
+    const contingencyBase = totalPersonnel + facilities + supplies + contracted + technology + authorizerFee + insurance + foodService + transportation + curriculum + profDev + marketing + fundraising
+    const contingency = Math.round(contingencyBase * (assumptions.contingency_pct / 100))
+    let totalOperations = facilities + supplies + contracted + technology + authorizerFee + insurance + foodService + transportation + curriculum + profDev + marketing + fundraising + contingency
+
+    // R-REV-07: custom EXPENSE fold. Ratio drivers escalate with opsEscalator (opsScale);
+    // pct_revenue lines read the finalized recurring operating-revenue base (operatingRevenue,
+    // already folded above) in the authorizerFee slot. Added AFTER contingency so the
+    // contingency base is byte-identical when there are no custom expense lines.
+    const customExpenseDetail = customExpenseLines.map((line) => ({
+      id: line.id,
+      name: line.name,
+      group: line.group,
+      amount: customLineYearAmount(line, y, {
+        enrollment: enr,
+        enrollmentY1: enrollments[0] || 0,
+        fte: fteForYear,
+        fteY1,
+        escalatorMult: opsScale,
+        recurringRevenueBase: operatingRevenue,
+      }),
+    }))
+    const customExpenseTotal = customExpenseDetail.reduce((s, d) => s + d.amount, 0)
+    totalOperations += customExpenseTotal
+
+    const totalExpenses = totalPersonnel + totalOperations
 
     const net = totalRevenue - totalExpenses
     cumulativeNet += net
@@ -739,7 +762,7 @@ export function computeMultiYearDetailed(
         total: totalPersonnel,
         totalSalaries,
       },
-      operations: { facilities, supplies, contracted, technology, authorizerFee, insurance, foodService, transportation, curriculum, profDev, marketing, fundraising, contingency, total: totalOperations },
+      operations: { facilities, supplies, contracted, technology, authorizerFee, insurance, foodService, transportation, curriculum, profDev, marketing, fundraising, contingency, total: totalOperations, customExpense: customExpenseDetail },
       totalExpenses,
       net,
       cumulativeNet,

@@ -51,6 +51,7 @@ interface MultiYearRow {
     fundraising: number
     contingency: number
     total: number
+    customExpense?: { id: string; name: string; group: string; amount: number }[]
   }
   totalExpenses: number
   net: number
@@ -348,6 +349,25 @@ export async function POST(request: NextRequest) {
     ['Total Margin (Operating)', '', ...multiYear.map((r) => r.revenue.operatingRevenue > 0 ? `${(r.net / r.revenue.operatingRevenue * 100).toFixed(1)}%` : '0%')],
     ['Days of Cash on Hand', '', ...multiYear.map((r) => r.reserveDays)],
   ]
+
+  // R-REV-07: itemized custom expense rows, inserted under their group before the
+  // Total Non-Personnel subtotal. Pure reader of row.operations.customExpense.
+  const customExpIds: string[] = []
+  const customExpMeta = new Map<string, { name: string; group: string }>()
+  for (const r of multiYear) {
+    for (const c of (r.operations.customExpense || [])) {
+      if (!customExpMeta.has(c.id)) { customExpIds.push(c.id); customExpMeta.set(c.id, { name: c.name, group: c.group }) }
+    }
+  }
+  if (customExpIds.length > 0) {
+    const tnpIdx = plRows.findIndex((row) => row[0] === 'Total Non-Personnel')
+    const insertAt = tnpIdx >= 0 ? tnpIdx : plRows.length
+    const expRows = customExpIds.map((id) => {
+      const meta = customExpMeta.get(id)!
+      return [`${meta.group}: ${meta.name}`, 0, ...multiYear.map((r) => (r.operations.customExpense || []).find((c) => c.id === id)?.amount ?? 0)]
+    })
+    plRows.splice(insertAt, 0, ...expRows)
+  }
 
   const plSheet = XLSX.utils.aoa_to_sheet(plRows)
   XLSX.utils.book_append_sheet(wb, plSheet, 'P&L')
