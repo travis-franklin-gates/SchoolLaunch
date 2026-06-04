@@ -1,0 +1,10 @@
+{
+  "//": "Type-check the test harness/specs OUTSIDE the Next.js production build. The base tsconfig now excludes tests/** so `next build` never type-checks them; this config restores an optional `tsc --noEmit -p tsconfig.test.json` gate. allowImportingTsExtensions permits the tsx/Playwright `.ts`-extension import idiom used by the e2e harness.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["tests/**/*.ts", "tests/**/*.mts"],
+  "exclude": ["node_modules", "tests/audit/**/*"]
+}
