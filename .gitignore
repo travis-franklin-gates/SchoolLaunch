@@ -81,8 +81,13 @@ DIAGNOSTIC_*.md
 
 tests/audit/v11-cedar-grove/session2/scripts/out/
 
-# overnight e2e run artifacts (regenerated each run)
+# overnight e2e run artifacts (regenerated each run; harness source .ts/.mts, configs,
+# MORNING-REPORT.md, RECON.md, _snapshot/restore.sql + test-columbia-before.json stay tracked)
 tests/e2e-overnight/_artifacts/
+# doubled-path artifact tree from the a3f4a27 outputDir bug (contains the nested _artifacts):
+tests/e2e-overnight/tests/
+# restore re-verify output, rewritten every run:
+tests/e2e-overnight/_snapshot/test-columbia-after.json
 tests/e2e-overnight/run.log
 tests/e2e-overnight/_divergences.json
 tests/e2e-overnight/_surface-results.json
