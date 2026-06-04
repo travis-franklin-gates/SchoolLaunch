@@ -52,6 +52,8 @@ interface MultiYearRow {
     contingency: number
     total: number
     customExpense?: { id: string; name: string; group: string; amount: number }[]
+    depreciation?: number
+    interest?: number
   }
   totalExpenses: number
   net: number
@@ -367,6 +369,20 @@ export async function POST(request: NextRequest) {
       return [`${meta.group}: ${meta.name}`, 0, ...multiYear.map((r) => (r.operations.customExpense || []).find((c) => c.id === id)?.amount ?? 0)]
     })
     plRows.splice(insertAt, 0, ...expRows)
+  }
+
+  // P-FIN-01/02: facility depreciation + interest rows, inserted before Total Non-Personnel
+  // when the school has financing. Pure reader of row.operations.depreciation/.interest;
+  // omitted entirely for lease schools (byte-identical export).
+  const hasDepreciation = multiYear.some((r) => (r.operations.depreciation ?? 0) !== 0)
+  const hasInterest = multiYear.some((r) => (r.operations.interest ?? 0) !== 0)
+  if (hasDepreciation || hasInterest) {
+    const finIdx = plRows.findIndex((row) => row[0] === 'Total Non-Personnel')
+    const finInsertAt = finIdx >= 0 ? finIdx : plRows.length
+    const finRows: (string | number)[][] = []
+    if (hasDepreciation) finRows.push(['Facility Depreciation', 0, ...multiYear.map((r) => r.operations.depreciation ?? 0)])
+    if (hasInterest) finRows.push(['Facility Interest', 0, ...multiYear.map((r) => r.operations.interest ?? 0)])
+    plRows.splice(finInsertAt, 0, ...finRows)
   }
 
   const plSheet = XLSX.utils.aoa_to_sheet(plRows)

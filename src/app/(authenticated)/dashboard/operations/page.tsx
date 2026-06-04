@@ -8,6 +8,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { useStateConfig } from '@/contexts/StateConfigContext'
 import type { FinancialAssumptions } from '@/lib/types'
 import { CUSTOM_EXPENSE_PRESETS, CUSTOM_EXPENSE_GROUPS, type CustomLine, type CustomLineDriver } from '@/lib/customLines'
+import { readFacilityFinancing, annualDepreciation, annualInterest, type FacilityFinancing } from '@/lib/facilityFinancing'
 import { DataTable, type DataTableColumn, type DataTableRow } from '@/components/ui/DataTable'
 import { formatCurrency } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -100,12 +101,42 @@ export default function OperationsPage() {
   // effect then initializes from the loaded profile (cold direct-load would otherwise
   // let Save overwrite real custom_expense_lines with the unhydrated empty state).
   const [hydrated, setHydrated] = useState(false)
+  // P-FIN-01/02: facility financing (single owned/financed facility). Shares the same
+  // P-UX-17 cold-load hydration guard as custom expense lines, so Save stays disabled
+  // until the profile loads (a cold direct-load would otherwise overwrite real
+  // facility_financing with the unhydrated empty state).
+  const [facilityFin, setFacilityFin] = useState<FacilityFinancing>({})
+  const [savingFacility, setSavingFacility] = useState(false)
   useEffect(() => {
     if (loading || hydrated) return
     const ce = (profile as unknown as Record<string, unknown>).custom_expense_lines
     setCustomExpLines(Array.isArray(ce) ? (ce as CustomLine[]) : [])
+    const ff = (profile as unknown as Record<string, unknown>).facility_financing
+    setFacilityFin(ff && typeof ff === 'object' && !Array.isArray(ff) ? (ff as FacilityFinancing) : {})
     setHydrated(true)
   }, [loading, hydrated, profile])
+
+  function updateFacility(field: keyof FacilityFinancing, value: number) {
+    setFacilityFin((prev) => ({ ...prev, [field]: value }))
+  }
+  async function saveFacility() {
+    if (!schoolId) return
+    setSavingFacility(true)
+    // Store null when there is neither a basis nor a principal, so lease schools keep a
+    // clean NULL column (readFacilityFinancing treats both the same, but NULL is tidier).
+    const norm = readFacilityFinancing(facilityFin)
+    const payload = norm ? facilityFin : null
+    await supabase.from('school_profiles').update({ facility_financing: payload }).eq('school_id', schoolId)
+    setSavingFacility(false)
+    await reload()
+  }
+  // Read-only computed preview (pure helper; same math the engine uses).
+  const facilityNorm = readFacilityFinancing(facilityFin)
+  const facilityPreview = [1, 2, 3, 4, 5].map((y) => ({
+    year: y,
+    depreciation: facilityNorm ? annualDepreciation(facilityNorm, y) : 0,
+    interest: facilityNorm ? annualInterest(facilityNorm, y) : 0,
+  }))
 
   function newExpLineId(): string {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
@@ -676,6 +707,107 @@ export default function OperationsPage() {
             <p className="text-xs text-slate-400 mt-2 italic">Ratio drivers escalate by operations inflation ({assumptions.ops_escalator_pct}%/yr). &quot;% of Revenue&quot; (e.g. Management Company Fee) is computed against recurring operating revenue after revenue is finalized.</p>
           </div>
         )}
+      </div>
+
+      {/* P-FIN-01/02: Facility Financing (if applicable). Owned/financed schools model
+          depreciation (basis / useful life) + debt interest (monthly amortization). These
+          flow into Multi-Year, the Scorecard (depreciation is DCOH-neutral, interest
+          lowers DCOH), and the Commission export. Lease schools leave this blank. */}
+      <div id="facility-financing" className="bg-white border border-slate-200 rounded-xl shadow-sm mb-4 px-6 py-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-700">Facility Financing (if applicable)</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Only for schools that <strong>own or finance</strong> their building. Leave blank if you lease (your lease cost belongs in the Facilities line above). Depreciation and interest are computed below and flow into Multi-Year, the Scorecard, and the Commission export.</p>
+          </div>
+          {canEdit && (
+            <button
+              onClick={saveFacility}
+              disabled={savingFacility || !hydrated}
+              className="px-3 py-1.5 text-xs font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+            >
+              {savingFacility ? 'Saving...' : 'Save'}
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+          <div>
+            <h3 className="text-xs font-semibold text-slate-600 mb-2">Depreciation (owned asset)</h3>
+            <div className="space-y-2">
+              <label className="flex items-center justify-between gap-2 text-xs text-slate-600">
+                <span>Building / improvement cost basis ($)</span>
+                <input type="number" step={50000} value={facilityFin.basis ?? 0}
+                  onChange={(e) => updateFacility('basis', Number(e.target.value))}
+                  disabled={!canEdit || !hydrated}
+                  className="w-36 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50" />
+              </label>
+              <label className="flex items-center justify-between gap-2 text-xs text-slate-600">
+                <span>Useful life (years)</span>
+                <input type="number" step={1} value={facilityFin.useful_life ?? 30}
+                  onChange={(e) => updateFacility('useful_life', Number(e.target.value))}
+                  disabled={!canEdit || !hydrated}
+                  className="w-36 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50" />
+              </label>
+            </div>
+          </div>
+          <div>
+            <h3 className="text-xs font-semibold text-slate-600 mb-2">Facility loan (debt interest)</h3>
+            <div className="space-y-2">
+              <label className="flex items-center justify-between gap-2 text-xs text-slate-600">
+                <span>Loan principal ($)</span>
+                <input type="number" step={50000} value={facilityFin.principal ?? 0}
+                  onChange={(e) => updateFacility('principal', Number(e.target.value))}
+                  disabled={!canEdit || !hydrated}
+                  className="w-36 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50" />
+              </label>
+              <label className="flex items-center justify-between gap-2 text-xs text-slate-600">
+                <span>Interest rate (% / yr)</span>
+                <input type="number" step={0.25} value={facilityFin.interest_rate ?? 0}
+                  onChange={(e) => updateFacility('interest_rate', Number(e.target.value))}
+                  disabled={!canEdit || !hydrated}
+                  className="w-36 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50" />
+              </label>
+              <label className="flex items-center justify-between gap-2 text-xs text-slate-600">
+                <span>Loan term (years)</span>
+                <input type="number" step={1} value={facilityFin.term_years ?? 30}
+                  onChange={(e) => updateFacility('term_years', Number(e.target.value))}
+                  disabled={!canEdit || !hydrated}
+                  className="w-36 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50" />
+              </label>
+              <label className="flex items-center justify-between gap-2 text-xs text-slate-600">
+                <span>Financing starts in year</span>
+                <select value={facilityFin.start_year ?? 1}
+                  onChange={(e) => updateFacility('start_year', Number(e.target.value))}
+                  disabled={!canEdit || !hydrated}
+                  className="w-36 border border-slate-200 rounded px-2 py-1 text-sm bg-white disabled:bg-slate-50">
+                  {[1, 2, 3, 4, 5].map((y) => <option key={y} value={y}>Year {y}</option>)}
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto sl-scroll mt-4">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-white border-b border-slate-200">
+                <th className="text-left px-3 py-2 font-semibold text-slate-600 text-xs">Computed (read-only)</th>
+                {facilityPreview.map((p) => <th key={p.year} className="text-right px-3 py-2 font-semibold text-slate-600 text-xs">Year {p.year}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-slate-100 bg-white">
+                <td className="px-3 py-2 text-xs text-slate-600">Depreciation (straight-line)</td>
+                {facilityPreview.map((p) => <td key={p.year} className="px-3 py-2 text-right text-sm text-slate-700">{fmt(p.depreciation)}</td>)}
+              </tr>
+              <tr className="bg-white">
+                <td className="px-3 py-2 text-xs text-slate-600">Interest (monthly amortization)</td>
+                {facilityPreview.map((p) => <td key={p.year} className="px-3 py-2 text-right text-sm text-slate-700">{fmt(p.interest)}</td>)}
+              </tr>
+            </tbody>
+          </table>
+          <p className="text-xs text-slate-400 mt-2 italic">Depreciation is non-cash: it lowers net income but not days of cash on hand. Interest is a cash cost and does reduce days of cash. Both appear as P&amp;L lines in the Commission export.</p>
+        </div>
       </div>
 
       {canEdit && (

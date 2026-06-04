@@ -1,4 +1,5 @@
 import { readCustomLines, customLineYearAmount } from './customLines'
+import { readFacilityFinancing, annualDepreciation, annualInterest } from './facilityFinancing'
 import {
   calcRevenue,
   calcLevyEquity,
@@ -470,6 +471,10 @@ export interface MultiYearDetailedRow {
     total: number
     // R-REV-07: per-line custom expense breakdown (engine emits; Commission export reads)
     customExpense?: { id: string; name: string; group: string; amount: number }[]
+    // P-FIN-01/02: facility depreciation + debt interest, emitted ONLY when the school
+    // has facility_financing (absent for lease schools, keeping output byte-identical).
+    depreciation?: number
+    interest?: number
   }
   totalExpenses: number
   net: number
@@ -542,6 +547,11 @@ export function computeMultiYearDetailed(
   const customExpenseLines = readCustomLines((profile as unknown as Record<string, unknown>).custom_expense_lines)
   const fteY1 = positions.reduce((s, p) => s + (p.fte || 0), 0)
 
+  // P-FIN-01/02: facility depreciation + debt interest (WA pathway; null for lease schools
+  // and for Generic/Private/Micro, which never populate facility_financing).
+  const facilityFinancing = readFacilityFinancing((profile as unknown as Record<string, unknown>).facility_financing)
+  let cumulativeDepreciation = 0
+
   const interestRate = assumptions.interest_rate_on_cash / 100
 
   for (let y = 1; y <= 5; y++) {
@@ -554,8 +564,12 @@ export function computeMultiYearDetailed(
       : 0
     // Revenue — Commission-aligned with COLA. SSE passed in so rev.total is complete.
     const rev = calcCommissionRevenue(enr, profile.pct_frl, profile.pct_iep, profile.pct_ell, profile.pct_hicap, assumptions, y, smallSchoolEnhancement)
-    // Interest income on prior year ending cash balance
-    const priorCash = cumulativeNet
+    // Interest income on prior year ending CASH balance. P-FIN-01: cumulativeNet is an
+    // accrual net-position figure; depreciation (non-cash) must be added back to recover
+    // actual cash. cumulativeDepreciation here holds prior years' total (this year's is
+    // added after net, below), so this is the prior year's cash. 0 for lease schools, so
+    // priorCash == cumulativeNet and the result is byte-identical.
+    const priorCash = cumulativeNet + cumulativeDepreciation
     const interestIncome = y === 1
       ? Math.round(Math.max(0, priorCash) * interestRate / 2) // half-year approximation
       : Math.round(Math.max(0, priorCash) * interestRate)
@@ -716,13 +730,24 @@ export function computeMultiYearDetailed(
     const customExpenseTotal = customExpenseDetail.reduce((s, d) => s + d.amount, 0)
     totalOperations += customExpenseTotal
 
+    // P-FIN-01/02: fold facility depreciation + interest AFTER contingency + custom expense
+    // (so the contingency base stays byte-identical when there is no financing). Both are
+    // 0 for lease schools. depreciation is straight-line; interest is the V11 monthly
+    // fully-amortizing schedule.
+    const depreciation = facilityFinancing ? annualDepreciation(facilityFinancing, y) : 0
+    const facilityInterest = facilityFinancing ? annualInterest(facilityFinancing, y) : 0
+    totalOperations += depreciation + facilityInterest
+
     const totalExpenses = totalPersonnel + totalOperations
 
     const net = totalRevenue - totalExpenses
     cumulativeNet += net
-    const dailyExpense = totalExpenses / 365
-    // Days of Cash = ending cash (cumulativeNet) / daily expenses
-    const reserveDays = dailyExpense > 0 ? Math.round(cumulativeNet / dailyExpense) : 0
+    // Days of Cash — shares computeDaysOfCash with the FPF Scorecard. depreciation is
+    // non-cash: subtracted from the denominator AND added back to the cash numerator
+    // (cumulative), so it is DCOH-neutral; interest (cash) lowers it. Reduces to the prior
+    // formula when there is no financing (depreciation 0, add-back 0).
+    cumulativeDepreciation += depreciation
+    const reserveDays = computeDaysOfCash(cumulativeNet + cumulativeDepreciation, totalExpenses, depreciation)
 
     const expansionDetail = expansionDetails
       ? expansionDetails.find((d) => d.year === y)
@@ -762,7 +787,7 @@ export function computeMultiYearDetailed(
         total: totalPersonnel,
         totalSalaries,
       },
-      operations: { facilities, supplies, contracted, technology, authorizerFee, insurance, foodService, transportation, curriculum, profDev, marketing, fundraising, contingency, total: totalOperations, customExpense: customExpenseDetail },
+      operations: { facilities, supplies, contracted, technology, authorizerFee, insurance, foodService, transportation, curriculum, profDev, marketing, fundraising, contingency, total: totalOperations, customExpense: customExpenseDetail, ...(facilityFinancing ? { depreciation, interest: facilityInterest } : {}) },
       totalExpenses,
       net,
       cumulativeNet,
@@ -895,26 +920,48 @@ function fpfStatus(
   return check(value, stage)
 }
 
+/**
+ * Shared Days-of-Cash (DCOH) calculation — single source of truth for both the FPF
+ * Scorecard and the engine's per-year reserveDays so they can't drift (P-FIN-01/02).
+ *
+ * Denominator excludes depreciation (non-cash, per V11 / OSPI:
+ * `Unrestricted Cash / ((Expenses - Depreciation) / 365)`); interest stays in (cash cost).
+ * The caller supplies `endingCash` already adjusted for the depreciation add-back, so
+ * depreciation is DCOH-neutral (subtracted from the denominator AND added back to cash)
+ * while interest lowers DCOH. With no financing, depreciation = 0 and the add-back = 0,
+ * so this reduces exactly to the prior formula (byte-identical for lease schools).
+ */
+export function computeDaysOfCash(endingCash: number, totalExpenses: number, depreciation: number): number {
+  const dailyExpense = (totalExpenses - depreciation) / 365
+  return dailyExpense > 0 ? Math.round(endingCash / dailyExpense) : 0
+}
+
 export function computeFPFScorecard(
   multiYear: MultiYearDetailedRow[],
   startingCash: number,
   conservativeMode: boolean,
 ): FPFScorecard {
-  // Build year-end cash balances
-  const yearEndCash: number[] = []
+  // Build year-end CASH balances. P-FIN-01: depreciation is non-cash, so it is added back
+  // (cumulatively) to recover actual cash. This single cashOnHand figure backs EVERY
+  // cash-derived measure below (Current Ratio, Days of Cash, Cash Flow, Multi-Year Cash
+  // Flow) so they can't disagree. Zero add-back for lease schools => byte-identical.
+  const cashOnHand: number[] = []
   let cash = startingCash
   for (const row of multiYear) {
-    cash += row.net
-    yearEndCash.push(cash)
+    cash += row.net + (row.operations.depreciation ?? 0)
+    cashOnHand.push(cash)
   }
 
   const measures: FPFMeasure[] = []
 
   // 1. Current Ratio — FPF: Current Assets / Current Liabilities (balance sheet)
-  // Planning proxy: Ending Cash / (Total Expenses / 12) — months of expenses covered
+  // Planning proxy: Cash / (monthly CASH expenses) — months of expenses covered. P-FIN-01:
+  // depreciation is non-cash, so it is excluded from the monthly-expense denominator AND
+  // already added back to cashOnHand (numerator); the ratio is therefore depreciation-
+  // neutral while interest (cash) still lowers it. Reduces to Expenses/12 for lease schools.
   const currentRatioValues = multiYear.map((row, i) => {
-    const monthlyExpenses = row.totalExpenses / 12
-    return monthlyExpenses > 0 ? yearEndCash[i] / monthlyExpenses : 99
+    const monthlyExpenses = (row.totalExpenses - (row.operations.depreciation ?? 0)) / 12
+    return monthlyExpenses > 0 ? cashOnHand[i] / monthlyExpenses : 99
   })
   measures.push({
     name: 'Current Ratio',
@@ -935,12 +982,12 @@ export function computeFPFScorecard(
   })
 
   // 2. Unrestricted Days Cash — FPF: Unrestricted Cash / [(Total Expenses - Depreciation) / 365]
-  // Depreciation is $0 in planning mode but formula structured to handle it
-  const depreciation = 0 // no depreciation modeled in planning mode
-  const daysOfCash = multiYear.map((row, i) => {
-    const dailyExpense = (row.totalExpenses - depreciation) / 365
-    return dailyExpense > 0 ? Math.round(yearEndCash[i] / dailyExpense) : 0
-  })
+  // P-FIN-01: cashOnHand already carries the depreciation add-back; the denominator excludes
+  // depreciation. So it is DCOH-neutral; interest stays in (cash cost). Shares
+  // computeDaysOfCash with the engine's reserveDays. Zero add-back for lease schools.
+  const daysOfCash = multiYear.map((row, i) =>
+    computeDaysOfCash(cashOnHand[i], row.totalExpenses, row.operations.depreciation ?? 0)
+  )
   measures.push({
     name: 'Days of Cash',
     formula: 'Unrestricted Cash ÷ ((Expenses − Depreciation) / 365)',
@@ -1028,7 +1075,7 @@ export function computeFPFScorecard(
   // Year 1 is N/A per FPF (no prior operating year)
   const cashFlowValues: (number | null)[] = multiYear.map((_, i) => {
     if (i === 0) return null // Year 1: no prior operating year
-    return yearEndCash[i] - yearEndCash[i - 1]
+    return cashOnHand[i] - cashOnHand[i - 1]
   })
   measures.push({
     name: 'Cash Flow',
@@ -1047,7 +1094,7 @@ export function computeFPFScorecard(
   // N/A for Years 1-2
   const threeYearCashFlow: (number | null)[] = multiYear.map((_, i) => {
     if (i < 2) return null // Need at least 3 years of data
-    return yearEndCash[i] - yearEndCash[i - 2]
+    return cashOnHand[i] - cashOnHand[i - 2]
   })
   measures.push({
     name: 'Multi-Year Cash Flow',
