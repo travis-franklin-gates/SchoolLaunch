@@ -4,6 +4,7 @@ import { calcCommissionRevenue, calcAAFTE, calcBenefits, calcSmallSchoolEnhancem
 import { computeExpansionEnrollments, expansionToEnrollmentArray, getRetentionRate } from './gradeExpansion'
 import type { MultiYearDetailedRow, FPFScorecard } from './budgetEngine'
 import { canonicalizeStartupFunding } from './startupFunding'
+import { canonicalizeBudgetProjections } from './budgetProjections'
 import { ENGINE_VERSION } from './engineVersion'
 
 /**
@@ -77,7 +78,13 @@ function canonicalizeProjectionInputs(input: ProjectionHashInputs): string {
       || a.cls.localeCompare(b.cls)
     )
 
-  const projSlice = projections
+  // P-UX-16: shape normalization lives in the shared canonicalizeBudgetProjections (sibling of
+  // canonicalizeStartupFunding/canonicalizePreOpening*, distinct BudgetProjection shape). It drops
+  // null/non-object entries and coerces category/subcategory -> string, amount -> finite, so the
+  // projection below sorts + selects on clean data: no localeCompare throw on null cat/sub, no
+  // Math.round(NaN) masked into the hash. Byte-identical for canonical input (canonicalization is a
+  // no-op), so the slice and the resulting advisory hash are unchanged for existing cached rows.
+  const projSlice = canonicalizeBudgetProjections(projections)
     .map(r => ({
       y: r.year,
       cat: r.category,

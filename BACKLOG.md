@@ -442,7 +442,26 @@ less-conservative template. Documentation is the right fix.
 ---
 
 ### P-UX-16 · Diagnose projSlice for the same canonicalizer brittleness P-UX-11 fixed
-**Status:** `OPEN` · **Opened:** 2026-06-03 · **Source:** P-UX-11
+**Status:** `RESOLVED` · **Opened:** 2026-06-03 · **Resolved:** 2026-06-05 · **Source:** P-UX-11
+
+**Resolution (P-UX-16 commit):** New shared value-preserving `canonicalizeBudgetProjections`
+(`src/lib/budgetProjections.ts`) applied at the advisory hash `projSlice` boundary
+(`buildSchoolContext.ts:80`), mirroring how `fundingSlice` layers on `canonicalizeStartupFunding`
+(P-UX-18) and the pre-opening canonicalizers (P-UX-19) — but a DISTINCT `BudgetProjection` shape, so
+a new canonicalizer (not reuse). COERCE semantics (not P-UX-19 DROP): drop only null/non-object
+entries; coerce category/subcategory -> string (null -> ''), amount -> finite (non-finite -> 0); row
+count stable, matching projSlice's existing keep-every-row-and-coerce behavior. Closes all three
+failure modes — Mode 1 null/non-object element (`reading 'year'` throw at :82), Mode 2 null cat/sub
+(`localeCompare` throw at :91/:92), Mode 3 non-finite amount (`Math.round(NaN)` -> JSON `null`,
+silently corrupting both the djb2 hash and the |len discriminator). Strict no-op on canonical input:
+`computeAdvisoryHash` byte-identical (WA `v3-2026-05|53ec6cd11605|ff272d0d|1599`, Generic
+`...|85dcf73f|1561`) so NO cache invalidates. `budgetProjections.ts` deliberately EXCLUDED from
+`ENGINE_HASH_FILES` (ENGINE_VERSION stays `53ec6cd11605` — advisory-only consumer, not engine math).
+Engine untouched (computeCarryForward WA 350000 / Generic 120000; computeMultiYearDetailed /
+computeGenericProjections 0 diff lines). Spec: `tests/session4/advisory-projslice-canonicalizer.spec.ts`
+(8/8). Engine-side sibling logged as P-UX-22. This completes the canonicalization shape-defense thread
+across both engine (P-UX-18/19) and advisory (P-UX-11/16) paths.
+Reference: `tests/audit/v11-cedar-grove/P-UX-16-diagnosis.md`.
 
 P-UX-11 hardened the fundingSlice pipeline in `canonicalizeProjectionInputs`
 (`src/lib/buildSchoolContext.ts`) against non-canonical startup_funding shapes.
@@ -617,6 +636,33 @@ caches aren't needlessly busted within a release. Pairs with scenario staleness 
 the same `computeAdvisoryHash`).
 
 **Reference:** `tests/audit/v11-cedar-grove/P-UX-20-diagnosis.md` §Q3
+
+---
+
+### P-UX-22 · Engine readers throw on a null array element in budget_projections
+**Status:** `OPEN` · **Opened:** 2026-06-05 · **Source:** P-UX-16
+
+P-UX-16 hardened the advisory-path `projSlice` against malformed `budget_projections`
+(`canonicalizeBudgetProjections`). The ENGINE-side readers remain raw: `computeMultiYearDetailed` /
+`computeGenericProjections` filter projections via `.filter((p) => !p.is_revenue && p.category === '…')`
+(e.g. `budgetEngine.ts:209, 212, 230, 304`). The equality comparisons are null-`category`/`subcategory`
+SAFE (a null simply never matches a known category), so P-UX-16's Mode 2 is a non-issue here — BUT a
+**null / non-object array element** would throw on `!p.is_revenue` (P-UX-16 Mode 1) at the engine
+boundary. Same non-editor threat model (DB seed / import / backfill / CSP fixtures).
+
+**Out of P-UX-16 scope by decision:** this is engine-scope. Hardening it touches an `ENGINE_HASH_FILES`
+member (`budgetEngine.ts`), which would bump `ENGINE_VERSION` and invalidate advisory caches — a
+deliberate, separately-reviewed event, not something to fold into an advisory-only shape-defense.
+
+**Proposed next step:** at the `computeMultiYearDetailed` / `computeGenericProjections` projection
+readers, drop null/non-object entries before the `.filter`/`.find` chains (a value-preserving guard:
+canonical rows pass through byte-identical, so the WA 350000 / Generic 120000 carry-forward pins and
+the multiyear deep-equal guards stay green). Confirm the engine-content-hash bump is expected and that
+the cache-invalidation cascade is acceptable before shipping. Consider whether `canonicalizeBudgetProjections`
+(advisory-only today) should be promoted into the engine readers too — if so it would JOIN the engine
+hash set, which is the ENGINE_VERSION-bumping event to plan for.
+
+**Reference:** `tests/audit/v11-cedar-grove/P-UX-16-diagnosis.md` §"Sibling found"
 
 ---
 
